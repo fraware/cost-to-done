@@ -59,6 +59,8 @@ jobs:
             --extra-docker-compose tests/harbor/compose.yaml \
             --job-name harbor-pi-mock --jobs-dir harbor-pi-mock-jobs \
             --n-concurrent 1 --n-attempts 1
+      - name: Reassign mock-only gateway evidence to the CI inspector
+        run: sudo chown -R "$(id -u):$(id -g)" "$CTD_EVIDENCE_DIR"
       - name: Verify recorded Harbor trial result and metered mock usage
         run: python scripts/check_harbor_mock.py harbor-pi-mock-jobs/harbor-pi-mock --evidence "$CTD_EVIDENCE_DIR"
       - name: Archive raw mock evaluation evidence
@@ -69,5 +71,6 @@ jobs:
           path: |
             harbor-pi-mock-jobs/
             ${{ github.workspace }}/.ctd-harbor-mock-evidence/provider-calls.txt
+            ${{ github.workspace }}/.ctd-harbor-mock-evidence/mock-ledger.sqlite3
           if-no-files-found: warn
           retention-days: 14
