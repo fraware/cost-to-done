@@ -27,7 +27,7 @@ def render_html(report: dict[str, Any], *, title: str, demo: bool = False) -> st
         cost = row["cost_per_success_usd"]
         ratio = max(2, round(100 * float(cost) / largest)) if cost is not None and largest > 0 else 100
         ci = row.get("bootstrap_95_usd")
-        ci_text = f"95% task bootstrap [{_money(ci[0])}, {"Unbounded" if ci[1] is None else _money(ci[1])}]" if ci else "No interval"
+        ci_text = (f"95% task bootstrap [{_money(ci[0])}, " + f"{'Unbounded' if ci[1] is None else _money(ci[1])}]") if ci else "No interval"
         table_rows.append(f'''
           <tr>
             <td class="position">{i if report["eligible_for_ranking"] else "—"}</td>
