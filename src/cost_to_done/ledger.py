@@ -58,6 +58,7 @@ class BudgetSnapshot:
     breached: bool
     pending: int
     uncertain: int
+    schedule_sha256: str | None = None
 
     def to_dict(self) -> dict[str, str | bool | int]:
         return vars(self).copy()
@@ -90,6 +91,7 @@ class BudgetLedger:
             self.path.touch(mode=0o600, exist_ok=False)
         with self._transaction() as db:
             db.execute("CREATE TABLE IF NOT EXISTS meta (id INTEGER PRIMARY KEY CHECK(id=1), limit_units INTEGER NOT NULL CHECK(limit_units>0))")
+            db.execute("CREATE TABLE IF NOT EXISTS rate_schedule (id INTEGER PRIMARY KEY CHECK(id=1), sha256 TEXT NOT NULL)")
             db.execute("""CREATE TABLE IF NOT EXISTS requests (
                 id TEXT PRIMARY KEY, maximum INTEGER NOT NULL CHECK(maximum >= 0),
                 actual INTEGER CHECK(actual >= 0),
@@ -102,6 +104,23 @@ class BudgetLedger:
                 db.execute("INSERT INTO meta VALUES(1,?)", (requested,))
             elif requested is not None and existing[0] != requested:
                 raise ReceiptError("existing budget differs; refusing silent budget change")
+
+    def bind_schedule(self, sha256: str) -> None:
+        """Persist one price schedule identity before the first request.
+
+        A ledger with existing reservations cannot be retroactively assigned a
+        rate schedule. A previously assigned identity cannot change.
+        """
+        if not isinstance(sha256, str) or not re.fullmatch(r"[a-f0-9]{64}", sha256):
+            raise ReceiptError("invalid SHA-256 price schedule identity")
+        with self._transaction() as db:
+            existing = db.execute("SELECT sha256 FROM rate_schedule WHERE id=1").fetchone()
+            if existing is None:
+                if db.execute("SELECT 1 FROM requests LIMIT 1").fetchone():
+                    raise ReceiptError("cannot attach a price schedule after spending began")
+                db.execute("INSERT INTO rate_schedule VALUES(1,?)", (sha256,))
+            elif existing[0] != sha256:
+                raise ReceiptError("price schedule differs from ledger's immutable identity")
 
     @contextmanager
     def _transaction(self) -> Iterator[sqlite3.Connection]:
@@ -139,9 +158,11 @@ class BudgetLedger:
         with self._transaction() as db:
             limit, settled, reserved, pending, uncertain, overruns = self._summary(db)
         remaining = limit - settled - reserved
+        with self._transaction() as db:
+            schedule = db.execute("SELECT sha256 FROM rate_schedule WHERE id=1").fetchone()
         return BudgetSnapshot(_usd(limit), _usd(settled), _usd(reserved),
                               _usd(max(0, remaining)), remaining < 0 or overruns > 0,
-                              pending, uncertain)
+                              pending, uncertain, schedule[0] if schedule else None)
 
     def reserve(self, request_id: str, maximum_usd: str) -> BudgetSnapshot:
         """Atomically admit a bounded request or reject it before forwarding."""

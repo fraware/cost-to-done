@@ -1,6 +1,6 @@
 # Budget authorization ledger — experimental foundation
 
-**Status:** Implemented and tested locally, **not connected to inference calls**. The ledger handles concurrent monetary reservations and ambiguous outcomes. It does not prevent a model or provider from charging outside the ledger.
+**Status:** Implemented and tested locally. A narrowly scoped, opt-in non-streaming HTTP inference gateway now calls this ledger for every supported forwarded request. Network isolation from agents and real-provider invoice reconciliation are still unverified. See [Gateway](gateway.md).
 
 A safe work-cost benchmark needs more than an elapsed-time timeout. An agent might launch several expensive requests, a request might be billed despite a timeout, and a retry might start before an earlier charge settles. A durable reservation ledger makes these cases explicit and prevents double allocation of a locally declared budget.
 
@@ -34,7 +34,7 @@ This is a **local admission record**, not a hard spending control. A genuine con
 4. Persistent ledgers and process restarts preserve pending authorizations. All budget breaches, overcharges and missing usage remain in the evidence.
 5. Provider-side account spending controls remain an independent backstop; absent their guarantees, no absolute upper bound on charged expenditure is claimed.
 
-The current ledger does **not** implement a gateway, provider protocol, network firewall, tokenization, tariff schedule, invoice reconciliation, or a cryptographic audit log. Do not wire untrusted models directly to payment credentials on the strength of this component.
+The experimental gateway implements one fixed OpenAI Chat Completions protocol and uses an operator-declared price schedule. It does **not** implement a provider network firewall, exact tokenizer proof, provider invoice reconciliation, or a cryptographic audit log. The ledger binds its first assigned price-schedule SHA-256 digest and refuses subsequent replacements. Do not wire untrusted models directly to payment credentials on the strength of this component.
 
 ## Test evidence
 

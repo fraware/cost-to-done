@@ -18,9 +18,8 @@ Token prices describe a unit of inference. Developers purchase **completed work*
 | Cost-per-completion analysis | **Working** | Includes failed attempts, blocks invalid comparisons, and computes task-cluster bootstrap intervals where supported |
 | Local HTML reports | **Working** | Generates standalone, offline evidence summaries without trackers or remote scripts |
 | Cost calculator | **Working** | Interactive hypothetical scenario analysis, separate from measured performance |
-| Transactional budget reservation ledger | **Experimental, not yet a provider gateway** | Exact-dollar reservation and uncertain-charge accounting; provider egress and billing enforcement outstanding |
 | Harbor receipt importer | **Experimental** | Converts pinned Harbor trial result files into local, **agent-reported price estimates**; refuses missing cost and mismatched identities |
-| Single-trial Harbor/Pi model launcher | **Experimental, not yet live-tested with credentials** | Opt-in executable runner, pinned agent, strict identity checks, local evidence and explicit cost-limit warnings |
+| Execution of actual coding agents | **Not yet integrated** | The next engineering milestone; Harbor is the planned execution backend |
 | Public model leaderboard | **Not yet published** | Awaiting controlled runs and independently checked verification/provenance |
 
 **There are no real-model benchmark results in this repository yet.** The example report uses generated synthetic data from fictional configurations. It cannot support claims about the performance or cost of actual providers.
@@ -64,7 +63,7 @@ cost-to-done validate harbor-trials.jsonl
 cost-to-done report harbor-trials.jsonl --output harbor-report.html
 ```
 
-See [Harbor import contract](docs/harbor.md). The Harbor importer and inspector are tested against redacted records from genuine Docker-backed no-op and reference-solution jobs. Import and price validation of an actual paid-model job remain unverified. It does not run agents, audit hidden test execution, inspect provider invoices, or support a genuine leaderboard claim by itself.
+See [Harbor import contract](docs/harbor.md). This importer is validated against a minimal offline fixture based on Harbor's published trial-result schema. **It has not been exercised against a real Harbor job in this environment.** It does not run agents, audit hidden test execution, inspect provider invoices, or support a genuine leaderboard claim by itself.
 
 ## The central metric
 
@@ -105,7 +104,7 @@ The hexadecimal digests are **declared identifiers** in this receipt format, not
 ## Long-term roadmap
 
 1. **Evidence foundation.** Local-first receipts, honest cost arithmetic, readable reports, strict comparability. **Implemented.**
-2. **Verified execution.** Pinned Harbor-based trials, task qualifications, controlled model/harness configurations, raw usage and verifier-evidence linkage. **In progress — qualified no-op/reference controls, experimental model launcher.**
+2. **Verified execution.** Pinned Harbor-based trials, task qualifications, controlled model/harness configurations, raw usage and verifier-evidence linkage. **Next.**
 3. **Bring your own repository.** Small tasks and acceptance tests from a project; isolation, one-command evaluation, spend caps, reruns, and useful recommendations. **Planned.**
 4. **Open cost-to-done benchmark.** Audited public tasks, third-party reproductions, evolving model choices, empirical cost frontiers, and uncertainty-aware comparisons. **Vision.**
 5. **Workload economics.** Model routing by task class, organizational cost simulations, human-review costs, and completed-work optimization across agents, tools, and environments. **Vision.**
@@ -129,10 +128,6 @@ This is early-stage infrastructure with an intentionally demanding evidence stan
 **License** · MIT.
 
 
-## Financial controls: precise accounting before a provider gateway
-
-The experimental [durable budget ledger](docs/budget-ledger.md) serializes monetary authorizations, retains reserved funds for unconfirmed requests, and flags actual charges exceeding their authorization. It is tested under concurrent request admission and persistent storage. **It does not yet intercept inference requests or enforce provider billing.** A credential-isolating gateway with independent metering is the next requirement; see [Issue #5](https://github.com/fraware/cost-to-done/issues/5).
-
 ## Run the first model-backed smoke test (opt-in)
 
 The new `run-harbor` command provides a no-spend execution plan and a one-trial Harbor/Pi launch with archived local evidence:
@@ -142,6 +137,21 @@ cost-to-done run-harbor --model openai/YOUR_MODEL_ID
 ```
 
 This command defaults to **dry-run**; it does not contact an inference provider. For a real trial, supply `--execute --acknowledge-no-dollar-cap`, a dedicated provider API key, Harbor 0.26.0, Docker, and an externally enforced provider spending quota. It limits the trial count, agent turns, and local elapsed time, **not dollars**. A paid-model integration test has not yet been completed. See [Model smoke-test procedure](docs/model-smoke.md) for exact commands, security assumptions, and evidence limitations.
+
+## Experimental inference budget gateway
+
+An opt-in local HTTP gateway now performs conservative pre-admission for one
+non-streaming OpenAI Chat Completions route with an immutable-identity price
+schedule, distinct client/provider credentials, and a persistent SQLite ledger.
+Its monetary accounting is **based on declared rate-card estimates**. The
+estimated authorization is not a universal tokenization bound or a provider
+invoice guarantee. It has not yet been connected to Harbor or used in a paid
+model trial. See [Gateway limitations and usage](docs/gateway.md).
+
+```bash
+cost-to-done gateway-serve --price-schedule local-price.json \
+  --ledger private/ledger.sqlite3 --budget-usd 0.50  # plan only
+```
 
 ## First real execution qualification
 

@@ -27,3 +27,11 @@ jobs:
           cost-to-done run-harbor --task tasks/allocation-repair
           --model openai/dry-run-placeholder --jobs-dir runs
           --max-turns 5
+
+      - name: Confirm gateway price-schedule planning does not use providers
+        run: >-
+          cost-to-done gateway-serve
+          --price-schedule examples/gateway-price.example.json
+          --ledger private/test-gateway.sqlite3 --budget-usd 0.5
+      - name: Confirm planning did not create a ledger
+        run: test ! -e private/test-gateway.sqlite3

@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
 from .core import ReceiptError, analyze, read_trials
 from .execute import Launch, execute, plan
 from .harbor import inspect_harbor_job, write_harbor_receipts
+from .gateway import PriceSchedule, serve_local
+from .ledger import BudgetLedger
 from .report import write_report
 
 
@@ -40,8 +43,45 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--max-turns", type=int, default=10)
     p.add_argument("--execute", action="store_true", help="Run the model instead of printing a zero-spend plan")
     p.add_argument("--acknowledge-no-dollar-cap", action="store_true", help="Confirm provider-side spending controls are installed")
+    p = subs.add_parser("gateway-serve", help="Start the opt-in, local non-streaming OpenAI inference gateway")
+    p.add_argument("--price-schedule", required=True, type=Path)
+    p.add_argument("--ledger", required=True, type=Path)
+    p.add_argument("--budget-usd", required=True, help="Exact decimal run authorization amount")
+    p.add_argument("--port", type=int, default=8766)
+    p.add_argument("--serve", action="store_true", help="Actually bind the gateway; default is a no-spend plan")
+    p.add_argument("--acknowledge-no-provider-hard-cap", action="store_true")
+    p = subs.add_parser("gateway-status", help="Read local admission ledger without provider calls")
+    p.add_argument("ledger", type=Path)
     args = parser.parse_args(argv)
     try:
+        if args.command == "gateway-status":
+            ledger = BudgetLedger(args.ledger)
+            print(json.dumps({"snapshot": ledger.snapshot().to_dict(), "entries": ledger.entries()}, indent=2))
+            return 0
+        if args.command == "gateway-serve":
+            schedule = PriceSchedule.load(args.price_schedule)
+            # Exact monetary argument is validated even in dry run. Never create a
+            # ledger or read credentials in plan mode.
+            from .ledger import _units
+            _units(args.budget_usd, allow_zero=False)
+            if not args.serve:
+                print(json.dumps({"status": "plan_only", "listen_host": "127.0.0.1",
+                                  "port": args.port, "model": schedule.model,
+                                  "price_schedule_sha256": schedule.digest,
+                                  "budget_usd": args.budget_usd,
+                                  "spending_basis": "rate_card_estimate_not_invoice",
+                                  "provider_hard_cap": False}, indent=2))
+                return 0
+            if not args.acknowledge_no_provider_hard_cap:
+                raise ReceiptError("--serve requires --acknowledge-no-provider-hard-cap")
+            if os.name != "posix":
+                raise ReceiptError("live gateway only supported on POSIX in this release")
+            token = os.environ.get("COST_TO_DONE_GATEWAY_TOKEN", "")
+            provider_key = os.environ.get("OPENAI_API_KEY", "")
+            serve_local(ledger_path=args.ledger, budget_usd=args.budget_usd,
+                        price_path=args.price_schedule, port=args.port,
+                        gateway_token=token, provider_key=provider_key)
+            return 0
         if args.command == "run-harbor":
             cfg = Launch(args.task, args.jobs_dir, args.model, args.agent, args.job_name, args.max_wall_seconds, args.max_turns)
             result = execute(cfg, acknowledged=args.acknowledge_no_dollar_cap) if args.execute else plan(cfg)
