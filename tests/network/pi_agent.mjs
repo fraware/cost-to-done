@@ -2,6 +2,7 @@
 // No upstream provider credentials, account information or paid calls exist here.
 import net from 'node:net';
 import { spawn } from 'node:child_process';
+import { mkdirSync, copyFileSync, chmodSync } from 'node:fs';
 
 function canConnect(host, port) {
   return new Promise((resolve) => {
@@ -21,6 +22,11 @@ function canConnect(host, port) {
 }
 
 function piSession() {
+  // Pi initializes auth.json even for a declared inline gateway key. Keep only
+  // this session directory writable, preserving the read-only root filesystem.
+  mkdirSync('/tmp/pi-config', { recursive: true, mode: 0o700 });
+  copyFileSync('/pi-config-seed/models.json', '/tmp/pi-config/models.json');
+  chmodSync('/tmp/pi-config/models.json', 0o600);
   return new Promise((resolve, reject) => {
     const child = spawn('pi', [
       '--print', '--mode', 'json', '--session-dir', '/tmp/pi-sessions',
