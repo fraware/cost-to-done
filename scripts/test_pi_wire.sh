@@ -73,7 +73,7 @@ for _ in $(seq 1 60); do
   sleep 0.2
 done
 python3 -c 'import socket; socket.create_connection(("127.0.0.1",8878),timeout=2).close()'
-sed -i 's/127.0.0.1:8877/127.0.0.1:8878/' "$working/isolated-pi-config/models.json"
+sed -i 's/127.0.0.1:8877/127.0.0.1:8878/; s/mock-pi-only-token/mock-pi-test-gateway-token-00001/' "$working/isolated-pi-config/models.json"
 mkdir -p "$working/gateway-sessions"
 printf 'Respond with OK. Do not use tools.\n' | timeout 90s pi --print --mode json \
   --session-dir "$working/gateway-sessions" --provider cost-to-done-mock --model test-model-1 \

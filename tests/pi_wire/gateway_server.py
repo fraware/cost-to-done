@@ -35,7 +35,7 @@ if __name__ == '__main__':
     price = PriceSchedule('test-model-1', '2026-11-20',
                           'https://example.com/fictional-rates', '20', '40')
     ledger = BudgetLedger(args.ledger, budget_usd='5')
-    gateway = Gateway(ledger, price, client_token='mock-pi-only-token',
+    gateway = Gateway(ledger, price, client_token='mock-pi-test-gateway-token-00001',
                       provider_key='fake-provider-never-used', transport=mock_transport)
     with _LocalServer(('127.0.0.1', 8878), gateway) as server:
         server.serve_forever(poll_interval=0.1)
