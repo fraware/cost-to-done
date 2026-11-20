@@ -90,7 +90,7 @@ def inspect_evidence(request: EvidenceRequest) -> tuple[dict[str, Any], dict[str
     if not isinstance(request.model, str) or not request.model:
         raise ReceiptError("expected provider/model is required")
     for name, value, size in (("harness_digest", request.harness_digest, 64),
-                              ("harbor_task_checksum", request.harbor_task_checksum, 40)):
+                              ("harbor_task_checksum", request.harbor_task_checksum, 64)):
         if not isinstance(value, str) or len(value) != size or any(ch not in "0123456789abcdef" for ch in value):
             raise ReceiptError(f"{name} must be a lowercase {size}-character hex digest")
     if not request.model.startswith("openai/"):
