@@ -4,7 +4,7 @@
 
 > The cheapest AI model might be the most expensive way to finish your work.
 
-[Explore the static experience](docs/index.html) · [Sample evidence report](docs/report.html) · [Interactive cost calculator](docs/calculator.html) · [Methodology](docs/methodology.md) · [Model smoke test](docs/model-smoke.md) · [Harbor mock integration](docs/harbor-mock.md) · [Isolated Harbor test](docs/harbor-isolated.md) · [Receipt reconciliation](docs/ledger-reconciliation.md) · [Vision](docs/vision.md)
+[Explore the static experience](docs/index.html) · [Sample evidence report](docs/report.html) · [Interactive cost calculator](docs/calculator.html) · [Methodology](docs/methodology.md) · [Model smoke test](docs/model-smoke.md) · [Harbor mock integration](docs/harbor-mock.md) · [Isolated Harbor test](docs/harbor-isolated.md) · [Receipt reconciliation](docs/ledger-reconciliation.md) · [Vision](docs/vision.md) · [Private real-provider trial](docs/live-gateway.md)
 
 Token prices describe a unit of inference. Developers purchase **completed work**. A model that generates cheap tokens while wasting attempts, hallucinating fixes, or failing tests can incur more expense per successful task than a higher-priced model.
 
@@ -22,7 +22,10 @@ Token prices describe a unit of inference. Developers purchase **completed work*
 | Mock-backed coding-agent execution | **CI verified** | Harbor 0.26.0 and Pi 0.85.1 now exercise both a single-call failed task and a two-call scripted tool repair accepted by an independent verifier; paid-model execution is still outstanding |
 | Mock Harbor agent network isolation | **CI verified for one topology** | The actual Harbor task reaches the gateway while direct provider DNS, provider IP, and public IP probes fail; not a production security guarantee |
 | Harbor + gateway receipt reconciliation | **Mock-CI verified** | Joins one completed Harbor trial and a dedicated, fully settled gateway ledger into a canonical JSONL receipt and audit metadata; monetary values remain estimates |
+| Opt-in real-provider gateway runner | **Prepared, not paid-tested** | Experimental one-task Harbor path with gateway-only provider credential mount, internal agent network and zero-spend planning; independent provider cap remains mandatory |
 | Public model leaderboard | **Not yet published** | Awaiting controlled runs and independently checked verification/provenance |
+
+**An [opt-in real-provider gateway path](docs/live-gateway.md) is prepared.** It accepts the qualified allocation-repair task only, confines upstream credentials to a dedicated gateway container, preserves a separate metering ledger, and never publishes results automatically. The path has not yet completed a paid model trial.
 
 **There are no real-model benchmark results in this repository yet.** The example report uses generated synthetic data from fictional configurations. It cannot support claims about the performance or cost of actual providers.
 

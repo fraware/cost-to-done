@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from .core import ReceiptError, analyze, read_trials
+from .live import LiveConfig, execute_live, plan_live
 from .execute import Launch, execute, plan
 from .evidence import EvidenceRequest, write_evidence_receipt
 from .harbor import inspect_harbor_job, write_harbor_receipts
@@ -46,6 +47,21 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--harness-digest", required=True, help="Operator-declared SHA-256 of a pinned harness specification")
     p.add_argument("--harbor-task-checksum", required=True, help="Expected Harbor task checksum from archived control evidence")
     p.add_argument("--output", type=Path, required=True, help="New JSONL receipt file, with adjacent provenance sidecar")
+    p = subs.add_parser("run-harbor-gateway", help="Plan or explicitly execute the qualified task through an isolated metering gateway")
+    p.add_argument("--repo-root", type=Path, default=Path.cwd())
+    p.add_argument("--task", type=Path, default=Path("tasks/allocation-repair"))
+    p.add_argument("--jobs-dir", type=Path, default=Path("runs"))
+    p.add_argument("--model", required=True, help="Exact OpenAI Chat Completions model ID")
+    p.add_argument("--price-schedule", required=True, type=Path)
+    p.add_argument("--provider-key-file", required=True, type=Path,
+                   help="Private chmod-600 file outside the repository; never pass key contents")
+    p.add_argument("--budget-usd", required=True, help="Exact USD allowance for estimated gateway admission")
+    p.add_argument("--job-name", default="gateway-smoke-01")
+    p.add_argument("--max-turns", type=int, default=3)
+    p.add_argument("--max-wall-seconds", type=int, default=900)
+    p.add_argument("--execute", action="store_true", help="Opt in to a paid model trial")
+    p.add_argument("--acknowledge-provider-limit", action="store_true",
+                   help="Confirm independent provider-side spending controls and invoice uncertainty")
     p = subs.add_parser("run-harbor", help="Plan or explicitly execute one real Harbor model trial")
     p.add_argument("--task", type=Path, default=Path("tasks/allocation-repair"))
     p.add_argument("--jobs-dir", type=Path, default=Path("runs"))
@@ -104,6 +120,13 @@ def main(argv: list[str] | None = None) -> int:
             )
             print(json.dumps(write_evidence_receipt(request, args.output), indent=2))
             return 0
+        if args.command == "run-harbor-gateway":
+            cfg = LiveConfig(args.repo_root, args.task, args.jobs_dir, args.model,
+                             args.price_schedule, args.provider_key_file, args.budget_usd,
+                             args.job_name, args.max_turns, args.max_wall_seconds)
+            result = execute_live(cfg, acknowledged=args.acknowledge_provider_limit) if args.execute else plan_live(cfg)
+            print(json.dumps(result, indent=2))
+            return 0 if result["status"] in ("plan_only", "completed_with_unverified_rate_card_estimate") else 2
         if args.command == "run-harbor":
             cfg = Launch(args.task, args.jobs_dir, args.model, args.agent, args.job_name, args.max_wall_seconds, args.max_turns)
             result = execute(cfg, acknowledged=args.acknowledge_no_dollar_cap) if args.execute else plan(cfg)

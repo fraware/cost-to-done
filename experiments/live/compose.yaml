@@ -1,0 +1,46 @@
+# Trusted local-operator experiment only. Never publish a host gateway port.
+# The agent has no interface on ctd_provider_net and never receives provider key.
+services:
+  main:
+    networks: [ctd_agent_net]
+    depends_on:
+      ctd_gateway:
+        condition: service_healthy
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    # Required by Harbor 0.26.0's Pi configuration and file permissions.
+    cap_add: [FOWNER, DAC_OVERRIDE]
+
+  ctd_gateway:
+    image: python:3.12.8-slim-bookworm@sha256:2199a62885a12290dc9c5be3ca0681d367576ab7bf037da120e564723292a2f0
+    command: ["python", "-m", "cost_to_done.live_gateway"]
+    environment:
+      PYTHONPATH: /runtime/src
+      CTD_PRICE_PATH: /run/prices.json
+      CTD_LEDGER_PATH: /evidence/ledger.sqlite3
+      CTD_GATEWAY_TOKEN: ${CTD_GATEWAY_TOKEN:?must-set-CTD_GATEWAY_TOKEN}
+      CTD_BUDGET_USD: ${CTD_BUDGET_USD:?must-set-CTD_BUDGET_USD}
+    networks: [ctd_agent_net, ctd_provider_net]
+    volumes:
+      - ${CTD_REPO_ROOT:?must-set-CTD_REPO_ROOT}/src:/runtime/src:ro
+      - ${CTD_PRICE_FILE:?must-set-CTD_PRICE_FILE}:/run/prices.json:ro
+      - ${CTD_EVIDENCE_DIR:?must-set-CTD_EVIDENCE_DIR}:/evidence
+    secrets: [ctd_provider_key]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1',8866), timeout=1).close()"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+secrets:
+  ctd_provider_key:
+    file: ${CTD_PROVIDER_KEY_FILE:?must-set-CTD_PROVIDER_KEY_FILE}
+
+networks:
+  ctd_agent_net:
+    internal: true
+  ctd_provider_net: {}
