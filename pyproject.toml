@@ -7,7 +7,7 @@ name = "cost-to-done"
 version = "0.1.0"
 description = "Open, reproducible accounting for the real cost of verified AI work"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "MIT"
 readme = "README.md"
 
 [project.scripts]
