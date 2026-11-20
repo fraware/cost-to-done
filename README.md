@@ -150,8 +150,10 @@ The test uses Docker Compose on Linux and makes **no paid API calls**. Its resul
 
 ## Experimental inference budget gateway
 
+The dedicated [Pi protocol compatibility probe](docs/pi-protocol.md) exercises the pinned coding agent against a mock endpoint and the gateway. Streaming outcomes are buffered until terminal usage has been validated; this is **not** a claim of compatibility with Harbor's container networking or live provider billing.
+
 An opt-in local HTTP gateway now performs conservative pre-admission for one
-non-streaming OpenAI Chat Completions route with an immutable-identity price
+constrained OpenAI Chat Completions route with buffered streaming and an immutable-identity price
 schedule, distinct client/provider credentials, and a persistent SQLite ledger.
 Its monetary accounting is **based on declared rate-card estimates**. The
 estimated authorization is not a universal tokenization bound or a provider

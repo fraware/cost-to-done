@@ -1,6 +1,7 @@
 """Conservative, narrowly scoped inference-admission gateway.
 
-This module supports a single non-streaming OpenAI Chat Completions route. It
+This module supports a constrained OpenAI Chat Completions route, including
+fully buffered streaming responses with verifiable terminal usage. It
 checks a pessimistic *estimate* before forwarding and retains reservations on
 ambiguous failures. It is NOT a hard cap on provider invoices: model tokenizer,
 provider-specific charges, cancelled requests, and upstream noncompliance are
@@ -33,7 +34,7 @@ _RATE = re.compile(r"(?:0|[1-9][0-9]*)(?:\.[0-9]{1,12})?\Z")
 _DATE = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
 _ROUTE = "/v1/chat/completions"
 _UPSTREAM = "api.openai.com"
-_ALLOWED_TOP = frozenset({"model", "messages", "max_completion_tokens", "stream", "tools", "tool_choice"})
+_ALLOWED_TOP = frozenset({"model", "messages", "max_completion_tokens", "stream", "stream_options", "store", "tools", "tool_choice"})
 _ALLOWED_MESSAGE = frozenset({"role", "content", "tool_calls", "tool_call_id", "name", "refusal"})
 
 
@@ -111,8 +112,17 @@ def _bounded_request(data: bytes, *, model: str) -> tuple[dict[str, Any], int]:
         raise ReceiptError("unsupported Chat Completions request fields")
     if obj.get("model") != model:
         raise ReceiptError("model must exactly match priced route")
-    if obj.get("stream", False) is not False:
-        raise ReceiptError("streaming is not supported by the initial gateway")
+    if type(obj.get("stream", False)) is not bool:
+        raise ReceiptError("stream must be a JSON boolean")
+    streaming = obj.get("stream", False)
+    if obj.get("store", False) is not False:
+        raise ReceiptError("store must be false; persisted provider requests are unsupported")
+    options = obj.get("stream_options")
+    if streaming:
+        if options != {"include_usage": True}:
+            raise ReceiptError("streaming requires stream_options.include_usage=true")
+    elif options is not None:
+        raise ReceiptError("stream_options without streaming is unsupported")
     cap = obj.get("max_completion_tokens")
     if type(cap) is not int or not 1 <= cap <= 4096:
         raise ReceiptError("explicit max_completion_tokens in [1,4096] is required")
@@ -189,9 +199,81 @@ def openai_transport(body: bytes, api_key: str) -> UpstreamResponse:
         content = response.read(MAX_RESPONSE_BYTES + 1)
         if len(content) > MAX_RESPONSE_BYTES:
             raise ReceiptError("upstream response size exceeded; usage uncertain")
-        return UpstreamResponse(response.status, content)
+        return UpstreamResponse(response.status, content,
+                                response.getheader("Content-Type", "application/octet-stream"))
     finally:
         conn.close()
+
+
+def _stream_token_usage(payload: bytes, model: str) -> tuple[int, int]:
+    """Parse a fully buffered OpenAI SSE completion, refusing incomplete usage.
+
+    The original stream is forwarded byte-for-byte *only after* validation and
+    settlement. This intentionally sacrifices incremental output to keep
+    completion/accounting consistent with the durable reservation.
+    """
+    try:
+        source = payload.decode("utf-8")
+    except UnicodeError as exc:
+        raise ReceiptError("stream is not valid UTF-8") from exc
+    if not source.endswith(("\n\n", "\r\n\r\n")):
+        raise ReceiptError("truncated terminal stream framing")
+    frames: list[str] = []
+    current: list[str] = []
+    for raw_line in source.splitlines():
+        if not raw_line:
+            if current:
+                frames.append("\n".join(current))
+                current = []
+            continue
+        if raw_line.startswith(":"):
+            continue  # Valid SSE comment, never interpreted as usage.
+        if not raw_line.startswith("data: "):
+            raise ReceiptError("unsupported SSE event field")
+        current.append(raw_line[6:])
+    if current:
+        raise ReceiptError("unterminated SSE event")
+    if not frames or frames[-1] != "[DONE]" or frames.count("[DONE]") != 1:
+        raise ReceiptError("stream lacks an unambiguous final [DONE] marker")
+    if len(frames) < 3:
+        raise ReceiptError("stream is missing completion or usage events")
+    usage: tuple[int, int] | None = None
+    saw_final_choice = False
+    for event_index, raw in enumerate(frames[:-1]):
+        try:
+            event = json.loads(raw)
+        except (ValueError, UnicodeError) as exc:
+            raise ReceiptError("invalid JSON stream event") from exc
+        if not isinstance(event, dict) or event.get("model") != model:
+            raise ReceiptError("stream event model mismatch")
+        choices = event.get("choices")
+        if not isinstance(choices, list):
+            raise ReceiptError("stream event lacks choices")
+        if event.get("usage") is not None:
+            if usage is not None or choices or event_index != len(frames) - 2:
+                raise ReceiptError("usage must appear once in the final data event")
+            reported = event["usage"]
+            if not isinstance(reported, dict):
+                raise ReceiptError("invalid terminal stream usage")
+            prompt = reported.get("prompt_tokens")
+            completion = reported.get("completion_tokens")
+            if type(prompt) is not int or type(completion) is not int or prompt < 0 or completion < 0:
+                raise ReceiptError("invalid terminal stream token counts")
+            usage = (prompt, completion)
+        elif choices:
+            for choice in choices:
+                if not isinstance(choice, dict):
+                    raise ReceiptError("invalid streamed choice")
+                finish = choice.get("finish_reason")
+                if finish is not None:
+                    if finish not in ("stop", "length", "tool_calls", "content_filter", "function_call"):
+                        raise ReceiptError("unsupported stream finish reason")
+                    saw_final_choice = True
+        else:
+            raise ReceiptError("empty stream event without terminal usage")
+    if usage is None or not saw_final_choice:
+        raise ReceiptError("stream lacks finish reason or complete terminal usage")
+    return usage
 
 
 class Gateway:
@@ -243,15 +325,23 @@ class Gateway:
             if response.status != 200:
                 self.ledger.mark_uncertain(request_id)
                 return 502, _canonical({"error": "upstream request failed; charge uncertain", "request_id": request_id})
-            raw = json.loads(response.body.decode("utf-8"))
-            if not isinstance(raw, dict) or raw.get("model") != self.price.model:
-                raise ReceiptError("provider response model mismatch; charge uncertain")
-            usage = raw.get("usage")
-            if not isinstance(usage, dict):
-                raise ReceiptError("provider omitted usage; charge uncertain")
-            prompt, completion = usage.get("prompt_tokens"), usage.get("completion_tokens")
-            if type(prompt) is not int or type(completion) is not int or prompt < 0 or completion < 0:
-                raise ReceiptError("invalid usage fields; charge uncertain")
+            mime = response.content_type.split(";", 1)[0].strip().lower()
+            if obj.get("stream", False):
+                if mime != "text/event-stream":
+                    raise ReceiptError("streaming response content type mismatch; charge uncertain")
+                prompt, completion = _stream_token_usage(response.body, self.price.model)
+            else:
+                if mime != "application/json":
+                    raise ReceiptError("JSON response content type mismatch; charge uncertain")
+                raw = json.loads(response.body.decode("utf-8"))
+                if not isinstance(raw, dict) or raw.get("model") != self.price.model:
+                    raise ReceiptError("provider response model mismatch; charge uncertain")
+                usage = raw.get("usage")
+                if not isinstance(usage, dict):
+                    raise ReceiptError("provider omitted usage; charge uncertain")
+                prompt, completion = usage.get("prompt_tokens"), usage.get("completion_tokens")
+                if type(prompt) is not int or type(completion) is not int or prompt < 0 or completion < 0:
+                    raise ReceiptError("invalid usage fields; charge uncertain")
             if prompt > input_envelope or completion > obj["max_completion_tokens"]:
                 raise ReceiptError("provider reported usage above reserved envelope; charge uncertain")
             estimated = (_money_estimate(prompt, _dec(self.price.input_per_million_usd))
@@ -284,9 +374,9 @@ class _Handler(BaseHTTPRequestHandler):
     def log_message(self, format: str, *args: Any) -> None:
         """Suppress default logs: URLs and headers might contain secrets."""
 
-    def _reply(self, code: int, payload: bytes) -> None:
+    def _reply(self, code: int, payload: bytes, *, content_type: str = "application/json") -> None:
         self.send_response(code)
-        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(payload)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("Connection", "close")
@@ -333,7 +423,8 @@ class _Handler(BaseHTTPRequestHandler):
             content = _canonical({"error": message, "request_id": request_id})
         except Exception:
             status, content = 502, _canonical({"error": "provider outcome uncertain", "request_id": request_id})
-        self._reply(status, content)
+        content_type = "text/event-stream" if status == 200 and content.startswith(b"data: ") else "application/json"
+        self._reply(status, content, content_type=content_type)
 
     def do_GET(self) -> None:
         self._reply(404, b'{"error":"route not supported"}')

@@ -1,17 +1,17 @@
 # Inference admission gateway — experimental
 
-**Status (November 20, 2026): deterministic local mock tests only. No paid calls have been completed through this gateway.**
+**Status (November 20, 2026): mocked HTTP and container tests; no paid calls have been completed through this gateway.**
 
-The first release exposes a *narrow* OpenAI Chat Completions HTTP endpoint. The objective is to ensure that each supported request has an atomic ledger reservation **before** being forwarded, while preserving indeterminate liabilities on failures. It does **not** establish an absolute provider spending cap.
+The first release exposes a *narrow* OpenAI Chat Completions HTTP endpoint, with fully buffered streaming support. The objective is to ensure that each supported request has an atomic ledger reservation **before** being forwarded, while preserving indeterminate liabilities on failures. It does **not** establish an absolute provider spending cap.
 
 ## Supported protocol
 
 - Endpoint: `POST /v1/chat/completions` on IPv4 loopback (`127.0.0.1`). Only the fixed upstream `https://api.openai.com/v1/chat/completions` is used in production. Redirects, arbitrary upstream URLs, client-supplied authorization headers and unrelated API endpoints are excluded.
-- One precisely named model, text-only messages, ordinary function tools, and explicit `max_completion_tokens` (1–4096). **No streaming**; no image, audio, file, video, search, batch or embeddings paths. Unsupported request fields fail closed.
+- One precisely named model, text-only messages, ordinary function tools, and explicit `max_completion_tokens` (1–4096). Streaming is accepted only with `stream_options: {"include_usage": true}` and a validated final usage event. The gateway buffers the full upstream stream before returning it to the client, which changes latency behavior. No image, audio, file, video, search, batch or embeddings paths; unsupported request fields fail closed.
 - Client authentication via `Authorization: Bearer $COST_TO_DONE_GATEWAY_TOKEN`, separate from the upstream provider credential. Never supply the upstream key to the agent. A client-supplied `X-Cost-To-Done-Request-Id` is optional and must be unique; retries with an existing ID are rejected.
 - Pricing: an operator-supplied JSON schedule containing the exact model name, calendar effective date, HTTPS source URL, and uncached input/output USD per million tokens. The canonical SHA-256 digest identifies the declaration. **The declared rates are not verified by the software.** Confirm them against official provider pricing before any experiment.
 - Preauthorization: estimated input tokens = `4 × UTF-8 request bytes + 32 × message count + 64`, plus the requested completion-token cap. This deliberately conservative heuristic is **not a proven tokenizer upper bound**. It does not account for provider-defined extra charges and cannot certify a true maximum invoice.
-- Settlement: on a successful JSON response with complete prompt/completion usage, estimate cost from reported tokens at the declared **uncached** rate. Reasoning tokens are assumed included in the provider's completion-token count. Missing usage, mismatched model, HTTP errors, transport errors and unexpected token counts leave the full reservation in `uncertain` state until separately reconciled.
+- Settlement: on a successful JSON response or completed SSE stream with terminal prompt/completion usage, estimate cost from reported tokens at the declared **uncached** rate. Reasoning tokens are assumed included in the provider's completion-token count. Missing usage, mismatched model, HTTP errors, transport errors and unexpected token counts leave the full reservation in `uncertain` state until separately reconciled.
 
 ## Zero-spend plan
 
@@ -53,7 +53,7 @@ The resulting ledger's amounts are **estimated expenditures**, not independently
 
 The gateway's request admission path and failure accounting have deterministic mock tests. **A separate mock-only Docker Compose topology has an isolation test; Harbor agent isolation has not been established.** A container able to contact the provider directly or read the provider key defeats the gateway. The agent must run with restricted egress, and the gateway must be reachable over an authenticated channel using a short-lived credential. Binding this initial version to loopback protects against casual network exposure, yet also means it is **not currently connected to the Harbor agent container**. This limitation is deliberate until container routing and process/container isolation are tested.
 
-The gateway buffers non-streaming responses. It does not support streaming token accounting, nested model calls through separate endpoints, adaptive provider routing, retries controlled by an outer client, or billed invoice reconciliation. Client-visible timeouts do not prove provider cancellation. HTTP failures consume reservations pending external confirmation. A response with usage beyond its authorized envelope is treated as uncertain, not as a safely free request.
+The gateway buffers both non-streaming responses and the *entire* SSE stream before forwarding. It does not support incremental live relaying, separate API endpoints, adaptive provider routing, or billed invoice reconciliation. Client-visible timeouts do not prove provider cancellation. HTTP failures consume reservations pending external confirmation. A response with usage beyond its authorized envelope is treated as uncertain, not as a safely free request.
 
 **Not safe for arbitrary untrusted agents or multi-tenant deployment.** A provider-side project spending limit and access controls are strongly recommended, though some provider alert mechanisms are advisory rather than strictly enforced. Do not use this component to promise a hard invoice maximum.
 
@@ -61,7 +61,7 @@ The gateway buffers non-streaming responses. It does not support streaming token
 
 1. Local forward-path mock tests, authentication, duplicate request protection, admission rejection, concurrency and uncertainty retention. **Implemented and tested locally.**
 2. Mock-only Docker Compose topology with direct-bypass probes. **Integration test implemented; review its CI result and limitations in [network-isolation.md](network-isolation.md). Harbor isolation remains outstanding.**
-3. Harbor Pi agent integration with real model calls, stream and tool compatibility confirmed. **Outstanding.**
+3. Pinned Pi mock-only HTTP compatibility test and stream accounting. **Integration test implemented; review its CI result. Actual Harbor Pi isolation, multi-turn tool execution, and real model calls remain outstanding.**
 4. Provider usage compared with published dated rates, tool fees and eventual billing records. **Outstanding.**
 5. Public release of audited trial evidence with independent verification and no secret exposure. **Outstanding.**
 
