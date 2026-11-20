@@ -16,6 +16,8 @@ services:
       - ${CTD_EVIDENCE_DIR:?set-CTD_EVIDENCE_DIR}:/evidence
     security_opt: ["no-new-privileges:true"]
     cap_drop: [ALL]
+    # Harbor uploads agent config as a separate owner; Pi needs chmod.
+    cap_add: [FOWNER]
 
   ctd_mock_provider:
     image: python:3.12-slim-bookworm
