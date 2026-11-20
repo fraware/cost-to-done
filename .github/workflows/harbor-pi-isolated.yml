@@ -18,10 +18,15 @@ permissions:
 jobs:
   isolated-harbor:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [noop, scripted-repair]
     timeout-minutes: 25
     env:
       CTD_REPO_ROOT: ${{ github.workspace }}
       CTD_EVIDENCE_DIR: ${{ github.workspace }}/ctd-harbor-isolation-evidence
+      CTD_MOCK_SCENARIO: ${{ matrix.scenario }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -49,7 +54,7 @@ jobs:
             --api-key-name CTD_MOCK_GATEWAY_TOKEN \
             --api-format openai_chat_completions \
             --ak version=0.85.1 --ak skip_install=true \
-            --ak model_api=openai-completions --ak max_turns=1 \
+            --ak model_api=openai-completions --ak max_turns=3 \
             --agent-env CTD_MOCK_GATEWAY_TOKEN=test-gateway-session-token-00001 \
             --extra-docker-compose tests/harbor/compose-isolated.yaml \
             --job-name harbor-pi-isolated --jobs-dir harbor-pi-isolated-jobs \
@@ -65,9 +70,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: harbor-isolated-mock-${{ github.run_id }}
+          name: harbor-isolated-${{ matrix.scenario }}-${{ github.run_id }}
           path: |
             harbor-pi-isolated-jobs/
-            ${{ github.workspace }}/.ctd-harbor-isolation-evidence/
+            ${{ github.workspace }}/ctd-harbor-isolation-evidence/
           if-no-files-found: warn
           retention-days: 14

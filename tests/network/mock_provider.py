@@ -32,6 +32,27 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(400)
             return
 
+        scenario = os.environ.get('CTD_MOCK_SCENARIO', 'noop')
+        if scenario == 'scripted-repair':
+            from mock_repair import scripted_reply
+            try:
+                delta, finish_reason = scripted_reply(body)
+            except (ValueError, TypeError):
+                self.send_error(422, 'invalid scripted tool exchange')
+                return
+            tool_response = finish_reason == 'tool_calls'
+            usage = {
+                'prompt_tokens': 100 if tool_response else 200,
+                'completion_tokens': 400 if tool_response else 40,
+            }
+        elif scenario == 'noop':
+            delta, finish_reason = {'content': 'OK'}, 'stop'
+            usage = {'prompt_tokens': 100, 'completion_tokens': 40}
+        else:
+            self.send_error(422, 'unsupported mock scenario')
+            return
+        usage['total_tokens'] = usage['prompt_tokens'] + usage['completion_tokens']
+
         with COUNT_PATH.open('a', encoding='utf-8') as record:
             record.write('forwarded\n')
         if body.get('stream', False):
@@ -43,17 +64,17 @@ class Handler(BaseHTTPRequestHandler):
                         'choices': [{'index': 0, 'delta': delta, 'finish_reason': finish}]}
             final = {'id': 'mock-completion-1', 'object': 'chat.completion.chunk',
                      'created': 0, 'model': 'test-model-1', 'choices': [],
-                     'usage': {'prompt_tokens': 100, 'completion_tokens': 40, 'total_tokens': 140}}
-            response = (frame(choice({'role': 'assistant'})) + frame(choice({'content': 'OK'})) +
-                        frame(choice({}, 'stop')) + frame(final) + b'data: [DONE]\n\n')
+                     'usage': usage}
+            response = (frame(choice({'role': 'assistant'})) + frame(choice(delta)) +
+                        frame(choice({}, finish_reason)) + frame(final) + b'data: [DONE]\n\n')
             mime = 'text/event-stream'
         else:
             response = json.dumps({
                 'id': 'mock-completion-1', 'object': 'chat.completion',
                 'model': 'test-model-1',
-                'choices': [{'index': 0, 'finish_reason': 'stop',
-                             'message': {'role': 'assistant', 'content': 'Mock repair plan'}}],
-                'usage': {'prompt_tokens': 100, 'completion_tokens': 40, 'total_tokens': 140},
+                'choices': [{'index': 0, 'finish_reason': finish_reason,
+                             'message': {'role': 'assistant', **delta}}],
+                'usage': usage,
             }).encode('utf-8')
             mime = 'application/json'
         self.send_response(200)

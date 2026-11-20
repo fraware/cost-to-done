@@ -30,3 +30,11 @@ The endpoint probes cover the tested addresses, Docker networking, and execution
 The price schedule is entirely fictional; the gateway's accounting entry is not an invoice. The current request price envelope is heuristic and insufficient to guarantee a provider-side monetary ceiling. No paid provider call is part of this CI workflow.
 
 **Release gate:** Public model-cost rankings require a genuine model run, reproducible task verification, provider-side spending controls, and verified charging information. Keep the relevant GitHub issues open until those conditions are met.
+
+## Multi-turn scripted repair control (mock-only)
+
+The CI workflow executes two distinct controls on the same isolated topology. The `noop` control produces one fictional model completion and a correctly failed verifier. The `scripted-repair` control uses a **hand-authored fake provider** to return an agent tool call that replaces the allocation module, followed by a second fake model response once Pi submits the tool result. The independent Harbor verifier must then pass. The scripted source is mounted **only into the fake provider**, not into Harbor's task image. This test verifies protocol and accounting integration, not any real model's coding skill.
+
+In the scripted control, mocked usage is 100 input / 400 output tokens for the tool-call response, then 200 input / 40 output for the final response. Fictional rates of $20 and $40 per million tokens produce a total simulated expenditure of **$0.0236** (two settled ledger entries). These numbers are fixtures, not observed provider usage. The workflow explicitly audits both requests, successful task verification, runtime network probes, and the absence of uncertain ledger reservations.
+
+Both controls use Harbor 0.26.0 and Pi 0.85.1. CI artifacts include the Harbor trial, network proof, and mock ledger under scenario-specific names. No provider secrets or real money are involved.
