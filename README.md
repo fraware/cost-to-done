@@ -19,7 +19,7 @@ Token prices describe a unit of inference. Developers purchase **completed work*
 | Local HTML reports | **Working** | Generates standalone, offline evidence summaries without trackers or remote scripts |
 | Cost calculator | **Working** | Interactive hypothetical scenario analysis, separate from measured performance |
 | Harbor receipt importer | **Experimental** | Converts pinned Harbor trial result files into local, **agent-reported price estimates**; refuses missing cost and mismatched identities |
-| Execution of actual coding agents | **Not yet integrated** | The next engineering milestone; Harbor is the planned execution backend |
+| Single-trial Harbor/Pi model launcher | **Experimental, not yet live-tested with credentials** | Opt-in executable runner, pinned agent, strict identity checks, local evidence and explicit cost-limit warnings |
 | Public model leaderboard | **Not yet published** | Awaiting controlled runs and independently checked verification/provenance |
 
 **There are no real-model benchmark results in this repository yet.** The example report uses generated synthetic data from fictional configurations. It cannot support claims about the performance or cost of actual providers.
@@ -63,7 +63,7 @@ cost-to-done validate harbor-trials.jsonl
 cost-to-done report harbor-trials.jsonl --output harbor-report.html
 ```
 
-See [Harbor import contract](docs/harbor.md). This importer is validated against a minimal offline fixture based on Harbor's published trial-result schema. **It has not been exercised against a real Harbor job in this environment.** It does not run agents, audit hidden test execution, inspect provider invoices, or support a genuine leaderboard claim by itself.
+See [Harbor import contract](docs/harbor.md). The Harbor importer and inspector are tested against redacted records from genuine Docker-backed no-op and reference-solution jobs. Import and price validation of an actual paid-model job remain unverified. It does not run agents, audit hidden test execution, inspect provider invoices, or support a genuine leaderboard claim by itself.
 
 ## The central metric
 
@@ -104,7 +104,7 @@ The hexadecimal digests are **declared identifiers** in this receipt format, not
 ## Long-term roadmap
 
 1. **Evidence foundation.** Local-first receipts, honest cost arithmetic, readable reports, strict comparability. **Implemented.**
-2. **Verified execution.** Pinned Harbor-based trials, task qualifications, controlled model/harness configurations, raw usage and verifier-evidence linkage. **Next.**
+2. **Verified execution.** Pinned Harbor-based trials, task qualifications, controlled model/harness configurations, raw usage and verifier-evidence linkage. **In progress — qualified no-op/reference controls, experimental model launcher.**
 3. **Bring your own repository.** Small tasks and acceptance tests from a project; isolation, one-command evaluation, spend caps, reruns, and useful recommendations. **Planned.**
 4. **Open cost-to-done benchmark.** Audited public tasks, third-party reproductions, evolving model choices, empirical cost frontiers, and uncertainty-aware comparisons. **Vision.**
 5. **Workload economics.** Model routing by task class, organizational cost simulations, human-review costs, and completed-work optimization across agents, tools, and environments. **Vision.**
