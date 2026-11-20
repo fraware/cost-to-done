@@ -27,9 +27,11 @@ services:
     environment:
       CTD_PROVIDER_IP_PATH: /evidence/provider-ip.txt
       CTD_PROVIDER_LOG_PATH: /evidence/provider-calls.txt
+      CTD_MOCK_SCENARIO: ${CTD_MOCK_SCENARIO:-noop}
     volumes:
       - ${CTD_REPO_ROOT:?set-CTD_REPO_ROOT}/tests/network/mock_provider.py:/fixture/mock_provider.py:ro
       - ${CTD_REPO_ROOT:?set-CTD_REPO_ROOT}/tests/harbor/isolated_provider.py:/fixture/isolated_provider.py:ro
+      - ${CTD_REPO_ROOT:?set-CTD_REPO_ROOT}/tests/harbor/mock_repair.py:/fixture/mock_repair.py:ro
       - ${CTD_EVIDENCE_DIR:?set-CTD_EVIDENCE_DIR}:/evidence
     read_only: true
     tmpfs: [/tmp]

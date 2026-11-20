@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import ipaddress
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -31,11 +32,17 @@ def verify(job_dir: Path, evidence: Path) -> dict[str, object]:
     assert ipaddress.IPv4Address(ip).is_private, proof
     assert (evidence / "provider-ip.txt").read_text("ascii").strip() == ip
 
+    scenario = os.environ.get("CTD_MOCK_SCENARIO", "noop")
+    assert scenario in ("noop", "scripted-repair"), scenario
+    expected_verdict = "pass" if scenario == "scripted-repair" else "fail"
+    expected_calls = 2 if scenario == "scripted-repair" else 1
+    expected_estimate = "0.0236" if scenario == "scripted-repair" else "0.0036"
+
     inspected = inspect_harbor_job(job_dir)
     assert inspected["complete"] is True and inspected["observed_trials"] == 1, inspected
     trial = inspected["trials"][0]
     assert trial["agent"] == "pi" and trial["model"] == "test-model-1", trial
-    assert trial["outcome"] == "fail", trial  # Mock model deliberately does no repair.
+    assert trial["outcome"] == expected_verdict, trial
     sessions = list(job_dir.glob("*/agent/pi.txt"))
     assert len(sessions) == 1, sessions
     events = [json.loads(line) for line in sessions[0].read_text().splitlines()
@@ -48,15 +55,17 @@ def verify(job_dir: Path, evidence: Path) -> dict[str, object]:
 
     ledger = BudgetLedger(evidence / "mock-ledger.sqlite3")
     state = ledger.snapshot()
-    assert state.settled == "0.0036" and state.pending == 0 and state.uncertain == 0, state
-    assert len(ledger.entries()) == 1
-    assert (evidence / "provider-calls.txt").read_text().splitlines() == ["forwarded"]
+    assert state.settled == expected_estimate and state.pending == 0 and state.uncertain == 0, state
+    entries = ledger.entries()
+    assert len(entries) == expected_calls and all(x["state"] == "settled" for x in entries), entries
+    assert (evidence / "provider-calls.txt").read_text().splitlines() == ["forwarded"] * expected_calls
     return {
         "status": "mock-harbor-pi-isolated-verified",
         "network_checks": sorted(REQUIRED_CHECKS),
-        "gateway_calls": 1,
+        "scenario": scenario,
+        "gateway_calls": expected_calls,
         "mock_price_estimate_usd": state.settled,
-        "verifier_outcome": "fail",
+        "verifier_outcome": expected_verdict,
         "real_model_executed": False,
         "provider_invoice_verified": False,
         "harbor_trial_raw_sha256": trial.get("raw_result_sha256"),
