@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synthetic comparison — Cost to Done</title>
+<style>
+:root { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; color:#161616; background:#f5f3ec; }
+*{box-sizing:border-box}body{margin:0}a{color:inherit}.shell{max-width:1280px;margin:0 auto;padding:0 42px}
+nav{border-bottom:1px solid #c9c6bd;}nav .shell{display:flex;align-items:center;justify-content:space-between;min-height:72px;gap:20px}
+.wordmark{font-size:13px;font-weight:800;letter-spacing:-.03em}.wordmark b{background:#c6382d;color:white;padding:8px 10px;margin-right:10px}
+nav small, .muted{color:#67645e}nav small{font-size:12px;letter-spacing:.07em;text-transform:uppercase}
+.hero{padding:90px 0 65px;display:grid;grid-template-columns:1.3fr .7fr;gap:45px;border-bottom:1px solid #c9c6bd}
+.kicker{color:#b22d25;text-transform:uppercase;letter-spacing:.16em;font-weight:800;font-size:12px}
+h1{font-family:Georgia,"Times New Roman",serif;font-weight:400;letter-spacing:-.065em;font-size:clamp(52px,6.3vw,104px);line-height:.99;margin:24px 0}
+.hero p{font-size:18px;line-height:1.55;max-width:700px;color:#52504c}
+.hero aside{border-top:4px solid #c6382d;padding:22px 0}.hero aside h2{font:normal 32px/1.13 Georgia,serif;letter-spacing:-.04em;margin:10px 0 18px}
+.hero aside p{font-size:14px;line-height:1.55;color:#66635d}.notice{display:inline-block;font:700 11px/1.35 monospace;background:#e3ded2;padding:11px 13px;letter-spacing:.04em}
+.stats{display:flex;gap:0;border-bottom:1px solid #c9c6bd}.stat{padding:33px 0;flex:1}.stat+.stat{padding-left:35px;border-left:1px solid #c9c6bd}
+.stat label{font:700 11px monospace;text-transform:uppercase;color:#77716b;letter-spacing:.08em;display:block;margin-bottom:15px}
+.stat strong{font:normal 42px Georgia,serif;letter-spacing:-.06em}
+.section-head{display:flex;justify-content:space-between;align-items:end;gap:25px;margin:70px 0 22px}
+.section-head h2{font:normal 40px Georgia,serif;letter-spacing:-.05em;margin:0}.section-head span{font:12px monospace;color:#706b65}
+.table-wrap{overflow:auto;border-top:2px solid #171717}table{border-collapse:collapse;width:100%;min-width:920px}th{font:700 11px monospace;text-transform:uppercase;letter-spacing:.04em;text-align:left;padding:18px 14px;color:#66635d;border-bottom:1px solid #bdb8af}
+td{padding:22px 14px;border-bottom:1px solid #d4d0c8;font-size:15px;vertical-align:middle}td.position{font:16px monospace;color:#a6a098}td.number{font:600 17px monospace;white-space:nowrap}
+.sub{display:block;color:#79756d;font-size:11px;font-weight:400;margin-top:7px;line-height:1.4}.cost>span{font:700 19px monospace}.track{width:200px;max-width:100%;height:7px;background:#ded8d0;margin-top:10px}.fill{height:100%;background:#c6382d}
+.notes{border-top:1px solid #beb9b1;margin:70px 0 40px;padding:25px 0}.notes h2{font:normal 29px Georgia,serif}.notes li{max-width:880px;margin-bottom:12px;line-height:1.5;color:#595650}
+.method{display:grid;grid-template-columns:1fr 1fr;gap:50px;margin:65px 0 90px;border-top:2px solid #161616;padding-top:30px}
+.method h3{font-size:12px;letter-spacing:.07em;text-transform:uppercase}.method p{font-size:14px;color:#55514b;line-height:1.6}
+footer{border-top:1px solid #c9c6bd;padding:30px 0 48px;font-size:12px;color:#66635d;display:flex;justify-content:space-between;gap:20px}
+@media(max-width:760px){.shell{padding:0 21px}.hero{grid-template-columns:1fr;padding:52px 0}.stats{display:grid;grid-template-columns:1fr 1fr}.stat+.stat{padding-left:0;border:0}.stat strong{font-size:32px}.method{grid-template-columns:1fr}.section-head{display:block}.section-head h2{font-size:34px}nav small{display:none}}
+</style></head><body>
+<nav><div class="shell"><div class="wordmark"><b>1</b> COST TO DONE</div><small>Open methodology · local evidence</small></div></nav>
+<main class="shell">
+<section class="hero"><div><div class="kicker">The receipt for completed work</div><h1>Price a result.<br>Not a token.</h1><p>Which agent configuration actually finishes the job? Every failed attempt, every verified pass, and every dollar counted against the same task contract.</p></div>
+<aside><span class="notice">SYNTHETIC DATA · DESIGN DEMONSTRATION</span><h2>Synthetic comparison</h2><p>Trial-level accounting. Each recorded success must terminate with a verifier pass. Price source, retry policy, and artifact digests travel with the result.</p></aside></section>
+<div class="stats"><div class="stat"><label>Distinct tasks</label><strong>6</strong></div><div class="stat"><label>Recorded trials</label><strong>90</strong></div><div class="stat"><label>Configurations</label><strong>5</strong></div><div class="stat"><label>Comparable ranking</label><strong>YES</strong></div></div>
+<section class="section-head"><h2>Cost per verified completion</h2><span>Lower is better · failures included in spend</span></section>
+<div class="table-wrap"><table><thead><tr><th>#</th><th>Configuration</th><th>Verified</th><th>Total spend</th><th>Cost / success</th><th>Time</th></tr></thead><tbody>
+          <tr>
+            <td class="position">1</td>
+            <td><strong>Hypothetical setup A</strong><span class="sub">rate_card_estimate · one-feedback-retry</span></td>
+            <td class="number">12/18<span class="sub">66.7% verified</span></td>
+            <td class="number">$0.1044<span class="sub">22 charged attempts</span></td>
+            <td><div class="cost"><span>$0.0087</span><div class="track" aria-hidden="true"><div class="fill" style="width:13%"></div></div></div><span class="sub">95% task bootstrap [$0.0056, $0.0131]</span></td>
+            <td class="number">22.5s<span class="sub">median trial</span></td>
+          </tr>
+        
+          <tr>
+            <td class="position">2</td>
+            <td><strong>Hypothetical setup B</strong><span class="sub">rate_card_estimate · one-feedback-retry</span></td>
+            <td class="number">12/18<span class="sub">66.7% verified</span></td>
+            <td class="number">$0.2124<span class="sub">22 charged attempts</span></td>
+            <td><div class="cost"><span>$0.0177</span><div class="track" aria-hidden="true"><div class="fill" style="width:27%"></div></div></div><span class="sub">95% task bootstrap [$0.0106, $0.0320]</span></td>
+            <td class="number">22.5s<span class="sub">median trial</span></td>
+          </tr>
+        
+          <tr>
+            <td class="position">3</td>
+            <td><strong>Hypothetical setup C</strong><span class="sub">rate_card_estimate · one-feedback-retry</span></td>
+            <td class="number">12/18<span class="sub">66.7% verified</span></td>
+            <td class="number">$0.3267<span class="sub">23 charged attempts</span></td>
+            <td><div class="cost"><span>$0.0272</span><div class="track" aria-hidden="true"><div class="fill" style="width:42%"></div></div></div><span class="sub">95% task bootstrap [$0.0158, $0.0488]</span></td>
+            <td class="number">22.5s<span class="sub">median trial</span></td>
+          </tr>
+        
+          <tr>
+            <td class="position">4</td>
+            <td><strong>Hypothetical setup D</strong><span class="sub">rate_card_estimate · one-feedback-retry</span></td>
+            <td class="number">10/18<span class="sub">55.6% verified</span></td>
+            <td class="number">$0.4392<span class="sub">23 charged attempts</span></td>
+            <td><div class="cost"><span>$0.0439</span><div class="track" aria-hidden="true"><div class="fill" style="width:67%"></div></div></div><span class="sub">95% task bootstrap [$0.0242, $0.0848]</span></td>
+            <td class="number">22.5s<span class="sub">median trial</span></td>
+          </tr>
+        
+          <tr>
+            <td class="position">5</td>
+            <td><strong>Hypothetical setup E</strong><span class="sub">rate_card_estimate · one-feedback-retry</span></td>
+            <td class="number">8/18<span class="sub">44.4% verified</span></td>
+            <td class="number">$0.5220<span class="sub">22 charged attempts</span></td>
+            <td><div class="cost"><span>$0.0653</span><div class="track" aria-hidden="true"><div class="fill" style="width:100%"></div></div></div><span class="sub">95% task bootstrap [$0.0378, $0.1594]</span></td>
+            <td class="number">22.5s<span class="sub">median trial</span></td>
+          </tr>
+        </tbody></table></div>
+
+<section class="method"><div><h3>Accounting contract</h3><p>Cost per success equals the full spend across completed trials divided by their verified successes. Expenses from unsuccessful trials are retained. The ratio is undefined if no trial passes. Exact decimal strings avoid floating-point drift in summed charges.</p></div><div><h3>Comparability contract</h3><p>Rankings are withheld if task sets or per-task replication differ, or billing and rate-card estimates are mixed. A common task verifier and pinned task digest are mandatory. Five or more distinct tasks unlock descriptive task-cluster bootstrap intervals.</p></div></section>
+</main><footer class="shell"><span>COST TO DONE · Local-first report format v0.1</span><span>No external scripts, analytics, or network requests.</span></footer>
+</body></html>
