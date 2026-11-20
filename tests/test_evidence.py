@@ -96,6 +96,8 @@ class EvidenceTests(unittest.TestCase):
     def test_rejects_price_and_harness_mismatch(self):
         with self.assertRaises(ReceiptError):
             self.check(replace(self.request, harness_digest="not-a-hash"))
+        with self.assertRaisesRegex(ReceiptError, "64-character"):
+            self.check(replace(self.request, harbor_task_checksum="a" * 40))
         with self.assertRaises(ReceiptError):
             self.check(replace(self.request, model="openai/another-model"))
         different = PriceSchedule("test-model-1", "2026-11-20", "https://example.com/rates", "21", "40")
