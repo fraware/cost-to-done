@@ -14,11 +14,11 @@
     "rollout_details": null
   },
   "exception_info": null,
-  "finished_at": "2026-11-20T11:08:48.874644Z",
-  "id": "9f0e5860-f82c-43dc-8f9f-2ada2753248f",
+  "finished_at": "2026-11-20T11:15:30.639239Z",
+  "id": "3a1d123f-c9e5-49b2-9b5a-7220ed9edbef",
   "schema_version": 1,
-  "started_at": "2026-11-20T11:08:33.886135Z",
-  "task_checksum": "1612eb85736fd1ac9a22f11970cfbe170bfc2d1e0e600ac6b7c98d40cb98aef5",
+  "started_at": "2026-11-20T11:15:14.703440Z",
+  "task_checksum": "62884685a34a548962fa6771cb25ded8ab2dc5a486163fb72ca337f40748910e",
   "task_name": "cost-to-done/allocation-repair",
   "verifier_result": {
     "rewards": {

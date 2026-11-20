@@ -58,6 +58,7 @@ Valid receipts alone **do not** authenticate a verifier execution or establish t
 Harbor provides sandboxed agent execution and structured per-trial results. Cost to Done reads those existing outputs rather than reproducing Harbor's agent loop. Import is guarded by a manifest with pinned task checksums, verifier digests, agent identity, and harness identity.
 
 ```bash
+cost-to-done inspect-harbor path/to/harbor-job
 cost-to-done import-harbor path/to/manifest.json --output harbor-trials.jsonl
 cost-to-done validate harbor-trials.jsonl
 cost-to-done report harbor-trials.jsonl --output harbor-report.html
@@ -136,3 +137,7 @@ python scripts/qualify_task.py tasks/allocation-repair
 ```
 
 GitHub Actions separately runs the official Harbor `nop` and `oracle` agents in containers, checks their raw verifier outcomes, and archives the evidence. These are **qualification controls, not model performance or cost measurements**. Read the experimental protocol before interpreting any output.
+
+## Publish the static website
+
+The source for the product site is in [`docs/`](docs/), with an automatic [GitHub Pages deployment workflow](.github/workflows/pages.yml). Initial site creation needs one owner-admin change under **Settings → Pages → Build and deployment → Source: GitHub Actions**. Until activated and successfully deployed, links to `docs/*.html` refer to source files rather than a verified live site.

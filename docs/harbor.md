@@ -58,3 +58,21 @@ The importer refuses absent or invalid cost data. An exception or missing verifi
 - It does not cryptographically verify that a verifier binary was invoked, or that an agent was isolated from test answers.
 - A multistep Harbor result is supported for cost accumulation only where each step includes complete `cost_usd` data; the terminal trial's verifier result is used for pass/fail.
 - Full task-panel equality and replication counts are enforced by the downstream analyzer. A manifest mismatch terminates the import.
+
+## Inspect a job without preparing a manifest
+
+The read-only inspector accepts a genuine Harbor job directory and shows the
+recorded verdict and provenance for each trial, as well as whether agent cost
+telemetry is available:
+
+```bash
+cost-to-done inspect-harbor control-jobs/controls-oracle
+```
+
+It reports document SHA-256 digests and checks the job's declared trial count
+against the discovered result files. `billing_verified` and
+`verifier_independently_audited` are deliberately `false`. If the model/agent
+reported no cost, the field is `null` and the status is `unavailable`.
+The inspector never calls a provider or executes task code. Inspect only
+trusted local result directories; job artifacts and trajectories can contain
+sensitive information.

@@ -1,6 +1,6 @@
 # First experiment — a genuine execution qualification, not an AI leaderboard
 
-**Status:** Both Harbor controls ran on GitHub Actions on November 20, 2026. The initial workflow detected the actual Harbor 0.26 output-layout change, and its final checker failed; the correction was independently verified against the downloaded raw artifacts. A successful end-to-end workflow rerun is still required before this qualification is marked complete. No paid-model result is available.
+**Status:** Both Docker-backed Harbor controls passed the strict qualification checks on November 20, 2026 in [GitHub Actions run 44725906881](https://github.com/fraware/cost-to-done/actions/runs/44725906881). The pinned task revision earned `reward=0.0` under `nop` and `reward=1.0` under `oracle`; neither trial raised an exception. No paid-model result is available.
 
 ## Purpose
 
@@ -47,6 +47,8 @@ We do **not** claim that GitHub's execution environment or this verifier is a fo
 
 ## Initial observed Harbor evidence
 
-The first Docker-backed run is [GitHub Actions run 44724971452](https://github.com/fraware/cost-to-done/actions/runs/44724971452). Both agent executions completed without a Harbor exception. The actual, independently inspected trial results recorded `reward=0.0` for `nop` and `reward=1.0` for `oracle`, with the same Harbor task checksum `1612eb85736fd1ac9a22f11970cfbe170bfc2d1e0e600ac6b7c98d40cb98aef5`. The workflow's final step failed because our parser assumed an older path layout; the original job and verifier artifacts were retained.
+The first Docker-backed run, [44724971452](https://github.com/fraware/cost-to-done/actions/runs/44724971452), recorded correct no-op/oracle verdicts, though the workflow's final inspection step failed due to an outdated directory-layout assumption. The verified rerun, [44725906881](https://github.com/fraware/cost-to-done/actions/runs/44725906881), passed all steps. Both rerun trials recorded Harbor task checksum `62884685a34a548962fa6771cb25ded8ab2dc5a486163fb72ca337f40748910e`, reflecting the image-digest pin added after the initial run.
 
-[Recorded trial excerpts](../tests/fixtures/) preserve the identifiers, reported trial timestamps, agent identities and reward fields from those genuine executions. Both agents report `cost_usd: null`; they serve exclusively as task controls. This one-task validation supplies no evidence about model quality, cost efficiency, or generalization.
+[Recorded trial excerpts](../tests/fixtures/) now preserve the fields from the successful rerun, including identifiers, timestamps, agent names and rewards. Raw artifact SHA-256 digests were `67c72058a95197a24378be19ca8f1ec42464bd47ec43f189fe9ae877a6afb32f` (`nop`) and `6e854b9b0f687c6600b86ba2eb947da332c6a6ad09ca19b0c33643c26459c86d` (`oracle`). The archived full logs and verifier outputs are available through the run's Actions artifact, subject to GitHub's retention period.
+
+Both controls report `cost_usd: null`; they serve exclusively as task controls. This one-task validation supplies no evidence about model quality, cost efficiency, or generalization.

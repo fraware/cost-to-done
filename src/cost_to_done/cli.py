@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from .core import ReceiptError, analyze, read_trials
-from .harbor import write_harbor_receipts
+from .harbor import inspect_harbor_job, write_harbor_receipts
 from .report import write_report
 
 
@@ -26,8 +26,14 @@ def main(argv: list[str] | None = None) -> int:
     p = subs.add_parser("import-harbor", help="Normalize pinned Harbor trial results (estimates, not invoices)")
     p.add_argument("manifest", type=Path)
     p.add_argument("--output", required=True, type=Path)
+    p = subs.add_parser("inspect-harbor", help="Inspect raw Harbor job outcomes and cost availability")
+    p.add_argument("job", type=Path, help="Harbor job directory containing trial result files")
+    p.add_argument("--reward-key", default="reward", help="named scalar verifier reward")
     args = parser.parse_args(argv)
     try:
+        if args.command == "inspect-harbor":
+            print(json.dumps(inspect_harbor_job(args.job, reward_key=args.reward_key), indent=2))
+            return 0
         if args.command == "import-harbor":
             count = write_harbor_receipts(args.manifest, args.output)
             print(f"Imported {count} trials to {args.output} (rate-card estimates)")

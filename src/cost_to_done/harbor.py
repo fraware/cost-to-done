@@ -7,6 +7,7 @@ manifest; their authenticity is outside this module's trust boundary.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 from datetime import datetime
@@ -95,6 +96,91 @@ def _outcome(raw: dict[str, Any], *, reward_key: str) -> str:
     return "pass" if reward == 1 else "fail"
 
 
+def _trial_files(job_path: Path) -> list[Path]:
+    """Discover trial results in Harbor's current or legacy on-disk layout.
+
+    Avoid the root job-level result.json, which is a *summary* rather than a
+    scored trial; mixed layouts and symlinked paths are not accepted.
+    """
+    modern = sorted(job_path.glob("*/result.json"))
+    legacy = sorted(job_path.glob("trials/*/result.json"))
+    if modern and legacy:
+        raise ReceiptError(f"{job_path}: mixed Harbor trial layouts")
+    files = modern or legacy
+    if not files:
+        raise ReceiptError(f"{job_path}: no completed Harbor trial results")
+    for path in files:
+        if path.is_symlink() or not path.resolve().is_relative_to(job_path):
+            raise ReceiptError(f"{path}: unsafe trial path")
+    return files
+
+
+def inspect_harbor_job(job_dir: Path, *, reward_key: str = "reward") -> dict[str, Any]:
+    """Describe real Harbor trial files without claiming verifier trust or billing.
+
+    The result contains declared agent identity, reported verifier result,
+    agent-reported monetary estimates (if available), and the SHA-256 hash of
+    each on-disk JSON document. It executes no task code or provider calls.
+    """
+    if not reward_key or len(reward_key) > 256:
+        raise ReceiptError("reward_key must be a nonempty string (max 256 chars)")
+    if job_dir.is_symlink():
+        raise ReceiptError("job directory must not be a symlink")
+    root = job_dir.resolve(strict=True)
+    if not root.is_dir():
+        raise ReceiptError("job directory must be a directory")
+    paths = _trial_files(root)
+    rows: list[dict[str, Any]] = []
+    for path in paths:
+        data = path.read_bytes()
+        raw = _object(json.loads(data.decode("utf-8")), "Harbor trial")
+        if raw.get("schema_version", 1) != 1:
+            raise ReceiptError(f"{path}: unsupported Harbor trial schema_version")
+        agent = _object(raw.get("agent_info"), "agent_info")
+        model = agent.get("model_info")
+        if model is not None:
+            model = _object(model, "model_info")
+        contexts = (
+            [raw["agent_result"]] if raw.get("agent_result") is not None else
+            [step.get("agent_result") for step in raw.get("step_results") or []]
+        )
+        has_cost = bool(contexts) and all(
+            isinstance(context, dict) and context.get("cost_usd") is not None
+            for context in contexts
+        )
+        cost = str(_agent_cost(raw)) if has_cost else None
+        rows.append({
+            "id": _text(raw.get("id"), "trial id"),
+            "task": _text(raw.get("task_name"), "task_name"),
+            "task_checksum": _text(raw.get("task_checksum"), "task_checksum"),
+            "agent": _text(agent.get("name"), "agent.name"),
+            "agent_version": _text(agent.get("version"), "agent.version"),
+            "model": model.get("name") if model is not None else None,
+            "provider": model.get("provider") if model is not None else None,
+            "outcome": _outcome(raw, reward_key=reward_key),
+            "elapsed_seconds": _elapsed(raw),
+            "agent_reported_cost_usd": cost,
+            "cost_status": "agent_reported_estimate" if cost is not None else "unavailable",
+            "raw_result_sha256": hashlib.sha256(data).hexdigest(),
+        })
+    summary = root / "result.json"
+    expected_trials: int | None = None
+    if summary.is_file() and not summary.is_symlink():
+        obj = _object(json.loads(summary.read_text(encoding="utf-8")), "Harbor job summary")
+        count = obj.get("n_total_trials")
+        if type(count) is int and count >= 0:
+            expected_trials = count
+    return {
+        "job": root.name,
+        "observed_trials": len(rows),
+        "expected_trials": expected_trials,
+        "complete": expected_trials == len(rows) if expected_trials is not None else None,
+        "billing_verified": False,
+        "verifier_independently_audited": False,
+        "trials": rows,
+    }
+
+
 def import_harbor(manifest_file: Path) -> list[dict[str, Any]]:
     """Normalize locally stored Harbor trial results under explicit pinning.
 
@@ -130,16 +216,7 @@ def import_harbor(manifest_file: Path) -> list[dict[str, Any]]:
         if job.get("retry_policy") != "independent-trials":
             raise ReceiptError("retry_policy must be independent-trials")
         digest = _text(job.get("harness_digest"), "harness_digest")
-        # Harbor 0.26 stores each trial directly below the job directory;
-        # older releases placed trials under a 'trials/' intermediary.
-        # Never count the job-level result.json as an individual trial.
-        modern = sorted(job_path.glob("*/result.json"))
-        legacy = sorted(job_path.glob("trials/*/result.json"))
-        if modern and legacy:
-            raise ReceiptError(f"{relative}: mixed Harbor trial layouts")
-        trial_files = modern or legacy
-        if not trial_files:
-            raise ReceiptError(f"no completed Harbor trials in {relative}")
+        trial_files = _trial_files(job_path)
         expected = job.get("expected_tasks")
         if expected is not None:
             if (not isinstance(expected, list) or not expected
@@ -150,8 +227,6 @@ def import_harbor(manifest_file: Path) -> list[dict[str, Any]]:
                 raise ReceiptError(f"incomplete job {relative}: {len(trial_files)} results for {len(expected)} expected tasks")
         seen_tasks: set[str] = set()
         for path in trial_files:
-            if path.is_symlink() or not path.resolve().is_relative_to(job_path):
-                raise ReceiptError(f"unsafe trial path: {path}")
             raw = _object(json.loads(path.read_text(encoding="utf-8")), "Harbor result")
             if raw.get("schema_version", 1) != 1:
                 raise ReceiptError(f"{path}: unsupported Harbor trial schema_version")
