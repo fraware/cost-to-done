@@ -11,8 +11,8 @@ jobs:
       matrix:
         python-version: ['3.11', '3.12', '3.13']
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install -e .
@@ -21,3 +21,9 @@ jobs:
           python examples/generate_synthetic.py
           cost-to-done validate examples/synthetic-trials.jsonl > /dev/null
           cost-to-done report examples/synthetic-trials.jsonl --output report.html --title Synthetic --demo
+
+      - name: Confirm model-run preflight never needs credentials
+        run: >-
+          cost-to-done run-harbor --task tasks/allocation-repair
+          --model openai/dry-run-placeholder --jobs-dir runs
+          --max-turns 5

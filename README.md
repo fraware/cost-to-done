@@ -4,7 +4,7 @@
 
 > The cheapest AI model might be the most expensive way to finish your work.
 
-[Explore the static experience](docs/index.html) · [Sample evidence report](docs/report.html) · [Interactive cost calculator](docs/calculator.html) · [Methodology](docs/methodology.md) · [Vision](docs/vision.md)
+[Explore the static experience](docs/index.html) · [Sample evidence report](docs/report.html) · [Interactive cost calculator](docs/calculator.html) · [Methodology](docs/methodology.md) · [Model smoke test](docs/model-smoke.md) · [Vision](docs/vision.md)
 
 Token prices describe a unit of inference. Developers purchase **completed work**. A model that generates cheap tokens while wasting attempts, hallucinating fixes, or failing tests can incur more expense per successful task than a higher-priced model.
 
@@ -58,7 +58,6 @@ Valid receipts alone **do not** authenticate a verifier execution or establish t
 Harbor provides sandboxed agent execution and structured per-trial results. Cost to Done reads those existing outputs rather than reproducing Harbor's agent loop. Import is guarded by a manifest with pinned task checksums, verifier digests, agent identity, and harness identity.
 
 ```bash
-cost-to-done inspect-harbor path/to/harbor-job
 cost-to-done import-harbor path/to/manifest.json --output harbor-trials.jsonl
 cost-to-done validate harbor-trials.jsonl
 cost-to-done report harbor-trials.jsonl --output harbor-report.html
@@ -128,6 +127,17 @@ This is early-stage infrastructure with an intentionally demanding evidence stan
 
 **License** · MIT.
 
+
+## Run the first model-backed smoke test (opt-in)
+
+The new `run-harbor` command provides a no-spend execution plan and a one-trial Harbor/Pi launch with archived local evidence:
+
+```bash
+cost-to-done run-harbor --model openai/YOUR_MODEL_ID
+```
+
+This command defaults to **dry-run**; it does not contact an inference provider. For a real trial, supply `--execute --acknowledge-no-dollar-cap`, a dedicated provider API key, Harbor 0.26.0, Docker, and an externally enforced provider spending quota. It limits the trial count, agent turns, and local elapsed time, **not dollars**. A paid-model integration test has not yet been completed. See [Model smoke-test procedure](docs/model-smoke.md) for exact commands, security assumptions, and evidence limitations.
+
 ## First real execution qualification
 
 The first software-repair task and its no-op/reference controls are now in [`tasks/allocation-repair/`](tasks/allocation-repair/) and [`docs/first-experiment.md`](docs/first-experiment.md). Reproduce the local qualification without keys or Docker:
@@ -137,7 +147,3 @@ python scripts/qualify_task.py tasks/allocation-repair
 ```
 
 GitHub Actions separately runs the official Harbor `nop` and `oracle` agents in containers, checks their raw verifier outcomes, and archives the evidence. These are **qualification controls, not model performance or cost measurements**. Read the experimental protocol before interpreting any output.
-
-## Publish the static website
-
-The source for the product site is in [`docs/`](docs/), with an automatic [GitHub Pages deployment workflow](.github/workflows/pages.yml). Initial site creation needs one owner-admin change under **Settings → Pages → Build and deployment → Source: GitHub Actions**. Until activated and successfully deployed, links to `docs/*.html` refer to source files rather than a verified live site.
