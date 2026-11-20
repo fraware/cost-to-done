@@ -4,7 +4,8 @@ on:
   push:
     paths:
       - '.github/workflows/harbor-pi-mock.yml'
-      - 'tests/harbor/**'
+      - 'tests/harbor/compose.yaml'
+      - 'tests/harbor/Dockerfile.mock-pi'
       - 'tests/network/mock_provider.py'
       - 'tests/network/mock_gateway.py'
       - 'tests/harbor/Dockerfile.mock-pi'

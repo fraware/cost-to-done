@@ -24,10 +24,8 @@ The test fails if either agent establishes a TCP connection to the provider's DN
 
 The Linux Docker bridge restriction is an infrastructural property of this particular Compose test. It does not establish isolation on different container runtimes, host network modes, custom task Compose overrides, privileged containers, attached Docker sockets, Kubernetes, or environments with altered firewall routing. Docker image tags in this smoke test are not digest-pinned. The test itself cannot establish absence of kernel/runtime vulnerabilities.
 
-## Remaining Harbor prerequisites
+## Harbor mock integration status
 
-Harbor's Pi agent supports `--base-url`, `--api-key-name`, `--api-format openai-chat-completions`, and a custom `model_api=openai-completions` option. Connecting it to a gateway needs a **Harbor-controlled agent network without direct provider egress**, a gateway address reachable within that network, and a proven request-format match.
+The earlier Docker-only tests have been complemented by [a distinct isolated Harbor/Pi CI fixture](harbor-isolated.md). In this fixture the actual Harbor `main` task container is on an internal Docker network and uses a separate gateway connected to a fake provider network. Its runtime probes check gateway reachability and unsuccessful direct connections by provider DNS, provider raw IPv4, and public IPv4. The completed Pi transcript, task verifier outcome, mock-provider call count, and gateway ledger are audited together.
 
-The current gateway is non-streaming and runs on host loopback in the product CLI. Pi's streaming request behavior has not yet been demonstrated compatible with that gateway. Connecting the agent to a non-loopback gateway without independently validating its network isolation would create an unsafe bypass path. No route through this test is labeled an enforced monetary cap, since price-token envelopes are estimates and final provider charges need independent reconciliation.
-
-The next acceptance test must execute Pi *through Harbor* and verify the full Harbor network policy, multi-turn tool execution, and verifier evidence together, with a mock upstream first. Paid-model execution follows only once that end-to-end path is established and separately authorized.
+These observations establish the tested configuration's behavior. They do **not** constitute a general Harbor security proof, a provider-side billing guarantee, or evidence about arbitrary task Compose overrides. Production-key isolation, external billing reconciliation, and a real-model task remain outstanding.

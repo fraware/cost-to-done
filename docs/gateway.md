@@ -51,7 +51,7 @@ The resulting ledger's amounts are **estimated expenditures**, not independently
 
 ## Scope of the security claim
 
-The gateway's request admission path and failure accounting have deterministic mock tests. **A separate mock-only Docker Compose topology has an isolation test; Harbor agent isolation has not been established.** A container able to contact the provider directly or read the provider key defeats the gateway. The agent must run with restricted egress, and the gateway must be reachable over an authenticated channel using a short-lived credential. Binding this initial version to loopback protects against casual network exposure, yet also means it is **not currently connected to the Harbor agent container**. This limitation is deliberate until container routing and process/container isolation are tested.
+The gateway's request admission path and failure accounting have deterministic mock tests. **A separate isolated Harbor mock fixture now tests gateway-only access from its actual task container; see [Harbor isolation](harbor-isolated.md).** A container able to contact the provider directly or read the provider key defeats the gateway. The agent must run with restricted egress, and the gateway must be reachable over an authenticated channel using a short-lived credential. The product's standalone gateway CLI still binds to loopback; the CI mock gateway listens on a container network interface with fictional credentials. That experimental topology does not authorize exposing the production gateway or running arbitrary Harbor task Compose overrides.
 
 The gateway buffers both non-streaming responses and the *entire* SSE stream before forwarding. It does not support incremental live relaying, separate API endpoints, adaptive provider routing, or billed invoice reconciliation. Client-visible timeouts do not prove provider cancellation. HTTP failures consume reservations pending external confirmation. A response with usage beyond its authorized envelope is treated as uncertain, not as a safely free request.
 
@@ -60,8 +60,8 @@ The gateway buffers both non-streaming responses and the *entire* SSE stream bef
 ## Acceptance gates for Issue #5
 
 1. Local forward-path mock tests, authentication, duplicate request protection, admission rejection, concurrency and uncertainty retention. **Implemented and tested locally.**
-2. Mock-only Docker Compose topology with direct-bypass probes. **Integration test implemented; review its CI result and limitations in [network-isolation.md](network-isolation.md). Harbor isolation remains outstanding.**
-3. Pinned Pi mock-only HTTP compatibility test and stream accounting. **Docker network isolation and mock-backed Harbor Pi orchestration have passed CI independently. Full Harbor agent-to-provider egress containment, multi-turn tool execution, and real-provider invoice reconciliation remain outstanding.**
+2. Mock-only Docker Compose topology with direct-bypass probes. **Integration test implemented; review its CI result and limitations in [network-isolation.md](network-isolation.md). An isolated Harbor mock fixture has passed CI for its explicitly configured Docker networks.**
+3. Pinned Pi mock-only HTTP compatibility test and stream accounting. **Docker network isolation and mock-backed Harbor Pi orchestration have passed CI independently. Isolation beyond the tested Docker configuration, multi-turn tool execution, and real-provider invoice reconciliation remain outstanding.**
 4. Provider usage compared with published dated rates, tool fees and eventual billing records. **Outstanding.**
 5. Public release of audited trial evidence with independent verification and no secret exposure. **Outstanding.**
 

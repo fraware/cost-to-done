@@ -4,7 +4,7 @@
 
 > The cheapest AI model might be the most expensive way to finish your work.
 
-[Explore the static experience](docs/index.html) · [Sample evidence report](docs/report.html) · [Interactive cost calculator](docs/calculator.html) · [Methodology](docs/methodology.md) · [Model smoke test](docs/model-smoke.md) · [Harbor mock integration](docs/harbor-mock.md) · [Vision](docs/vision.md)
+[Explore the static experience](docs/index.html) · [Sample evidence report](docs/report.html) · [Interactive cost calculator](docs/calculator.html) · [Methodology](docs/methodology.md) · [Model smoke test](docs/model-smoke.md) · [Harbor mock integration](docs/harbor-mock.md) · [Isolated Harbor test](docs/harbor-isolated.md) · [Vision](docs/vision.md)
 
 Token prices describe a unit of inference. Developers purchase **completed work**. A model that generates cheap tokens while wasting attempts, hallucinating fixes, or failing tests can incur more expense per successful task than a higher-priced model.
 
@@ -20,11 +20,12 @@ Token prices describe a unit of inference. Developers purchase **completed work*
 | Cost calculator | **Working** | Interactive hypothetical scenario analysis, separate from measured performance |
 | Harbor receipt importer | **Experimental** | Converts pinned Harbor trial result files into local, **agent-reported price estimates**; refuses missing cost and mismatched identities |
 | Mock-backed coding-agent execution | **CI verified** | Harbor 0.26.0 executes Pi 0.85.1 through a metered mock gateway and a task verifier; paid-model execution is still outstanding |
+| Mock Harbor agent network isolation | **CI verified for one topology** | The actual Harbor task reaches the gateway while direct provider DNS, provider IP, and public IP probes fail; not a production security guarantee |
 | Public model leaderboard | **Not yet published** | Awaiting controlled runs and independently checked verification/provenance |
 
 **There are no real-model benchmark results in this repository yet.** The example report uses generated synthetic data from fictional configurations. It cannot support claims about the performance or cost of actual providers.
 
-**Reproducible integration evidence:** [Harbor Pi mock integration](docs/harbor-mock.md) executes one actual Pi coding-agent process under Harbor against a fake inference provider. GitHub Actions independently checks the Pi transcript, the failed task-verifier verdict, one forwarded request, and a settled **fictional** $0.0036 ledger charge. It uses no paid API credentials.
+**Reproducible integration evidence:** [Harbor Pi mock integration](docs/harbor-mock.md) executes a pinned Pi client against a fake inference provider. The separate [isolated Harbor integration](docs/harbor-isolated.md) verifies the same mocked metering and task outcome in a two-network Docker topology, with runtime direct-provider bypass probes inside Harbor's `main` container. [GitHub Actions run 44802089155](https://github.com/fraware/cost-to-done/actions/runs/44802089155) passed. The recorded $0.0036 is **fictional**, and no paid provider was contacted.
 
 ## Quick start
 
