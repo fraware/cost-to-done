@@ -9,6 +9,9 @@ on:
       - 'tests/network/mock_provider.py'
       - 'src/cost_to_done/gateway.py'
       - 'src/cost_to_done/ledger.py'
+      - 'src/cost_to_done/evidence.py'
+      - 'src/cost_to_done/cli.py'
+      - 'tests/fixtures/mock-price-schedule.json'
       - 'scripts/check_harbor_isolated.py'
   workflow_dispatch:
 
@@ -66,6 +69,26 @@ jobs:
           python scripts/check_harbor_isolated.py \
             harbor-pi-isolated-jobs/harbor-pi-isolated \
             --evidence "$CTD_EVIDENCE_DIR"
+      - name: Export one canonical mock-only trial receipt and audited provenance
+        run: |
+          HARBOR_JOB="harbor-pi-isolated-jobs/harbor-pi-isolated"
+          CHECKSUM="$(cost-to-done inspect-harbor "$HARBOR_JOB" | python -c 'import json,sys; print(json.load(sys.stdin)["trials"][0]["task_checksum"])')"
+          HARNESS_DIGEST="$(sha256sum tests/harbor/compose-isolated.yaml | cut -d ' ' -f 1)"
+          RECEIPT="mock-receipt-${{ matrix.scenario }}.jsonl"
+          cost-to-done reconcile-harbor \
+            --job "$HARBOR_JOB" \
+            --ledger "$CTD_EVIDENCE_DIR/mock-ledger.sqlite3" \
+            --task "$RUNNER_TEMP/isolated-task" \
+            --verifier "$RUNNER_TEMP/isolated-task/tests/test_state.py" \
+            --price-schedule tests/fixtures/mock-price-schedule.json \
+            --model openai/test-model-1 --agent pi \
+            --configuration-id "pi-0.85.1-${{ matrix.scenario }}" \
+            --harness-digest "$HARNESS_DIGEST" \
+            --harbor-task-checksum "$CHECKSUM" \
+            --output "$RECEIPT"
+          cost-to-done validate "$RECEIPT" > /dev/null
+          python -c 'import json,sys; meta=json.load(open(sys.argv[1])); assert meta["billing_verified"] is False; assert meta["gateway_request_count"] == int(sys.argv[2])' \
+            "$RECEIPT.evidence.json" "${{ matrix.scenario == 'scripted-repair' && '2' || '1' }}"
       - name: Archive mock-only task and network evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -74,5 +97,7 @@ jobs:
           path: |
             harbor-pi-isolated-jobs/
             ${{ github.workspace }}/ctd-harbor-isolation-evidence/
+            mock-receipt-*.jsonl
+            mock-receipt-*.jsonl.evidence.json
           if-no-files-found: warn
           retention-days: 14
