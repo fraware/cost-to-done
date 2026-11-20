@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 25
     env:
       CTD_REPO_ROOT: ${{ github.workspace }}
-      CTD_EVIDENCE_DIR: ${{ github.workspace }}/.ctd-harbor-isolation-evidence
+      CTD_EVIDENCE_DIR: ${{ github.workspace }}/ctd-harbor-isolation-evidence
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -57,6 +57,7 @@ jobs:
       - name: Collect and inspect network-verifier accounting evidence
         run: |
           sudo chown -R "$(id -u):$(id -g)" "$CTD_EVIDENCE_DIR"
+          find "$CTD_EVIDENCE_DIR" -maxdepth 1 -type f -printf '%f\n'
           python scripts/check_harbor_isolated.py \
             harbor-pi-isolated-jobs/harbor-pi-isolated \
             --evidence "$CTD_EVIDENCE_DIR"
