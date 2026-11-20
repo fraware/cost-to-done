@@ -7,6 +7,7 @@ on:
       - 'tests/harbor/**'
       - 'tests/network/mock_provider.py'
       - 'tests/network/mock_gateway.py'
+      - 'tests/harbor/Dockerfile.mock-pi'
       - 'scripts/check_harbor_mock.py'
   workflow_dispatch:
 
@@ -31,14 +32,20 @@ jobs:
           python -m pip install -e .
           harbor --version
           docker version
+      - name: Build mock-only task with Pi preinstalled outside the restricted runtime
+        run: |
+          mkdir -p "$RUNNER_TEMP/mock-task"
+          cp -a tasks/allocation-repair/. "$RUNNER_TEMP/mock-task/"
+          cp tests/harbor/Dockerfile.mock-pi "$RUNNER_TEMP/mock-task/environment/Dockerfile"
       - name: Execute one real Pi-in-Harbor attempt with fake provider only
         run: |
-          harbor run --path tasks/allocation-repair \
+          harbor run --path "$RUNNER_TEMP/mock-task" \
             --agent pi --model openai/test-model-1 \
             --base-url http://127.0.0.1:8866/v1 \
             --api-key-name CTD_MOCK_GATEWAY_TOKEN \
             --api-format openai_chat_completions \
             --ak version=0.85.1 \
+            --ak skip_install=true \
             --ak model_api=openai-completions \
             --ak max_turns=1 \
             --agent-env CTD_MOCK_GATEWAY_TOKEN=test-gateway-session-token-00001 \
