@@ -25,23 +25,38 @@ class Handler(BaseHTTPRequestHandler):
             if not 0 < length < 256_000:
                 raise ValueError('invalid length')
             body = json.loads(self.rfile.read(length))
-            if body.get('model') != 'test-model-1' or body.get('stream', False):
-                raise ValueError('unexpected request')
+            if body.get('model') != 'test-model-1':
+                raise ValueError('unexpected model')
         except (ValueError, TypeError, KeyError, json.JSONDecodeError):
             self.send_error(400)
             return
 
         with COUNT_PATH.open('a', encoding='utf-8') as record:
             record.write('forwarded\n')
-        response = json.dumps({
-            'id': 'mock-completion-1', 'object': 'chat.completion',
-            'model': 'test-model-1',
-            'choices': [{'index': 0, 'finish_reason': 'stop',
-                         'message': {'role': 'assistant', 'content': 'Mock repair plan'}}],
-            'usage': {'prompt_tokens': 100, 'completion_tokens': 40, 'total_tokens': 140},
-        }).encode('utf-8')
+        if body.get('stream', False):
+            def frame(value: dict) -> bytes:
+                return b'data: ' + json.dumps(value).encode('utf-8') + b'\n\n'
+            def choice(delta: dict, finish: str | None = None) -> dict:
+                return {'id': 'mock-completion-1', 'object': 'chat.completion.chunk',
+                        'created': 0, 'model': 'test-model-1',
+                        'choices': [{'index': 0, 'delta': delta, 'finish_reason': finish}]}
+            final = {'id': 'mock-completion-1', 'object': 'chat.completion.chunk',
+                     'created': 0, 'model': 'test-model-1', 'choices': [],
+                     'usage': {'prompt_tokens': 100, 'completion_tokens': 40, 'total_tokens': 140}}
+            response = (frame(choice({'role': 'assistant'})) + frame(choice({'content': 'OK'})) +
+                        frame(choice({}, 'stop')) + frame(final) + b'data: [DONE]\n\n')
+            mime = 'text/event-stream'
+        else:
+            response = json.dumps({
+                'id': 'mock-completion-1', 'object': 'chat.completion',
+                'model': 'test-model-1',
+                'choices': [{'index': 0, 'finish_reason': 'stop',
+                             'message': {'role': 'assistant', 'content': 'Mock repair plan'}}],
+                'usage': {'prompt_tokens': 100, 'completion_tokens': 40, 'total_tokens': 140},
+            }).encode('utf-8')
+            mime = 'application/json'
         self.send_response(200)
-        self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Type', mime)
         self.send_header('Content-Length', str(len(response)))
         self.end_headers()
         self.wfile.write(response)

@@ -54,6 +54,51 @@ services:
       gateway:
         condition: service_healthy
 
+
+  # A separate gateway budget avoids changing the strict simulated-agent
+  # over-budget test. Both gateways use the same fictional mock provider.
+  pi_gateway:
+    image: python:3.12-slim-bookworm
+    command: ["python", "-u", "/fixture/mock_gateway.py"]
+    volumes:
+      - ../../src:/fixture/src:ro
+      - ./mock_gateway.py:/fixture/mock_gateway.py:ro
+    working_dir: /fixture
+    environment:
+      PYTHONPATH: /fixture/src
+      CTD_PI_MODE: '1'
+    networks: [agent_net, provider_net]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    depends_on:
+      provider:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8866), timeout=1).close()"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  pi_agent:
+    build:
+      context: ../..
+      dockerfile: tests/network/Dockerfile.pi
+    command: ["node", "/fixture/pi_agent.mjs"]
+    volumes:
+      - ./pi_agent.mjs:/fixture/pi_agent.mjs:ro
+    environment:
+      PROVIDER_IP: ${PROVIDER_IP:-unset}
+    networks: [agent_net]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    depends_on:
+      pi_gateway:
+        condition: service_healthy
+
 networks:
   agent_net:
     internal: true

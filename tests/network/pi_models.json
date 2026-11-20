@@ -1,0 +1,10 @@
+{
+  "providers": {
+    "mock-gateway": {
+      "baseUrl": "http://pi_gateway:8866/v1",
+      "apiKey": "test-gateway-session-token-00001",
+      "api": "openai-completions",
+      "models": [{"id": "test-model-1", "contextWindow": 8192, "maxTokens": 256}]
+    }
+  }
+}
