@@ -1,0 +1,70 @@
+# Mock-only Harbor execution. The main task is on a Docker-internal network,
+# the provider is on a distinct network, and only the gateway bridges both.
+# Explicit network settings are necessary: Harbor otherwise joins services
+# to the same egress-control sidecar network namespace.
+services:
+  main:
+    networks: [ctd_agent_net]
+    # The bypass probe is executed in the *actual* Harbor task container,
+    # before the pinned Pi client starts. A failure exits the main service.
+    command: ["sh", "-c", "python /fixture/probe_egress.py && exec sleep infinity"]
+    depends_on:
+      ctd_mock_gateway:
+        condition: service_healthy
+    volumes:
+      - ${CTD_REPO_ROOT:?set-CTD_REPO_ROOT}/tests/harbor/probe_egress.py:/fixture/probe_egress.py:ro
+      - ${CTD_EVIDENCE_DIR:?set-CTD_EVIDENCE_DIR}:/evidence
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+
+  ctd_mock_provider:
+    image: python:3.12-slim-bookworm
+    command: ["python", "-u", "/fixture/isolated_provider.py"]
+    networks: [ctd_provider_net]
+    environment:
+      CTD_PROVIDER_IP_PATH: /evidence/provider-ip.txt
+      CTD_PROVIDER_LOG_PATH: /evidence/provider-calls.txt
+    volumes:
+      - ${CTD_REPO_ROOT:?set-CTD_REPO_ROOT}/tests/network/mock_provider.py:/fixture/mock_provider.py:ro
+      - ${CTD_REPO_ROOT:?set-CTD_REPO_ROOT}/tests/harbor/isolated_provider.py:/fixture/isolated_provider.py:ro
+      - ${CTD_EVIDENCE_DIR:?set-CTD_EVIDENCE_DIR}:/evidence
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8770), timeout=1).close()"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  ctd_mock_gateway:
+    image: python:3.12-slim-bookworm
+    command: ["python", "-u", "/fixture/mock_gateway.py"]
+    networks: [ctd_agent_net, ctd_provider_net]
+    environment:
+      PYTHONPATH: /fixture/src
+      CTD_PI_MODE: "1"
+      CTD_MOCK_UPSTREAM_HOST: ctd_mock_provider
+      CTD_MOCK_LEDGER_PATH: /evidence/mock-ledger.sqlite3
+    volumes:
+      - ${CTD_REPO_ROOT:?set-CTD_REPO_ROOT}/src:/fixture/src:ro
+      - ${CTD_REPO_ROOT:?set-CTD_REPO_ROOT}/tests/network/mock_gateway.py:/fixture/mock_gateway.py:ro
+      - ${CTD_EVIDENCE_DIR:?set-CTD_EVIDENCE_DIR}:/evidence
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    depends_on:
+      ctd_mock_provider:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8866), timeout=1).close()"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+networks:
+  ctd_agent_net:
+    internal: true
+  ctd_provider_net: {}

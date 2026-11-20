@@ -1,0 +1,72 @@
+name: Harbor Pi isolated mock evaluation
+
+on:
+  push:
+    paths:
+      - '.github/workflows/harbor-pi-isolated.yml'
+      - 'tests/harbor/**'
+      - 'tests/network/mock_gateway.py'
+      - 'tests/network/mock_provider.py'
+      - 'src/cost_to_done/gateway.py'
+      - 'src/cost_to_done/ledger.py'
+      - 'scripts/check_harbor_isolated.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-harbor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CTD_REPO_ROOT: ${{ github.workspace }}
+      CTD_EVIDENCE_DIR: ${{ github.workspace }}/.ctd-harbor-isolation-evidence
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned evaluation runner
+        run: |
+          python -m pip install 'harbor==0.26.0'
+          python -m pip install -e .
+          harbor --version
+          docker version
+      - name: Prepare separate task copy with preinstalled Pi
+        run: |
+          mkdir -p "$RUNNER_TEMP/isolated-task" "$CTD_EVIDENCE_DIR"
+          chmod 0777 "$CTD_EVIDENCE_DIR"
+          cp -a tasks/allocation-repair/. "$RUNNER_TEMP/isolated-task/"
+          cp tests/harbor/Dockerfile.mock-pi "$RUNNER_TEMP/isolated-task/environment/Dockerfile"
+      - name: Execute a real Pi client in the Harbor internal-only agent network
+        env:
+          CTD_MOCK_GATEWAY_TOKEN: test-gateway-session-token-00001
+        run: |
+          harbor run --path "$RUNNER_TEMP/isolated-task" \
+            --agent pi --model openai/test-model-1 \
+            --base-url http://ctd_mock_gateway:8866/v1 \
+            --api-key-name CTD_MOCK_GATEWAY_TOKEN \
+            --api-format openai_chat_completions \
+            --ak version=0.85.1 --ak skip_install=true \
+            --ak model_api=openai-completions --ak max_turns=1 \
+            --agent-env CTD_MOCK_GATEWAY_TOKEN=test-gateway-session-token-00001 \
+            --extra-docker-compose tests/harbor/compose-isolated.yaml \
+            --job-name harbor-pi-isolated --jobs-dir harbor-pi-isolated-jobs \
+            --n-concurrent 1 --n-attempts 1
+      - name: Collect and inspect network-verifier accounting evidence
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" "$CTD_EVIDENCE_DIR"
+          python scripts/check_harbor_isolated.py \
+            harbor-pi-isolated-jobs/harbor-pi-isolated \
+            --evidence "$CTD_EVIDENCE_DIR"
+      - name: Archive mock-only task and network evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: harbor-isolated-mock-${{ github.run_id }}
+          path: |
+            harbor-pi-isolated-jobs/
+            ${{ github.workspace }}/.ctd-harbor-isolation-evidence/
+          if-no-files-found: warn
+          retention-days: 14
