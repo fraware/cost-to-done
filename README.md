@@ -18,6 +18,7 @@ Token prices describe a unit of inference. Developers purchase **completed work*
 | Cost-per-completion analysis | **Working** | Includes failed attempts, blocks invalid comparisons, and computes task-cluster bootstrap intervals where supported |
 | Local HTML reports | **Working** | Generates standalone, offline evidence summaries without trackers or remote scripts |
 | Cost calculator | **Working** | Interactive hypothetical scenario analysis, separate from measured performance |
+| Transactional budget reservation ledger | **Experimental, not yet a provider gateway** | Exact-dollar reservation and uncertain-charge accounting; provider egress and billing enforcement outstanding |
 | Harbor receipt importer | **Experimental** | Converts pinned Harbor trial result files into local, **agent-reported price estimates**; refuses missing cost and mismatched identities |
 | Single-trial Harbor/Pi model launcher | **Experimental, not yet live-tested with credentials** | Opt-in executable runner, pinned agent, strict identity checks, local evidence and explicit cost-limit warnings |
 | Public model leaderboard | **Not yet published** | Awaiting controlled runs and independently checked verification/provenance |
@@ -127,6 +128,10 @@ This is early-stage infrastructure with an intentionally demanding evidence stan
 
 **License** · MIT.
 
+
+## Financial controls: precise accounting before a provider gateway
+
+The experimental [durable budget ledger](docs/budget-ledger.md) serializes monetary authorizations, retains reserved funds for unconfirmed requests, and flags actual charges exceeding their authorization. It is tested under concurrent request admission and persistent storage. **It does not yet intercept inference requests or enforce provider billing.** A credential-isolating gateway with independent metering is the next requirement; see [Issue #5](https://github.com/fraware/cost-to-done/issues/5).
 
 ## Run the first model-backed smoke test (opt-in)
 
