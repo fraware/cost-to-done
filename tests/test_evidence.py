@@ -38,12 +38,12 @@ class EvidenceTests(unittest.TestCase):
             job=self.root / "job", ledger=self.ledger_path, task=task,
             verifier=task / "tests" / "test_state.py", price_schedule=rates,
             configuration_id="pi+mock", agent="pi", model="openai/test-model-1",
-            harness_digest="c" * 64, harbor_task_checksum="b" * 40,
+            harness_digest="c" * 64, harbor_task_checksum="b" * 64,
         )
         self.fake_job = {
             "complete": True, "observed_trials": 1,
             "trials": [{
-                "id": "trial-1", "task": "allocation-repair", "task_checksum": "b" * 40,
+                "id": "trial-1", "task": "allocation-repair", "task_checksum": "b" * 64,
                 "agent": "pi", "model": "test-model-1", "provider": "openai",
                 "outcome": "pass", "elapsed_seconds": 23.5,
                 "raw_result_sha256": "a" * 64,
@@ -77,7 +77,7 @@ class EvidenceTests(unittest.TestCase):
 
     def test_rejects_mismatched_model_and_task_checksum(self):
         for field, value in (("provider", "anthropic"), ("model", "unknown"),
-                             ("task_checksum", "d" * 40), ("agent", "other")):
+                             ("task_checksum", "d" * 64), ("agent", "other")):
             original = self.fake_job["trials"][0][field]
             self.fake_job["trials"][0][field] = value
             try:
