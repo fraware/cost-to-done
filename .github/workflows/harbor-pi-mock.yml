@@ -40,7 +40,6 @@ jobs:
             --ak version=0.85.1 \
             --ak model_api=openai-completions \
             --ak max_turns=1 \
-            --ak max_output_tokens=256 \
             --agent-env CTD_MOCK_GATEWAY_TOKEN=test-gateway-session-token-00001 \
             --allow-agent-host 127.0.0.1 \
             --allow-environment-host raw.githubusercontent.com \
