@@ -4,57 +4,58 @@
 
 > The cheapest AI model might be the most expensive way to finish your work.
 
-[Website prototype](docs/index.html) · [Sample report](docs/report.html) · [Cost calculator](docs/calculator.html) · [Methodology](docs/methodology.md) · [Long-term vision](docs/vision.md)
+[Explore the static experience](docs/index.html) · [Sample evidence report](docs/report.html) · [Interactive cost calculator](docs/calculator.html) · [Methodology](docs/methodology.md) · [Vision](docs/vision.md)
 
-AI model pricing describes what inference costs. Developers care what **finished work** costs. An inexpensive model that spends multiple attempts failing tests, retransmitting context, or calling tools can cost more per accepted task than an expensive model that finishes the work.
+Token prices describe a unit of inference. Developers purchase **completed work**. A model that generates cheap tokens while wasting attempts, hallucinating fixes, or failing tests can incur more expense per successful task than a higher-priced model.
 
-**Cost to Done aims to become the open standard for measuring the real economics of completed AI work.** The eventual product is one command to evaluate competing model and agent configurations on **your own repository, your own tasks, your own verification criteria, and your own budget**, backed by inspectable evidence. Repository repair is the first workload, not the limit of the vision.
+**Cost to Done** is an open-source project to make the *cost of verified AI work* measurable, inspectable, and comparable. The long-term product is a one-command way to benchmark competing agent configurations on **your own work**, backed by a public standard for trial receipts, executable verification, and cost accounting. Our starting point is repository-level engineering tasks. The same evidence contract can eventually support research, data, and operational agents.
 
-## Current status
+## What exists today
 
-| Component | Status |
-| --- | --- |
-| Trial receipt validation and complete retry accounting | Working |
-| Cost per verified completion, strict comparable-task checks | Working |
-| Task-cluster bootstrap uncertainty intervals | Working, exploratory |
-| Offline HTML evidence report and standalone calculator | Working |
-| Harbor trial receipt importer | Experimental, tested on offline Harbor-shaped fixtures |
-| Real coding-agent execution from this CLI | **Not integrated** |
-| Audited public model results | **Not yet available** |
+| Component | Status | What it does |
+| --- | --- | --- |
+| Receipt validator | **Working** | Validates per-trial attempts, artifact digests, cost sources, retry accounting, and success termination |
+| Cost-per-completion analysis | **Working** | Includes failed attempts, blocks invalid comparisons, and computes task-cluster bootstrap intervals where supported |
+| Local HTML reports | **Working** | Generates standalone, offline evidence summaries without trackers or remote scripts |
+| Cost calculator | **Working** | Interactive hypothetical scenario analysis, separate from measured performance |
+| Harbor receipt importer | **Experimental** | Converts pinned Harbor trial result files into local, **agent-reported price estimates**; refuses missing cost and mismatched identities |
+| Execution of actual coding agents | **Not yet integrated** | The next engineering milestone; Harbor is the planned execution backend |
+| Public model leaderboard | **Not yet published** | Awaiting controlled runs and independently checked verification/provenance |
 
-**No real-model performance measurements have been published.** The bundled report demonstrates the design with fictional configurations and synthetic data. It does not describe real providers.
+**There are no real-model benchmark results in this repository yet.** The example report uses generated synthetic data from fictional configurations. It cannot support claims about the performance or cost of actual providers.
 
 ## Quick start
 
-Python 3.11 or newer; no credentials or cloud services needed to reproduce the example.
+Python 3.11+; no API credentials or paid services needed for the local prototype.
 
 ```bash
 git clone https://github.com/fraware/cost-to-done.git
 cd cost-to-done
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 python -m pip install -e .
 
 python examples/generate_synthetic.py
 cost-to-done validate examples/synthetic-trials.jsonl
-cost-to-done report examples/synthetic-trials.jsonl --demo --output report.html
+cost-to-done report examples/synthetic-trials.jsonl \
+  --output report.html --title "Synthetic comparison" --demo
 python -m unittest discover -s tests -v
 ```
 
-Open report.html locally. For a self-contained product walkthrough, open docs/index.html and docs/calculator.html in your browser. The calculator uses explicitly hypothetical assumptions, not measured model prices or capabilities.
+Open `report.html` locally. Or open `docs/index.html`, then use the interactive calculator. The calculator takes **assumptions**, not model measurements.
 
-To report a set of trial receipts from a separate trusted executor, run:
+To analyze real trial receipts supplied by a trusted executor:
 
 ```bash
-cost-to-done validate path/to/receipts.jsonl
-cost-to-done report path/to/receipts.jsonl --output report.html
+cost-to-done validate path/to/trials.jsonl
+cost-to-done report path/to/trials.jsonl --output real-report.html
 ```
 
-The current validator checks receipt format and consistency. It **does not independently establish** that model calls were billed or that a verifier actually ran. Real-result publication needs executor-linked artifacts and separate corroboration.
+Valid receipts alone **do not** authenticate a verifier execution or establish that charges were genuinely billed. This version accepts declared provenance, checks consistency, and preserves the cost basis. Future releases will strengthen provenance with linked raw evidence and an independently executed verifier.
 
-## Import Harbor trial results
+## Import Harbor trials (experimental)
 
-Cost to Done integrates with [Harbor](https://github.com/harbor-framework/harbor) as a downstream analysis tool rather than attempting to replace its sandboxed execution framework.
+Harbor provides sandboxed agent execution and structured per-trial results. Cost to Done reads those existing outputs rather than reproducing Harbor's agent loop. Import is guarded by a manifest with pinned task checksums, verifier digests, agent identity, and harness identity.
 
 ```bash
 cost-to-done import-harbor path/to/manifest.json --output harbor-trials.jsonl
@@ -62,30 +63,25 @@ cost-to-done validate harbor-trials.jsonl
 cost-to-done report harbor-trials.jsonl --output harbor-report.html
 ```
 
-The importer verifies pinned identifiers and checks that job outputs include model identity, task checksum, verifier result, timestamps, and attributable agent cost. Missing or malformed fields are errors, not free attempts. The imported costs are marked **rate-card estimates**, never automatically called actual billed amounts.
+See [Harbor import contract](docs/harbor.md). This importer is validated against a minimal offline fixture based on Harbor's published trial-result schema. **It has not been exercised against a real Harbor job in this environment.** It does not run agents, audit hidden test execution, inspect provider invoices, or support a genuine leaderboard claim by itself.
 
-See [Harbor import contract](docs/harbor.md). The importer has been unit-tested on offline fixtures based on Harbor's documented trial-result structure, not yet validated on an actual completed Harbor job in this environment.
+## The central metric
 
-## Our metric
+For a pinned task distribution and configured retry policy:
 
-For a fixed task panel, verification policy and evaluation configuration:
+\[
+\mathrm{CostToDone} = \frac{\sum_{i=1}^{N}\ \text{all charges in completed trial }i}{\sum_{i=1}^{N}\mathbf{1}[\text{trial }i\text{ verified success}]}
+\]
 
-```text
-Cost per verified completion =
-    all charges for all evaluated trials
-    -------------------------------------
-       number of verified successes
-```
+Both the money spent on failed trials **and** the money spent on failed attempts preceding a successful one appear in the numerator. The denominator counts task trials, not successful model messages. If nothing passes, the ratio is undefined; it is never shown as zero dollars.
 
-Every paid failure counts, including retries preceding a pass. Zero passes means the metric is undefined, not zero. We publish success rate, total cost, and median duration alongside the ratio.
+**Never rank incompatible comparisons.** The current analyzer withholds monetary rankings for mismatched task sets, different per-task repetition counts, or mixed charged/estimated prices. Distinct model+harness combinations are distinct **configurations**; their effects must not be attributed to model quality alone.
 
-For comparisons, the current system checks matched task IDs, task/verifier digests, trial counts, and monetary cost basis. It withholds ranking for mismatches. It never attributes a combined **model + harness + retry-policy** effect to model choice alone.
+Uncertainty estimates are descriptive 95% task-cluster bootstrap percentile intervals with a fixed seed. They are not hypothesis tests or guarantees of performance on unseen repositories. See [Methodology](docs/methodology.md).
 
-Five or more tasks unlock descriptive 95% task-cluster bootstrap intervals. Those are exploratory and do not establish statistical superiority or generalization to novel tasks. See [Methodology and limitations](docs/methodology.md).
+## Data contract
 
-## Example receipt
-
-A line in the JSONL input represents a complete task trial, containing one or more charged attempts. The trial stops on its first verified pass.
+Each JSONL line represents one complete task trial; a trial can contain multiple charged attempts under a pinned retry policy.
 
 ```json
 {
@@ -97,28 +93,46 @@ A line in the JSONL input represents a complete task trial, containing one or mo
   "harness_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
   "retry_policy": "one-feedback-retry",
   "attempts": [
-    {"cost_usd": "0.120", "seconds": 18, "outcome": "fail", "cost_source": "billed"},
-    {"cost_usd": "0.080", "seconds": 12, "outcome": "pass", "cost_source": "billed"}
+    {"cost_usd": "0.12000", "seconds": 18, "outcome": "fail", "cost_source": "billed"},
+    {"cost_usd": "0.08000", "seconds": 12, "outcome": "pass", "cost_source": "billed"}
   ]
 }
 ```
 
-The digests are **declared identifiers** until checked against independently archived artifacts. They do not prove a trusted verifier ran. Actual charges and usage-priced estimates must never be mixed into a single monetary ranking.
+The hexadecimal digests are **declared identifiers** in this receipt format, not proof that referenced artifacts exist. `billed` and `rate_card_estimate` have deliberately different meanings; subscriber quotas, free inference, tool charges, and self-hosted equipment need their own accounting policy before they can enter a common comparison.
 
-## The roadmap
+## Long-term roadmap
 
-1. **Evidence foundation — implemented.** Receipt schema, strict accounting, comparable-task checks, local reports, and calculator.
-2. **Verified execution — next.** Pinned Harbor task runs, independently controlled acceptance tests, task selection, verifier artifacts, raw usage and price-versioned evidence.
-3. **Bring your own repository — planned.** Evaluate a few realistic fixes against your own test suite within a strict per-configuration spending budget, with actionable recommendations.
-4. **Open cost benchmark — long-term.** Publicly auditable task suites, independent reproduction, model/harness cost frontiers, and uncertainty-aware comparisons.
-5. **Workload economics — long-term.** Engineering, research and operational tasks; adaptive agent routing; full lifecycle costs including tools and human review.
+1. **Evidence foundation.** Local-first receipts, honest cost arithmetic, readable reports, strict comparability. **Implemented.**
+2. **Verified execution.** Pinned Harbor-based trials, task qualifications, controlled model/harness configurations, raw usage and verifier-evidence linkage. **Next.**
+3. **Bring your own repository.** Small tasks and acceptance tests from a project; isolation, one-command evaluation, spend caps, reruns, and useful recommendations. **Planned.**
+4. **Open cost-to-done benchmark.** Audited public tasks, third-party reproductions, evolving model choices, empirical cost frontiers, and uncertainty-aware comparisons. **Vision.**
+5. **Workload economics.** Model routing by task class, organizational cost simulations, human-review costs, and completed-work optimization across agents, tools, and environments. **Vision.**
 
-**The goal is to make the economics of reliable AI work independently measurable, not to create another opaque AI leaderboard.** Our launch strategy prioritizes a consequential experiment around a timely model release, followed by a first-run experience useful enough that developers return to evaluate their own work. See [Vision](docs/vision.md).
+The ambition is an **open, independently reproducible account of AI labor economics**, beginning with a tool useful to an individual software developer. More detail is in [Vision](docs/vision.md).
 
-## Security, privacy and contributions
+## Security and reproducibility
 
-The present reporting core does not execute untrusted code, transmit private repository content, or contact external analytics services. Agent execution will need strict separation of the model's workspace from secrets and hidden acceptance tests. Consult [Security](SECURITY.md) before contributing any execution adapter.
+- The current validator runs locally without executing task code or contacting external services.
+- HTML reports have no third-party scripts, analytics, or remote assets. Dynamic values are escaped.
+- Future agent execution must isolate secrets, source, verifier, filesystem, and network access. Public CI never needs provider API credentials.
+- Pin task revisions, verifier binaries, agent/harness versions, model routes, inference settings, price dates, and trial order for any real comparison.
+- Never publish private prompts, proprietary source, API keys, or model traces without explicit authorization.
 
-Contributions are welcome for independent task qualification, credible verifier designs, privacy-preserving sandboxing, cost accounting, regression tests, and new adapters. See [Contributing](CONTRIBUTING.md).
+See [Security](SECURITY.md) for reporting vulnerabilities.
 
-**License:** MIT.
+## Contribute
+
+This is early-stage infrastructure with an intentionally demanding evidence standard. Valuable contributions include independently verifiable repository tasks, new import adapters with pinned source fixtures, accounting corrections, privacy-preserving execution, and reproducibility audits. Read [CONTRIBUTING.md](CONTRIBUTING.md).
+
+**License** · MIT.
+
+## First real execution qualification
+
+The first software-repair task and its no-op/reference controls are now in [`tasks/allocation-repair/`](tasks/allocation-repair/) and [`docs/first-experiment.md`](docs/first-experiment.md). Reproduce the local qualification without keys or Docker:
+
+```bash
+python scripts/qualify_task.py tasks/allocation-repair
+```
+
+GitHub Actions separately runs the official Harbor `nop` and `oracle` agents in containers, checks their raw verifier outcomes, and archives the evidence. These are **qualification controls, not model performance or cost measurements**. Read the experimental protocol before interpreting any output.

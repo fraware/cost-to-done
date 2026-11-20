@@ -1,0 +1,62 @@
+name: Harbor task qualification
+
+on:
+  push:
+    paths:
+      - '.github/workflows/harbor-controls.yml'
+      - 'tasks/allocation-repair/**'
+      - 'scripts/qualify_task.py'
+      - 'scripts/check_harbor_controls.py'
+      - 'tests/test_qualification.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: harbor-controls-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Local baseline and reference qualification
+        run: python scripts/qualify_task.py tasks/allocation-repair --output local-qualification.json
+      - name: Install exact Harbor release
+        run: python -m pip install 'harbor==0.26.0'
+      - name: Record execution environment
+        run: |
+          harbor --version
+          docker version
+          python --version
+          docker pull python:3.12.8-slim-bookworm
+          docker image inspect python:3.12.8-slim-bookworm --format '{{json .RepoDigests}}' > base-image-digests.json
+      - name: Negative control — unchanged starter
+        run: harbor run --path tasks/allocation-repair --agent nop --job-name controls-nop --jobs-dir control-jobs --n-concurrent 1
+      - name: Positive control — reference solution
+        run: harbor run --path tasks/allocation-repair --agent oracle --job-name controls-oracle --jobs-dir control-jobs --n-concurrent 1
+      - name: Assert actual Harbor verdicts and shared task identity
+        run: |
+          python scripts/check_harbor_controls.py \
+            --nop control-jobs/controls-nop \
+            --oracle control-jobs/controls-oracle \
+            > harbor-control-summary.json
+          cat harbor-control-summary.json
+      - name: Archive control receipts and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: harbor-controls-${{ github.run_id }}
+          path: |
+            local-qualification.json
+            base-image-digests.json
+            harbor-control-summary.json
+            control-jobs/
+          if-no-files-found: warn
+          retention-days: 30
