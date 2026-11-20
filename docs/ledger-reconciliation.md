@@ -25,7 +25,7 @@ cost-to-done reconcile-harbor \
   --model openai/test-model-1 --agent pi \
   --configuration-id pi-0.85.1-mock \
   --harness-digest 64_LOWERCASE_HEX_CHARACTERS \
-  --harbor-task-checksum 40_LOWERCASE_HEX_CHARACTERS \
+  --harbor-task-checksum 64_LOWERCASE_HEX_CHARACTERS \
   --output receipt.jsonl
 
 cost-to-done validate receipt.jsonl
