@@ -11,3 +11,4 @@ jobs/
 .env
 .env.*
 *.log
+.ctd-harbor-mock-evidence/

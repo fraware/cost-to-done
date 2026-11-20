@@ -4,7 +4,7 @@
 
 > The cheapest AI model might be the most expensive way to finish your work.
 
-[Explore the static experience](docs/index.html) · [Sample evidence report](docs/report.html) · [Interactive cost calculator](docs/calculator.html) · [Methodology](docs/methodology.md) · [Model smoke test](docs/model-smoke.md) · [Vision](docs/vision.md)
+[Explore the static experience](docs/index.html) · [Sample evidence report](docs/report.html) · [Interactive cost calculator](docs/calculator.html) · [Methodology](docs/methodology.md) · [Model smoke test](docs/model-smoke.md) · [Harbor mock integration](docs/harbor-mock.md) · [Vision](docs/vision.md)
 
 Token prices describe a unit of inference. Developers purchase **completed work**. A model that generates cheap tokens while wasting attempts, hallucinating fixes, or failing tests can incur more expense per successful task than a higher-priced model.
 
@@ -19,10 +19,12 @@ Token prices describe a unit of inference. Developers purchase **completed work*
 | Local HTML reports | **Working** | Generates standalone, offline evidence summaries without trackers or remote scripts |
 | Cost calculator | **Working** | Interactive hypothetical scenario analysis, separate from measured performance |
 | Harbor receipt importer | **Experimental** | Converts pinned Harbor trial result files into local, **agent-reported price estimates**; refuses missing cost and mismatched identities |
-| Execution of actual coding agents | **Not yet integrated** | The next engineering milestone; Harbor is the planned execution backend |
+| Mock-backed coding-agent execution | **CI verified** | Harbor 0.26.0 executes Pi 0.85.1 through a metered mock gateway and a task verifier; paid-model execution is still outstanding |
 | Public model leaderboard | **Not yet published** | Awaiting controlled runs and independently checked verification/provenance |
 
 **There are no real-model benchmark results in this repository yet.** The example report uses generated synthetic data from fictional configurations. It cannot support claims about the performance or cost of actual providers.
+
+**Reproducible integration evidence:** [Harbor Pi mock integration](docs/harbor-mock.md) executes one actual Pi coding-agent process under Harbor against a fake inference provider. GitHub Actions independently checks the Pi transcript, the failed task-verifier verdict, one forwarded request, and a settled **fictional** $0.0036 ledger charge. It uses no paid API credentials.
 
 ## Quick start
 
@@ -63,7 +65,7 @@ cost-to-done validate harbor-trials.jsonl
 cost-to-done report harbor-trials.jsonl --output harbor-report.html
 ```
 
-See [Harbor import contract](docs/harbor.md). This importer is validated against a minimal offline fixture based on Harbor's published trial-result schema. **It has not been exercised against a real Harbor job in this environment.** It does not run agents, audit hidden test execution, inspect provider invoices, or support a genuine leaderboard claim by itself.
+See [Harbor import contract](docs/harbor.md). The importer is validated against offline fixtures based on Harbor's documented trial-result schema. The separate `inspect-harbor` path has processed real Harbor task-control and mock-Pi trial files in GitHub Actions. It does not run agents, audit hidden test execution, inspect provider invoices, or support a genuine leaderboard claim by itself.
 
 ## The central metric
 
