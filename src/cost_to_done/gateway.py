@@ -96,6 +96,17 @@ class PriceSchedule:
         return hashlib.sha256(_canonical(vars(self))).hexdigest()
 
 
+def _text_only_content(value: Any) -> bool:
+    """Allow OpenAI text content parts, while excluding every other modality."""
+    if isinstance(value, str):
+        return True
+    return (isinstance(value, list) and 1 <= len(value) <= 32 and all(
+        isinstance(part, dict) and set(part) == {"type", "text"} and
+        part["type"] == "text" and isinstance(part["text"], str)
+        for part in value
+    ))
+
+
 def _bounded_request(data: bytes, *, model: str) -> tuple[dict[str, Any], int]:
     """Accept just one costed route; reject opaque/multimodal and unbounded calls.
 
@@ -134,9 +145,9 @@ def _bounded_request(data: bytes, *, model: str) -> tuple[dict[str, Any], int]:
             raise ReceiptError("unsupported message fields")
         if msg.get("role") not in ("system", "developer", "user", "assistant", "tool"):
             raise ReceiptError("unsupported message role")
-        if not (isinstance(msg.get("content"), str) or
+        if not (_text_only_content(msg.get("content")) or
                 (msg.get("content") is None and msg.get("role") == "assistant" and isinstance(msg.get("tool_calls"), list))):
-            raise ReceiptError("only textual message content or assistant tool calls supported")
+            raise ReceiptError("only textual message parts or assistant tool calls supported")
         for key in ("name", "tool_call_id", "refusal"):
             if key in msg and msg[key] is not None and not isinstance(msg[key], str):
                 raise ReceiptError("invalid message metadata")

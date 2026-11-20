@@ -74,6 +74,20 @@ class StreamingTests(unittest.TestCase):
         self.assertEqual(len(self.seen), 1)
         self.assertTrue(json.loads(self.seen[0][0])['stream'])
 
+    def test_text_content_parts_are_accepted_without_multimodal_access(self):
+        body = json.loads(request())
+        body['messages'][1]['content'] = [{'type': 'text', 'text': 'Hello'},
+                                         {'type': 'text', 'text': ' again'}]
+        self.gw.handle(json.dumps(body).encode(), 'pi-text-parts')
+        self.assertEqual(len(self.seen), 1)
+        for content in ([{'type': 'image_url', 'image_url': {'url': 'https://example.com'}}],
+                        [{'type': 'text', 'text': 12}], [],
+                        [{'type': 'text', 'text': 'ok', 'extra': True}]):
+            body['messages'][1]['content'] = content
+            with self.subTest(content=content), self.assertRaises(ReceiptError):
+                self.gw.handle(json.dumps(body).encode(), 'bad-content')
+        self.assertEqual(len(self.seen), 1)
+
     def test_invalid_streaming_options_are_rejected_before_forwarding(self):
         for extra in (
             {'stream_options': None}, {'stream_options': {'include_usage': False}},
