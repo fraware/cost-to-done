@@ -21,7 +21,7 @@ jobs:
     env:
       CTD_MOCK_GATEWAY_TOKEN: test-gateway-session-token-00001
       CTD_REPO_ROOT: ${{ github.workspace }}
-      CTD_EVIDENCE_DIR: ${{ runner.temp }}/ctd-harbor-mock-evidence
+      CTD_EVIDENCE_DIR: ${{ github.workspace }}/.ctd-harbor-mock-evidence
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -68,6 +68,6 @@ jobs:
           name: harbor-pi-mock-${{ github.run_id }}
           path: |
             harbor-pi-mock-jobs/
-            ${{ runner.temp }}/ctd-harbor-mock-evidence/provider-calls.txt
+            ${{ github.workspace }}/.ctd-harbor-mock-evidence/provider-calls.txt
           if-no-files-found: warn
           retention-days: 14
