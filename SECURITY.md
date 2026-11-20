@@ -16,3 +16,7 @@ independently tested. The API only supports text/function-tool non-streaming
 Chat Completions and an exact model name. Requests outside this envelope are
 rejected, not forwarded. A price authorization based on a token estimate is
 **not a hard provider invoice limit**. See [docs/gateway.md](docs/gateway.md).
+
+## Operator-only real-provider gateway
+
+`run-harbor-gateway` is experimental. It copies the fixed, qualified task into a private run directory and attaches the upstream credential only to a gateway container through a Compose secret mount. The agent receives a short-lived gateway token, not the provider key. Do not mount a Docker socket, use arbitrary task Compose overrides, publish the gateway port, or upload raw logs without reviewing sensitive content. Rate-card preauthorization is not a hard provider spending limit. A dedicated provider-side financial control and independent invoice reconciliation are prerequisites for monetary claims. See [private trial procedure](docs/live-gateway.md).

@@ -36,3 +36,14 @@ jobs:
           --ledger private/test-gateway.sqlite3 --budget-usd 0.5
       - name: Confirm planning did not create a ledger
         run: test ! -e private/test-gateway.sqlite3
+
+      - name: Verify real-provider gateway planning needs no key and spends nothing
+        run: >-
+          cost-to-done run-harbor-gateway
+          --model test-model-1
+          --price-schedule tests/fixtures/mock-price-schedule.json
+          --provider-key-file /tmp/no-such-provider-key-file
+          --budget-usd 0.25
+          --job-name ci-plan-only
+      - name: Verify zero-spend planning did not create a run
+        run: test ! -e runs/.sessions/ci-plan-only
