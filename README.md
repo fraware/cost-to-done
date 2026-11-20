@@ -138,6 +138,16 @@ cost-to-done run-harbor --model openai/YOUR_MODEL_ID
 
 This command defaults to **dry-run**; it does not contact an inference provider. For a real trial, supply `--execute --acknowledge-no-dollar-cap`, a dedicated provider API key, Harbor 0.26.0, Docker, and an externally enforced provider spending quota. It limits the trial count, agent turns, and local elapsed time, **not dollars**. A paid-model integration test has not yet been completed. See [Model smoke-test procedure](docs/model-smoke.md) for exact commands, security assumptions, and evidence limitations.
 
+## Docker gateway isolation experiment
+
+A reproducible **mock-only** Docker Compose experiment now tests network separation independently of model providers. A simulated agent lives on an internal-only network, a metering gateway spans that network and a mock-provider network, and a fictitious provider records exactly which requests were forwarded. The agent is tested against direct provider DNS, raw-IP, and public-IP bypasses, as well as authorization and budget rejection.
+
+```bash
+bash scripts/test_gateway_network.sh
+```
+
+The test uses Docker Compose on Linux and makes **no paid API calls**. Its results apply to the stated Compose topology, not to Harbor or a production deployment. See [Network isolation methodology](docs/network-isolation.md) and the dedicated [GitHub Actions workflow](.github/workflows/gateway-isolation.yml).
+
 ## Experimental inference budget gateway
 
 An opt-in local HTTP gateway now performs conservative pre-admission for one

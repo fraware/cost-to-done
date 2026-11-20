@@ -51,7 +51,7 @@ The resulting ledger's amounts are **estimated expenditures**, not independently
 
 ## Scope of the security claim
 
-The gateway's request admission path and failure accounting have deterministic mock tests. **Network egress isolation is not yet implemented or verified.** A container able to contact the provider directly or read the provider key defeats the gateway. The agent must run with restricted egress, and the gateway must be reachable over an authenticated channel using a short-lived credential. Binding this initial version to loopback protects against casual network exposure, yet also means it is **not currently connected to the Harbor agent container**. This limitation is deliberate until container routing and process/container isolation are tested.
+The gateway's request admission path and failure accounting have deterministic mock tests. **A separate mock-only Docker Compose topology has an isolation test; Harbor agent isolation has not been established.** A container able to contact the provider directly or read the provider key defeats the gateway. The agent must run with restricted egress, and the gateway must be reachable over an authenticated channel using a short-lived credential. Binding this initial version to loopback protects against casual network exposure, yet also means it is **not currently connected to the Harbor agent container**. This limitation is deliberate until container routing and process/container isolation are tested.
 
 The gateway buffers non-streaming responses. It does not support streaming token accounting, nested model calls through separate endpoints, adaptive provider routing, retries controlled by an outer client, or billed invoice reconciliation. Client-visible timeouts do not prove provider cancellation. HTTP failures consume reservations pending external confirmation. A response with usage beyond its authorized envelope is treated as uncertain, not as a safely free request.
 
@@ -60,7 +60,7 @@ The gateway buffers non-streaming responses. It does not support streaming token
 ## Acceptance gates for Issue #5
 
 1. Local forward-path mock tests, authentication, duplicate request protection, admission rejection, concurrency and uncertainty retention. **Implemented and tested locally.**
-2. Controlled container test proving no direct provider network egress, DNS bypass, alternate ports or access to gateway/server credentials. **Outstanding.**
+2. Mock-only Docker Compose topology with direct-bypass probes. **Integration test implemented; review its CI result and limitations in [network-isolation.md](network-isolation.md). Harbor isolation remains outstanding.**
 3. Harbor Pi agent integration with real model calls, stream and tool compatibility confirmed. **Outstanding.**
 4. Provider usage compared with published dated rates, tool fees and eventual billing records. **Outstanding.**
 5. Public release of audited trial evidence with independent verification and no secret exposure. **Outstanding.**

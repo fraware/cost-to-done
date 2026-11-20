@@ -1,0 +1,60 @@
+# Deterministic Docker isolation proof; no provider secrets or paid API calls.
+# This is not a production deployment specification for Harbor.
+services:
+  provider:
+    image: python:3.12-slim-bookworm
+    command: ["python", "-u", "/fixture/mock_provider.py"]
+    volumes:
+      - ./mock_provider.py:/fixture/mock_provider.py:ro
+    networks: [provider_net]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8770), timeout=1).close()"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  gateway:
+    image: python:3.12-slim-bookworm
+    command: ["python", "-u", "/fixture/mock_gateway.py"]
+    volumes:
+      - ../../src:/fixture/src:ro
+      - ./mock_gateway.py:/fixture/mock_gateway.py:ro
+    working_dir: /fixture
+    environment:
+      PYTHONPATH: /fixture/src
+    networks: [agent_net, provider_net]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    depends_on:
+      provider:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8766), timeout=1).close()"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  agent:
+    image: python:3.12-slim-bookworm
+    command: ["python", "-u", "/fixture/probe_agent.py"]
+    volumes:
+      - ./probe_agent.py:/fixture/probe_agent.py:ro
+    networks: [agent_net]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    depends_on:
+      gateway:
+        condition: service_healthy
+
+networks:
+  agent_net:
+    internal: true
+  provider_net: {}
