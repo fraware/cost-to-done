@@ -19,13 +19,13 @@ Token prices describe a unit of inference. Developers purchase **completed work*
 | Local HTML reports | **Working** | Generates standalone, offline evidence summaries without trackers or remote scripts |
 | Cost calculator | **Working** | Interactive hypothetical scenario analysis, separate from measured performance |
 | Harbor receipt importer | **Experimental** | Converts pinned Harbor trial result files into local, **agent-reported price estimates**; refuses missing cost and mismatched identities |
-| Mock-backed coding-agent execution | **CI verified** | Harbor 0.26.0 executes Pi 0.85.1 through a metered mock gateway and a task verifier; paid-model execution is still outstanding |
+| Mock-backed coding-agent execution | **CI verified** | Harbor 0.26.0 and Pi 0.85.1 now exercise both a single-call failed task and a two-call scripted tool repair accepted by an independent verifier; paid-model execution is still outstanding |
 | Mock Harbor agent network isolation | **CI verified for one topology** | The actual Harbor task reaches the gateway while direct provider DNS, provider IP, and public IP probes fail; not a production security guarantee |
 | Public model leaderboard | **Not yet published** | Awaiting controlled runs and independently checked verification/provenance |
 
 **There are no real-model benchmark results in this repository yet.** The example report uses generated synthetic data from fictional configurations. It cannot support claims about the performance or cost of actual providers.
 
-**Reproducible integration evidence:** [Harbor Pi mock integration](docs/harbor-mock.md) executes a pinned Pi client against a fake inference provider. The separate [isolated Harbor integration](docs/harbor-isolated.md) verifies the same mocked metering and task outcome in a two-network Docker topology, with runtime direct-provider bypass probes inside Harbor's `main` container. [GitHub Actions run 44802089155](https://github.com/fraware/cost-to-done/actions/runs/44802089155) passed. The recorded $0.0036 is **fictional**, and no paid provider was contacted.
+**Reproducible integration evidence:** [Harbor Pi mock integration](docs/harbor-mock.md) verifies a single-turn failed task. The [isolated Harbor integration](docs/harbor-isolated.md) now checks two scenarios under the same network policy: a one-call, failed task ($0.0036 simulated expenditure), and a two-call scripted repair with an actual agent tool invocation and passing independent verifier ($0.0236 simulated expenditure). [GitHub Actions run 44828369078](https://github.com/fraware/cost-to-done/actions/runs/44828369078) passed both scenarios. Runtime tests check direct-provider DNS and IP bypass attempts inside Harbor's `main` container. **The repaired code was scripted by a fake provider, and the costs are fictional. No real model or paid provider was contacted.**
 
 ## Quick start
 
