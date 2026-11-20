@@ -1,0 +1,28 @@
+{
+  "agent_info": {
+    "model_info": null,
+    "name": "oracle",
+    "version": "1.0.0"
+  },
+  "agent_result": {
+    "cost_usd": null,
+    "metadata": null,
+    "model_usage": null,
+    "n_cache_tokens": null,
+    "n_input_tokens": null,
+    "n_output_tokens": null,
+    "rollout_details": null
+  },
+  "exception_info": null,
+  "finished_at": "2026-11-20T11:08:48.874644Z",
+  "id": "9f0e5860-f82c-43dc-8f9f-2ada2753248f",
+  "schema_version": 1,
+  "started_at": "2026-11-20T11:08:33.886135Z",
+  "task_checksum": "1612eb85736fd1ac9a22f11970cfbe170bfc2d1e0e600ac6b7c98d40cb98aef5",
+  "task_name": "cost-to-done/allocation-repair",
+  "verifier_result": {
+    "rewards": {
+      "reward": 1.0
+    }
+  }
+}

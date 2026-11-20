@@ -15,7 +15,11 @@ from typing import Any
 
 def control_result(job: Path, expected_agent: str, expected_reward: int) -> dict[str, str]:
     """Fail if a Harbor control job is incomplete, errored or misgraded."""
-    files = sorted(job.glob("trials/*/result.json"))
+    modern = sorted(job.glob("*/result.json"))
+    legacy = sorted(job.glob("trials/*/result.json"))
+    if modern and legacy:
+        raise ValueError(f"{job}: mixed Harbor trial layouts")
+    files = modern or legacy
     if len(files) != 1:
         raise ValueError(f"{job}: expected exactly one trial result, found {len(files)}")
     path = files[0]

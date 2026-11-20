@@ -112,12 +112,16 @@ def import_harbor(manifest_file: Path) -> list[dict[str, Any]]:
     if not isinstance(jobs, list) or not jobs:
         raise ReceiptError("jobs: expected nonempty list")
     out: list[dict[str, Any]] = []
+    manifest_dir = manifest_file.parent
     for job in jobs:
         job = _object(job, "job")
         relative = _text(job.get("path"), "job.path")
-        job_path = (manifest_file.parent / relative).resolve()
-        if not job_path.is_dir():
-            raise ReceiptError(f"missing job directory: {relative}")
+        safe_path = Path(relative)
+        if safe_path.is_absolute() or ".." in safe_path.parts or safe_path == Path("."):
+            raise ReceiptError(f"job.path must be a relative child directory: {relative}")
+        job_path = (manifest_dir / safe_path).resolve()
+        if not job_path.is_relative_to(manifest_dir) or not job_path.is_dir():
+            raise ReceiptError(f"unsafe or missing job directory: {relative}")
         config_id = _text(job.get("configuration_id"), "configuration_id")
         expected_agent = _text(job.get("agent"), "job.agent")
         expected_model = _text(job.get("model"), "job.model")
@@ -126,14 +130,35 @@ def import_harbor(manifest_file: Path) -> list[dict[str, Any]]:
         if job.get("retry_policy") != "independent-trials":
             raise ReceiptError("retry_policy must be independent-trials")
         digest = _text(job.get("harness_digest"), "harness_digest")
-        trial_files = sorted(job_path.glob("trials/*/result.json"))
+        # Harbor 0.26 stores each trial directly below the job directory;
+        # older releases placed trials under a 'trials/' intermediary.
+        # Never count the job-level result.json as an individual trial.
+        modern = sorted(job_path.glob("*/result.json"))
+        legacy = sorted(job_path.glob("trials/*/result.json"))
+        if modern and legacy:
+            raise ReceiptError(f"{relative}: mixed Harbor trial layouts")
+        trial_files = modern or legacy
         if not trial_files:
             raise ReceiptError(f"no completed Harbor trials in {relative}")
+        expected = job.get("expected_tasks")
+        if expected is not None:
+            if (not isinstance(expected, list) or not expected
+                    or len(expected) != len(set(map(str, expected)))
+                    or any(not isinstance(x, str) or not x for x in expected)):
+                raise ReceiptError("expected_tasks: expected distinct nonempty task names")
+            if len(trial_files) != len(expected):
+                raise ReceiptError(f"incomplete job {relative}: {len(trial_files)} results for {len(expected)} expected tasks")
+        seen_tasks: set[str] = set()
         for path in trial_files:
             if path.is_symlink() or not path.resolve().is_relative_to(job_path):
                 raise ReceiptError(f"unsafe trial path: {path}")
             raw = _object(json.loads(path.read_text(encoding="utf-8")), "Harbor result")
+            if raw.get("schema_version", 1) != 1:
+                raise ReceiptError(f"{path}: unsupported Harbor trial schema_version")
             task_name = _text(raw.get("task_name"), "task_name")
+            if task_name in seen_tasks:
+                raise ReceiptError(f"{relative}: duplicate task {task_name} within one independent-trial job")
+            seen_tasks.add(task_name)
             source = _object(tasks.get(task_name), f"task {task_name} manifest")
             if raw.get("task_checksum") != source.get("harbor_task_checksum"):
                 raise ReceiptError(f"{task_name}: Harbor checksum differs from manifest")
@@ -143,6 +168,9 @@ def import_harbor(manifest_file: Path) -> list[dict[str, Any]]:
             actual_model = f"{provider}/{model_info.get('name')}" if provider else model_info.get("name")
             if info.get("name") != expected_agent or actual_model != expected_model:
                 raise ReceiptError(f"{path}: agent/model mismatch")
+            expected_version = job.get("agent_version")
+            if expected_version is not None and info.get("version") != expected_version:
+                raise ReceiptError(f"{path}: agent version mismatch")
             reward_key = _text(source.get("reward_key", "reward"), "reward_key")
             obj = {
                 "trial_id": _text(raw.get("id"), "id"),
@@ -161,6 +189,8 @@ def import_harbor(manifest_file: Path) -> list[dict[str, Any]]:
             }
             parse_trial(obj)
             out.append(obj)
+        if expected is not None and seen_tasks != set(expected):
+            raise ReceiptError(f"incomplete job {relative}: task set differs from expected_tasks")
     if len({row["trial_id"] for row in out}) != len(out):
         raise ReceiptError("duplicate imported Harbor trial IDs")
     return out

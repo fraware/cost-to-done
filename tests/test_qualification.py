@@ -46,6 +46,21 @@ class HarborControlTests(unittest.TestCase):
         self.save()
         self.assertEqual(control_result(self.job, "oracle", 1)["reward"], "1.0")
 
+    def test_current_harbor_026_direct_layout(self):
+        direct = self.job / "allocation-repair__xyz"
+        direct.mkdir()
+        (direct / "result.json").write_text(json.dumps(self.record))
+        self.assertEqual(control_result(self.job, "oracle", 1)["reward"], "1.0")
+
+    def test_observed_harbor_026_control_fixtures(self):
+        fixture_root = Path(__file__).resolve().parent / "fixtures"
+        for agent, expected in (("nop", 0), ("oracle", 1)):
+            with self.subTest(agent=agent):
+                self.trial.write_text((fixture_root / f"harbor-026-{agent}.json").read_text())
+                result = control_result(self.job, agent, expected)
+                self.assertEqual(result["task_name"], "cost-to-done/allocation-repair")
+                self.assertEqual(len(result["task_checksum"]), 64)
+
     def test_invalid_agent_fails(self):
         self.save()
         with self.assertRaisesRegex(ValueError, "expected agent"):

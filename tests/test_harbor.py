@@ -51,6 +51,8 @@ class ImportHarborTests(unittest.TestCase):
                 "harness_digest": DIGEST,
                 "retry_policy": "independent-trials",
                 "n_attempts": 1,
+                "expected_tasks": ["repair-1"],
+                "agent_version": "1",
             }],
         }
         self.save()
@@ -119,6 +121,54 @@ class ImportHarborTests(unittest.TestCase):
         ]
         self.save()
         self.assertEqual(import_harbor(self.root / "manifest.json")[0]["attempts"][0]["cost_usd"], "0.300000000000")
+
+
+    def test_harbor_026_direct_trial_layout_supported(self):
+        self.save()
+        self.trial_dir.joinpath("result.json").unlink()
+        modern = self.root / "job-a" / "allocation-repair__abc"
+        modern.mkdir()
+        (modern / "result.json").write_text(json.dumps(self.result))
+        self.assertEqual(len(import_harbor(self.root / "manifest.json")), 1)
+
+    def test_path_traversal_rejected(self):
+        self.manifest["jobs"][0]["path"] = "../outside"
+        self.save()
+        with self.assertRaisesRegex(ReceiptError, "relative child directory"):
+            import_harbor(self.root / "manifest.json")
+
+    def test_absolute_path_rejected(self):
+        self.manifest["jobs"][0]["path"] = str(self.trial_dir.parent.parent)
+        self.save()
+        with self.assertRaisesRegex(ReceiptError, "relative child directory"):
+            import_harbor(self.root / "manifest.json")
+
+    def test_incomplete_task_roster_rejected(self):
+        self.manifest["jobs"][0]["expected_tasks"] = ["repair-1", "repair-2"]
+        self.save()
+        with self.assertRaisesRegex(ReceiptError, "incomplete job"):
+            import_harbor(self.root / "manifest.json")
+
+    def test_agent_version_mismatch_rejected(self):
+        self.manifest["jobs"][0]["agent_version"] = "different"
+        self.save()
+        with self.assertRaisesRegex(ReceiptError, "agent version mismatch"):
+            import_harbor(self.root / "manifest.json")
+
+    def test_unsupported_harbor_schema_rejected(self):
+        self.result["schema_version"] = 9
+        self.save()
+        with self.assertRaisesRegex(ReceiptError, "schema_version"):
+            import_harbor(self.root / "manifest.json")
+
+    def test_duplicate_task_in_single_job_rejected(self):
+        second = self.trial_dir.parent / "second"
+        second.mkdir()
+        (second / "result.json").write_text(json.dumps({**self.result, "id": "another"}))
+        self.manifest["jobs"][0].pop("expected_tasks")
+        self.save()
+        with self.assertRaisesRegex(ReceiptError, "duplicate task"):
+            import_harbor(self.root / "manifest.json")
 
     def test_manifest_retry_policy_must_be_independent(self):
         self.manifest["jobs"][0]["n_attempts"] = 3

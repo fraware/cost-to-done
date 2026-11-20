@@ -1,0 +1,28 @@
+{
+  "agent_info": {
+    "model_info": null,
+    "name": "nop",
+    "version": "1.0.0"
+  },
+  "agent_result": {
+    "cost_usd": null,
+    "metadata": null,
+    "model_usage": null,
+    "n_cache_tokens": null,
+    "n_input_tokens": null,
+    "n_output_tokens": null,
+    "rollout_details": null
+  },
+  "exception_info": null,
+  "finished_at": "2026-11-20T11:08:30.135736Z",
+  "id": "6f98d742-ae75-4053-8d5f-a26cd71deeae",
+  "schema_version": 1,
+  "started_at": "2026-11-20T11:08:13.253038Z",
+  "task_checksum": "1612eb85736fd1ac9a22f11970cfbe170bfc2d1e0e600ac6b7c98d40cb98aef5",
+  "task_name": "cost-to-done/allocation-repair",
+  "verifier_result": {
+    "rewards": {
+      "reward": 0.0
+    }
+  }
+}

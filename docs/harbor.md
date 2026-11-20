@@ -2,7 +2,7 @@
 
 Harbor is an upstream framework from the Terminal-Bench creators. The integration consumes already-generated `trials/*/result.json` files. Harbor handles agent execution; Cost to Done handles a normalized report. Inspect the upstream [Harbor documentation](https://github.com/harbor-framework/harbor) for current setup and CLI commands.
 
-This initial converter targets the published Harbor `TrialResult` schema v1, `AgentContext.cost_usd`, `VerifierResult.rewards`, and wall-clock `started_at`/`finished_at` fields. We have only tested artificial Harbor-shaped fixtures; compatibility with actual Harbor job outputs is **unverified**.
+This converter targets the published Harbor `TrialResult` schema v1, `AgentContext.cost_usd`, `VerifierResult.rewards`, and wall-clock `started_at`/`finished_at` fields. Harbor 0.26.0 trial files from an actual Docker-backed no-op/oracle control were inspected on November 20, 2026. Their directory layout and schemas are covered by recorded-fixture tests. Importing *paid-model economic results* remains unverified, since both control agents report null cost.
 
 ## Required manifest
 
@@ -27,7 +27,9 @@ Create a JSON file next to the Harbor job folders. Each job is one pinned agent+
       "model": "provider/model-a",
       "harness_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
       "retry_policy": "independent-trials",
-      "n_attempts": 1
+      "n_attempts": 1,
+      "expected_tasks": ["repair-1"],
+      "agent_version": "1.0.0"
     }
   ]
 }
@@ -42,6 +44,8 @@ cost-to-done import-harbor manifest.json --output receipts.jsonl
 cost-to-done validate receipts.jsonl
 cost-to-done report receipts.jsonl --output results.html
 ```
+
+The importer accepts both the current Harbor 0.26 `<job>/<trial>/result.json` layout and the older `<job>/trials/<trial>/result.json` layout. Supply `expected_tasks` to ensure that omissions are detected, and `agent_version` to verify that the harness revision matches the pin. Directly provided job directories are restricted to descendants of the manifest directory, preventing traversal out of the evidence root.
 
 The importer refuses absent or invalid cost data. An exception or missing verifier result counts as an infrastructure error; a complete reward equal to 1 counts as a pass. Partial rewards fail the binary pass condition. Source costs are labeled `rate_card_estimate` since Harbor's `AgentContext.cost_usd` is agent-reported, not independent billing evidence.
 
