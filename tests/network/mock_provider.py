@@ -6,10 +6,11 @@ The request counter is examined by the host after the probe completes.
 from __future__ import annotations
 
 import json
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-COUNT_PATH = Path('/tmp/mock-provider-requests.log')
+COUNT_PATH = Path(os.environ.get('CTD_PROVIDER_LOG_PATH', '/tmp/mock-provider-requests.log'))
 
 
 class Handler(BaseHTTPRequestHandler):

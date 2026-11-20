@@ -107,7 +107,7 @@ def _text_only_content(value: Any) -> bool:
     ))
 
 
-def _bounded_request(data: bytes, *, model: str) -> tuple[dict[str, Any], int]:
+def _bounded_request(data: bytes, *, model: str, max_output_cap: int = 4096) -> tuple[dict[str, Any], int]:
     """Accept just one costed route; reject opaque/multimodal and unbounded calls.
 
     Byte length is a *heuristic token envelope*, not a tokenizer guarantee.
@@ -135,8 +135,8 @@ def _bounded_request(data: bytes, *, model: str) -> tuple[dict[str, Any], int]:
     elif options is not None:
         raise ReceiptError("stream_options without streaming is unsupported")
     cap = obj.get("max_completion_tokens")
-    if type(cap) is not int or not 1 <= cap <= 4096:
-        raise ReceiptError("explicit max_completion_tokens in [1,4096] is required")
+    if type(cap) is not int or not 1 <= cap <= max_output_cap:
+        raise ReceiptError(f"explicit max_completion_tokens in [1,{max_output_cap}] is required")
     messages = obj.get("messages")
     if not isinstance(messages, list) or not 1 <= len(messages) <= 100:
         raise ReceiptError("messages must be a nonempty bounded list")
@@ -296,8 +296,11 @@ class Gateway:
     """
 
     def __init__(self, ledger: BudgetLedger, price: PriceSchedule, *, client_token: str,
-                 provider_key: str, transport: Transport = openai_transport):
+                 provider_key: str, transport: Transport = openai_transport,
+                 max_output_cap: int = 4096):
         price.validate()
+        if type(max_output_cap) is not int or not 1 <= max_output_cap <= 65536:
+            raise ReceiptError("max_output_cap must be an integer in [1,65536]")
         if not isinstance(client_token, str) or len(client_token) < 24:
             raise ReceiptError("gateway client token must have at least 24 characters")
         if not isinstance(provider_key, str) or not provider_key:
@@ -310,6 +313,7 @@ class Gateway:
         self.client_token = client_token
         self.provider_key = provider_key
         self.transport = transport
+        self.max_output_cap = max_output_cap
 
     def authorize(self, bearer: str | None) -> bool:
         return (isinstance(bearer, str) and bearer.startswith("Bearer ")
@@ -319,7 +323,7 @@ class Gateway:
         """Preauthorize, forward once, settle or retain uncertain reservation."""
         if not _ID.fullmatch(request_id):
             raise ReceiptError("invalid request ID")
-        obj, input_envelope = _bounded_request(data, model=self.price.model)
+        obj, input_envelope = _bounded_request(data, model=self.price.model, max_output_cap=self.max_output_cap)
         bound_units = (_money_estimate(input_envelope, _dec(self.price.input_per_million_usd))
                        + _money_estimate(obj["max_completion_tokens"], _dec(self.price.output_per_million_usd)))
         if bound_units <= 0:

@@ -29,10 +29,12 @@ if __name__ == '__main__':
     price = PriceSchedule('test-model-1', '2026-11-20',
                           'https://example.com/fictional-rates', '20', '40')
     pi_mode = os.environ.get('CTD_PI_MODE') == '1'
-    ledger = BudgetLedger('/tmp/pi-gateway-ledger.sqlite3' if pi_mode else '/tmp/gateway-ledger.sqlite3',
+    ledger_path = os.environ.get('CTD_MOCK_LEDGER_PATH') or ('/tmp/pi-gateway-ledger.sqlite3' if pi_mode else '/tmp/gateway-ledger.sqlite3')
+    ledger = BudgetLedger(ledger_path,
                           budget_usd='5' if pi_mode else '0.05')
     gateway = Gateway(ledger, price, client_token='test-gateway-session-token-00001',
-                      provider_key='mock-provider-key', transport=mock_transport)
+                      provider_key='mock-provider-key', transport=mock_transport,
+                      max_output_cap=65536 if pi_mode else 4096)
     # This listener is reachable only on Compose's internal agent network.
     # The *mock* gateway also attaches to the provider network for test traffic.
     with _LocalServer(('0.0.0.0', 8866 if pi_mode else 8766), gateway) as server:

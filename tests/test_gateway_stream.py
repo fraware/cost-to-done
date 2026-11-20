@@ -99,6 +99,18 @@ class StreamingTests(unittest.TestCase):
         self.assertEqual(self.seen, [])
         self.assertEqual(self.ledger.entries(), [])
 
+    def test_explicit_larger_cap_is_opt_in_and_accounts_for_reservation(self):
+        with self.assertRaisesRegex(ReceiptError, "max_completion_tokens"):
+            self.gw.handle(request(max_completion_tokens=16384), 'cap-denied')
+        self.assertEqual(self.seen, [])
+        self.assertEqual(self.ledger.entries(), [])
+        self.gw = Gateway(self.ledger, self.price, client_token=TOKEN,
+                          provider_key='mock-provider-key', transport=self.gw.transport,
+                          max_output_cap=65536)
+        self.gw.handle(request(max_completion_tokens=16384), 'cap-allowed')
+        self.assertEqual(len(self.seen), 1)
+        self.assertEqual(self.ledger.snapshot().settled, '0.0036')
+
     def test_incomplete_or_malformed_streams_hold_authorization(self):
         cases = [
             stream(done=False), stream(usage=False), stream(finish=False),
