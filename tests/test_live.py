@@ -26,7 +26,7 @@ class LiveContractTests(unittest.TestCase):
         task = self.root / "tasks/allocation-repair"
         (task / "environment").mkdir(parents=True)
         (task / "tests").mkdir()
-        for rel in ["src/cost_to_done/live_gateway.py", "experiments/live/compose.yaml", "experiments/live/Dockerfile.pi",
+        for rel in ["src/cost_to_done/live_gateway.py", "experiments/live/compose.yaml", "experiments/live/base-compose-ci.yaml", "experiments/live/Dockerfile.pi",
                     "tasks/allocation-repair/task.toml", "tasks/allocation-repair/environment/Dockerfile",
                     "tasks/allocation-repair/tests/test.sh"]:
             (self.root / rel).write_text("fixture\n")
@@ -130,7 +130,7 @@ class LiveContractTests(unittest.TestCase):
             log_file.write_text("test stub\n")
             return 0
         fake_result = {"complete": True,"observed_trials": 1,"trials": [{"agent":"pi","model":"test-model-1","provider":"openai","outcome":"pass"}]}
-        with mock.patch("cost_to_done.live._preflight"),mock.patch("cost_to_done.live._run_process",side_effect=fake_run),mock.patch("cost_to_done.live.inspect_harbor_job",return_value=fake_result),mock.patch.dict(os.environ,{"OPENAI_API_KEY":"must-not-forward","GITHUB_TOKEN":"must-not-forward"}):
+        with mock.patch("cost_to_done.live._preflight"),mock.patch("cost_to_done.live._audit_compose_before_live",return_value={"status":"passed"}),mock.patch("cost_to_done.live._run_process",side_effect=fake_run),mock.patch("cost_to_done.live.inspect_harbor_job",return_value=fake_result),mock.patch.dict(os.environ,{"OPENAI_API_KEY":"must-not-forward","GITHUB_TOKEN":"must-not-forward"}):
             result=execute_live(self.c,acknowledged=True)
         self.assertEqual(result["status"], "completed_with_unverified_rate_card_estimate")
         self.assertEqual(result["gateway_snapshot"]["settled"], "0.0036")
@@ -179,6 +179,7 @@ class TestLiveFailureHandling(unittest.TestCase):
         t.setUp()
         self.addCleanup(t.temp.cleanup)
         with mock.patch("cost_to_done.live._preflight"), \
+             mock.patch("cost_to_done.live._audit_compose_before_live",return_value={"status":"passed"}), \
              mock.patch("cost_to_done.live._run_process", return_value=7):
             result = execute_live(t.c, acknowledged=True)
         self.assertEqual(result["status"], "incomplete_or_uncertain")

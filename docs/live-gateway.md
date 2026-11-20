@@ -63,6 +63,8 @@ cost-to-done run-harbor-gateway \
   --execute --acknowledge-provider-limit
 ```
 
+The runner first validates the combined Docker Compose configuration and **refuses to start the model trial** if the agent would gain provider-network access, the upstream key could mount into the agent, host ports are published, or unapproved services or capabilities appear. This preflight is a configuration check, not a proof of the dynamic Harbor runtime.
+
 The runner copies the known task to a private session directory, substitutes the pinned Pi image, generates a fresh gateway token, and starts one Harbor trial. A minimal environment is passed to Harbor and **the upstream key is omitted from that environment**. A dedicated Compose secret mounts the key in `ctd_gateway`; `main` stays solely on `ctd_agent_net` with `internal: true`. No service publishes a host port.
 
 Pi receives the gateway token for `http://ctd_gateway:8866/v1` and is capped at three completed turns and 4,096 generated tokens per request. The gateway validates model identity and reserves a conservative estimated charge for each forwarded request in a per-run SQLite ledger. The task verifier grades the resulting patch independently of the model response. Harbor's end-to-end runtime and reported usage are recorded.

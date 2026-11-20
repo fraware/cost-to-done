@@ -1,0 +1,5 @@
+# Static Compose-config check only. Harbor supplies its real main service.
+services:
+  main:
+    image: python:3.12-slim-bookworm
+    command: ["sleep", "infinity"]

@@ -26,6 +26,7 @@ from .core import ReceiptError
 from .gateway import PriceSchedule
 from .harbor import inspect_harbor_job
 from .ledger import BudgetLedger, _units
+from .network_audit import audit_live_compose
 
 HARBOR_VERSION = "0.26.0"
 PI_VERSION = "0.85.1"
@@ -55,7 +56,7 @@ class LiveConfig:
         root = self.repo_root.resolve(strict=True)
         if not root.is_dir() or self.repo_root.is_symlink():
             raise ReceiptError("repository root must be a regular directory")
-        expected = (root / "experiments/live/compose.yaml", root / "experiments/live/Dockerfile.pi",
+        expected = (root / "experiments/live/compose.yaml", root / "experiments/live/base-compose-ci.yaml", root / "experiments/live/Dockerfile.pi",
                     root / "src/cost_to_done/live_gateway.py")
         if any(not x.is_file() or x.is_symlink() for x in expected):
             raise ReceiptError("repository is missing a trusted gateway execution fixture")
@@ -175,6 +176,29 @@ def _run_process(command: list[str], *, env: dict[str, str], log_file: Path, tim
             ) from exc
 
 
+def _audit_compose_before_live(root: Path, environment: dict[str, str]) -> dict[str, Any]:
+    """Reject unsafe static Compose declarations before any provider call.
+
+    This does not validate Harbor's dynamic network behavior. Errors are
+    deliberately redacted since Compose diagnostics might contain session
+    tokens or host-local file paths.
+    """
+    cmd = ["docker", "compose", "-f", str(root / "experiments/live/base-compose-ci.yaml"),
+           "-f", str(root / "experiments/live/compose.yaml"), "config", "--format", "json"]
+    try:
+        proc = subprocess.run(cmd, env=environment, capture_output=True, text=True,
+                              timeout=30, check=False)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ReceiptError("Docker Compose structural preflight was unavailable") from exc
+    if proc.returncode:
+        raise ReceiptError("Docker Compose structural preflight failed; no model call was launched")
+    try:
+        parsed = json.loads(proc.stdout)
+    except (ValueError, UnicodeError) as exc:
+        raise ReceiptError("Docker Compose did not return valid JSON") from exc
+    return audit_live_compose(parsed)
+
+
 def execute_live(config: LiveConfig, *, acknowledged: bool = False) -> dict[str, Any]:
     """Execute one specifically trusted task through the isolated gateway.
 
@@ -219,6 +243,7 @@ def execute_live(config: LiveConfig, *, acknowledged: bool = False) -> dict[str,
         "provider_key_declared_gateway_only": True,
     }
     try:
+        outcome["topology_preflight"] = _audit_compose_before_live(c.repo_root, environment)
         exit_code = _run_process(command, env=environment,
                                  log_file=session_dir / "harbor.driver.log",
                                  timeout=c.max_wall_seconds)

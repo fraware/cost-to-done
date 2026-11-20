@@ -47,3 +47,19 @@ jobs:
           --job-name ci-plan-only
       - name: Verify zero-spend planning did not create a run
         run: test ! -e runs/.sessions/ci-plan-only
+
+      - name: Validate declared gateway Compose topology without starting containers
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'non-secret-placeholder\\n' > "$RUNNER_TEMP/ctd-ci-placeholder-key"
+          chmod 600 "$RUNNER_TEMP/ctd-ci-placeholder-key"
+          export CTD_REPO_ROOT="$GITHUB_WORKSPACE"
+          export CTD_PRICE_FILE="$GITHUB_WORKSPACE/tests/fixtures/mock-price-schedule.json"
+          export CTD_PROVIDER_KEY_FILE="$RUNNER_TEMP/ctd-ci-placeholder-key"
+          export CTD_EVIDENCE_DIR="$RUNNER_TEMP"
+          export CTD_GATEWAY_TOKEN='ci-only-dummy-token-never-used'
+          export CTD_BUDGET_USD='0.25'
+          docker compose -f experiments/live/base-compose-ci.yaml \\
+            -f experiments/live/compose.yaml config --format json \\
+            | python -m cost_to_done.network_audit
