@@ -13,7 +13,7 @@ from cost_to_done.ledger import BudgetLedger
 
 
 def mock_transport(body: bytes, key: str) -> UpstreamResponse:
-    conn = http.client.HTTPConnection('provider', 8770, timeout=4)
+    conn = http.client.HTTPConnection(os.environ.get('CTD_MOCK_UPSTREAM_HOST', 'provider'), 8770, timeout=4)
     try:
         conn.request('POST', '/v1/chat/completions', body, headers={
             'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'

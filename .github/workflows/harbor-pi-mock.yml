@@ -1,0 +1,62 @@
+name: Harbor Pi mock integration
+
+on:
+  push:
+    paths:
+      - '.github/workflows/harbor-pi-mock.yml'
+      - 'tests/harbor/**'
+      - 'tests/network/mock_provider.py'
+      - 'tests/network/mock_gateway.py'
+      - 'scripts/check_harbor_mock.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  harbor-pi-mock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CTD_MOCK_GATEWAY_TOKEN: test-gateway-session-token-00001
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned Harbor and local inspector
+        run: |
+          python -m pip install 'harbor==0.26.0'
+          python -m pip install -e .
+          harbor --version
+          docker version
+      - name: Execute one real Pi-in-Harbor attempt with fake provider only
+        run: |
+          harbor run --path tasks/allocation-repair \
+            --agent pi --model openai/test-model-1 \
+            --base-url http://127.0.0.1:8866/v1 \
+            --api-key-name CTD_MOCK_GATEWAY_TOKEN \
+            --api-format openai_chat_completions \
+            --ak version=0.85.1 \
+            --ak model_api=openai-completions \
+            --ak max_turns=1 \
+            --ak max_output_tokens=256 \
+            --agent-env CTD_MOCK_GATEWAY_TOKEN=test-gateway-session-token-00001 \
+            --allow-agent-host 127.0.0.1 \
+            --allow-environment-host raw.githubusercontent.com \
+            --allow-environment-host github.com \
+            --allow-environment-host nodejs.org \
+            --allow-environment-host registry.npmjs.org \
+            --extra-docker-compose tests/harbor/compose.yaml \
+            --job-name harbor-pi-mock --jobs-dir harbor-pi-mock-jobs \
+            --n-concurrent 1 --n-attempts 1
+      - name: Verify recorded Harbor trial result
+        run: python scripts/check_harbor_mock.py harbor-pi-mock-jobs/harbor-pi-mock
+      - name: Archive raw mock evaluation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: harbor-pi-mock-${{ github.run_id }}
+          path: harbor-pi-mock-jobs/
+          if-no-files-found: warn
+          retention-days: 14

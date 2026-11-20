@@ -1,0 +1,46 @@
+# Integration fixture for one Harbor/Pi trial with a fake model.
+# This is deliberately not a claim of production network isolation.
+# The mock provider and mock gateway share Harbor's task network namespace.
+services:
+  main:
+    depends_on:
+      ctd_mock_provider:
+        condition: service_healthy
+      ctd_mock_gateway:
+        condition: service_healthy
+  ctd_mock_provider:
+    image: python:3.12-slim-bookworm
+    command: ["python", "-u", "/fixture/mock_provider.py"]
+    volumes:
+      - ../network/mock_provider.py:/fixture/mock_provider.py:ro
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8770), timeout=1).close()"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  ctd_mock_gateway:
+    image: python:3.12-slim-bookworm
+    command: ["python", "-u", "/fixture/mock_gateway.py"]
+    volumes:
+      - ../../src:/fixture/src:ro
+      - ../network/mock_gateway.py:/fixture/mock_gateway.py:ro
+    environment:
+      PYTHONPATH: /fixture/src
+      CTD_PI_MODE: "1"
+      CTD_MOCK_UPSTREAM_HOST: 127.0.0.1
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    depends_on:
+      ctd_mock_provider:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8866), timeout=1).close()"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
