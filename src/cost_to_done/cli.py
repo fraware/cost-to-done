@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .core import ReceiptError, analyze, read_trials
 from .execute import Launch, execute, plan
+from .evidence import EvidenceRequest, write_evidence_receipt
 from .harbor import inspect_harbor_job, write_harbor_receipts
 from .gateway import PriceSchedule, serve_local
 from .ledger import BudgetLedger
@@ -33,6 +34,18 @@ def main(argv: list[str] | None = None) -> int:
     p = subs.add_parser("inspect-harbor", help="Inspect raw Harbor job outcomes and cost availability")
     p.add_argument("job", type=Path, help="Harbor job directory containing trial result files")
     p.add_argument("--reward-key", default="reward", help="named scalar verifier reward")
+    p = subs.add_parser("reconcile-harbor", help="Join one Harbor trial to a dedicated, fully settled inference ledger")
+    p.add_argument("--job", type=Path, required=True)
+    p.add_argument("--ledger", type=Path, required=True)
+    p.add_argument("--task", type=Path, required=True)
+    p.add_argument("--verifier", type=Path, required=True)
+    p.add_argument("--price-schedule", type=Path, required=True)
+    p.add_argument("--configuration-id", required=True)
+    p.add_argument("--agent", default="pi")
+    p.add_argument("--model", required=True, help="Expected openai/model route")
+    p.add_argument("--harness-digest", required=True, help="Operator-declared SHA-256 of a pinned harness specification")
+    p.add_argument("--harbor-task-checksum", required=True, help="Expected Harbor task checksum from archived control evidence")
+    p.add_argument("--output", type=Path, required=True, help="New JSONL receipt file, with adjacent provenance sidecar")
     p = subs.add_parser("run-harbor", help="Plan or explicitly execute one real Harbor model trial")
     p.add_argument("--task", type=Path, default=Path("tasks/allocation-repair"))
     p.add_argument("--jobs-dir", type=Path, default=Path("runs"))
@@ -81,6 +94,15 @@ def main(argv: list[str] | None = None) -> int:
             serve_local(ledger_path=args.ledger, budget_usd=args.budget_usd,
                         price_path=args.price_schedule, port=args.port,
                         gateway_token=token, provider_key=provider_key)
+            return 0
+        if args.command == "reconcile-harbor":
+            request = EvidenceRequest(
+                job=args.job, ledger=args.ledger, task=args.task, verifier=args.verifier,
+                price_schedule=args.price_schedule, configuration_id=args.configuration_id,
+                agent=args.agent, model=args.model, harness_digest=args.harness_digest,
+                harbor_task_checksum=args.harbor_task_checksum,
+            )
+            print(json.dumps(write_evidence_receipt(request, args.output), indent=2))
             return 0
         if args.command == "run-harbor":
             cfg = Launch(args.task, args.jobs_dir, args.model, args.agent, args.job_name, args.max_wall_seconds, args.max_turns)

@@ -4,7 +4,7 @@
 
 > The cheapest AI model might be the most expensive way to finish your work.
 
-[Explore the static experience](docs/index.html) · [Sample evidence report](docs/report.html) · [Interactive cost calculator](docs/calculator.html) · [Methodology](docs/methodology.md) · [Model smoke test](docs/model-smoke.md) · [Harbor mock integration](docs/harbor-mock.md) · [Isolated Harbor test](docs/harbor-isolated.md) · [Vision](docs/vision.md)
+[Explore the static experience](docs/index.html) · [Sample evidence report](docs/report.html) · [Interactive cost calculator](docs/calculator.html) · [Methodology](docs/methodology.md) · [Model smoke test](docs/model-smoke.md) · [Harbor mock integration](docs/harbor-mock.md) · [Isolated Harbor test](docs/harbor-isolated.md) · [Receipt reconciliation](docs/ledger-reconciliation.md) · [Vision](docs/vision.md)
 
 Token prices describe a unit of inference. Developers purchase **completed work**. A model that generates cheap tokens while wasting attempts, hallucinating fixes, or failing tests can incur more expense per successful task than a higher-priced model.
 
@@ -21,6 +21,7 @@ Token prices describe a unit of inference. Developers purchase **completed work*
 | Harbor receipt importer | **Experimental** | Converts pinned Harbor trial result files into local, **agent-reported price estimates**; refuses missing cost and mismatched identities |
 | Mock-backed coding-agent execution | **CI verified** | Harbor 0.26.0 and Pi 0.85.1 now exercise both a single-call failed task and a two-call scripted tool repair accepted by an independent verifier; paid-model execution is still outstanding |
 | Mock Harbor agent network isolation | **CI verified for one topology** | The actual Harbor task reaches the gateway while direct provider DNS, provider IP, and public IP probes fail; not a production security guarantee |
+| Harbor + gateway receipt reconciliation | **Experimental** | Validates one completed trial against a dedicated fully-settled gateway ledger and emits a canonical JSONL receipt plus audit metadata; costs remain rate-card estimates |
 | Public model leaderboard | **Not yet published** | Awaiting controlled runs and independently checked verification/provenance |
 
 **There are no real-model benchmark results in this repository yet.** The example report uses generated synthetic data from fictional configurations. It cannot support claims about the performance or cost of actual providers.
