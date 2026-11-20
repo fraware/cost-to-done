@@ -49,3 +49,9 @@ It attributes the **sum of all settled model requests** to one task attempt and 
 - The two output files are each written using a replace operation; there is no atomic two-file transaction. Consumers must require both and independently verify their hashes and identities before publishing claims.
 
 The eventual public model leaderboard must apply stronger evidence rules before treating any result as independently reproduced.
+
+## Executed fixture evidence
+
+The corrected [Harbor CI run 44829754203](https://github.com/fraware/cost-to-done/actions/runs/44829754203) generated and validated both canonical outputs. For the scripted-repair scenario the receipt records **one passing task trial**, **two mock inference requests**, **$0.0236 fictional estimated expense**, and a trial duration of 76.211075 seconds. The no-op control records **one failing task trial**, **one mock inference request**, and **$0.0036 fictional estimated expense**. Both evidence sidecars explicitly record `billing_verified: false` and `request_to_trial_attribution: single-dedicated-ledger-operator-assertion`.
+
+These durations are actual Harbor CI wall-clock observations for the mock fixtures, not measurements of real model speed or completion ability. The archive preserves the source trial results, Pi transcripts, gateway ledgers and JSONL receipts for inspection during the retention period.
