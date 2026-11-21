@@ -12,6 +12,9 @@ services:
     cap_add: [FOWNER, DAC_OVERRIDE]
 
   ctd_gateway:
+    # Match the host owner of 0700 evidence and 0600 file-backed secret;
+    # dropping every capability otherwise prevents access to these mounts.
+    user: "${CTD_RUN_UID:?must-set-CTD_RUN_UID}:${CTD_RUN_GID:?must-set-CTD_RUN_GID}"
     image: python:3.12.8-slim-bookworm@sha256:2199a62885a12290dc9c5be3ca0681d367576ab7bf037da120e564723292a2f0
     command: ["python", "-m", "cost_to_done.live_gateway"]
     environment:

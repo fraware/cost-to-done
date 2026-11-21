@@ -230,6 +230,10 @@ def execute_live(config: LiveConfig, *, acknowledged: bool = False) -> dict[str,
         "CTD_PROVIDER_KEY_FILE": str(c.key_file),
         "CTD_BUDGET_USD": c.budget_usd,
         "CTD_GATEWAY_TOKEN": gateway_token,
+        # Run the gateway as the same non-root owner as the private evidence and
+        # chmod-0600 provider secret files mounted from the operator host.
+        "CTD_RUN_UID": str(os.getuid()),
+        "CTD_RUN_GID": str(os.getgid()),
     })
     command = c.command(task_copy=task_copy, token=gateway_token)
     outcome: dict[str, Any] = {
