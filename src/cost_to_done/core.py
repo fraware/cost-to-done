@@ -209,7 +209,8 @@ def analyze(trials: list[Trial]) -> dict[str, Any]:
     if not matched:
         warnings.append("Configurations do not cover identical task IDs with identical numbers of trials. No comparative ranking or confidence intervals are produced.")
     if len(set(policies.values())) > 1:
-        warnings.append("Retry policies differ. Configuration comparisons conflate model, harness, and retry strategy.")
+        warnings.append("Retry policies differ. Monetary rankings are withheld because the compared configurations use different execution policies.")
+        matched = False
     cost_sources = {c: set().union(*(t.sources for t in group)) for c, group in by_config.items()}
     if len(set(tuple(sorted(s)) for s in cost_sources.values())) > 1 or any(len(s) != 1 for s in cost_sources.values()):
         warnings.append("Billed and/or estimated expenses are mixed. Monetary rankings are withheld until a common cost basis is established.")

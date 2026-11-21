@@ -97,6 +97,14 @@ class ReceiptTests(unittest.TestCase):
         result = analyze([parse_trial(a), parse_trial(b)])
         self.assertFalse(result["eligible_for_ranking"])
 
+    def test_different_retry_policies_withhold_monetary_rank(self):
+        a = receipt("A", "task-1")
+        b = receipt("B", "task-1")
+        b["retry_policy"] = "no-retry"
+        report = analyze([parse_trial(a), parse_trial(b)])
+        self.assertFalse(report["eligible_for_ranking"])
+        self.assertTrue(any("Retry policies differ" in warning for warning in report["warnings"]))
+
     def test_verifier_mismatch_rejected(self):
         a = receipt("A", "task-1")
         b = copy.deepcopy(receipt("B", "task-1"))

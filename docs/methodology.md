@@ -12,7 +12,7 @@ For configuration \(c\), with complete trials \(i\), cost \(C_i\), and verified 
 
 ## Comparable design
 
-The analyzer checks that each compared configuration covers identical task IDs, task/verifier digests, and the same number of trial observations per task. It rejects cost-basis mixtures and refuses to rank mismatches. A trial's cost basis is either `billed` or `rate_card_estimate`.
+The analyzer checks that each compared configuration covers identical task IDs, task/verifier digests, and the same number of trial observations per task. It rejects cost-basis mixtures and refuses to rank mismatches. It also withholds rankings when the declared retry policies differ, even for otherwise matched task panels. A trial's cost basis is either `billed` or `rate_card_estimate`.
 
 Matching the task panel is necessary but insufficient. A defensible experimental comparison also needs pinned harness versions, model revisions/routes, inference settings, tools, environment resources, budgets, retries, verifier integrity, and task sampling rules. An observed configuration effect is not automatically a pure model effect.
 

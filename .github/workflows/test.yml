@@ -64,3 +64,14 @@ jobs:
           export CTD_BUDGET_USD='0.25'
           docker compose -f experiments/live/base-compose-ci.yaml -f experiments/live/compose.yaml config --format json | python -m cost_to_done.network_audit
 
+      - name: Compare two recorded Harbor controls without credentials or inference
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p private/compare-a/trial private/compare-b/trial
+          cp tests/fixtures/harbor-026-oracle.json private/compare-a/trial/result.json
+          cp tests/fixtures/harbor-026-oracle.json private/compare-b/trial/result.json
+          printf '{"n_total_trials":1}\n' > private/compare-a/result.json
+          printf '{"n_total_trials":1}\n' > private/compare-b/result.json
+          cost-to-done compare-harbor a=private/compare-a b=private/compare-b --output private/compare.html
+          python -c 'from pathlib import Path; h=Path("private/compare.html").read_text(); assert "NO RANKING" in h and "Unavailable" in h'
