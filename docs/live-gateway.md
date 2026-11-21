@@ -7,7 +7,7 @@ The purpose of `run-harbor-gateway` is to obtain **one privately inspected, veri
 ## Preconditions
 
 - Linux containers under a trusted, current Docker Engine and Docker Compose v2, on a host that you administer. Do not attach privileged containers, a Docker socket, or arbitrary Compose overrides.
-- Python 3.12+, `harbor==0.26.0`, and Cost to Done installed from a pinned repository revision. The task image installs Pi 0.85.1 at build time. npm transitive dependencies are not hermetically pinned.
+- Python 3.12+, `harbor==0.27.0`, and Cost to Done installed from a pinned repository revision. The task image installs Pi 0.85.1 at build time. npm transitive dependencies are not hermetically pinned.
 - One supported **OpenAI Chat Completions** model ID and an official, dated pricing schedule with the matching model identifier. Check current pricing and endpoint compatibility independently. The gateway declines unknown fields, unsupported modalities, and missing terminal token usage.
 - A **dedicated provider project with a separately enforced financial limit**, configured and inspected by the operator. Gateway reservations are **estimated**, and billing could exceed them. The interface does not create provider budgets.
 - A private credential file outside this repository and outside the run directory, mode 0600. Place the upstream key in the file as its only line. Never copy its contents into shell arguments, source control, a GitHub Actions secret used by public PRs, or task input.
