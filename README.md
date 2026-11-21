@@ -4,7 +4,7 @@
 
 > The cheapest AI model might be the most expensive way to finish your work.
 
-[Direct Harbor report](docs/direct-harbor-report.md) · [Explore the static experience](docs/index.html) · [Sample evidence report](docs/report.html) · [Interactive cost calculator](docs/calculator.html) · [Methodology](docs/methodology.md) · [Model smoke test](docs/model-smoke.md) · [Harbor mock integration](docs/harbor-mock.md) · [Isolated Harbor test](docs/harbor-isolated.md) · [Receipt reconciliation](docs/ledger-reconciliation.md) · [Vision](docs/vision.md) · [Private real-provider trial](docs/live-gateway.md)
+[Compare Harbor runs](docs/compare-harbor.md) · [Direct Harbor report](docs/direct-harbor-report.md) · [Explore the static experience](docs/index.html) · [Sample evidence report](docs/report.html) · [Interactive cost calculator](docs/calculator.html) · [Methodology](docs/methodology.md) · [Model smoke test](docs/model-smoke.md) · [Harbor mock integration](docs/harbor-mock.md) · [Isolated Harbor test](docs/harbor-isolated.md) · [Receipt reconciliation](docs/ledger-reconciliation.md) · [Vision](docs/vision.md) · [Private real-provider trial](docs/live-gateway.md)
 
 Token prices describe a unit of inference. Developers purchase **completed work**. A model that generates cheap tokens while wasting attempts, hallucinating fixes, or failing tests can incur more expense per successful task than a higher-priced model.
 
@@ -17,6 +17,7 @@ Token prices describe a unit of inference. Developers purchase **completed work*
 | Receipt validator | **Working** | Validates per-trial attempts, artifact digests, cost sources, retry accounting, and success termination |
 | Cost-per-completion analysis | **Working** | Includes failed attempts, blocks invalid comparisons, and computes task-cluster bootstrap intervals where supported |
 | Local HTML reports | **Working** | Generates standalone, offline evidence summaries without trackers or remote scripts |
+| Matched Harbor job comparison | **Working (descriptive)** | Compares two to eight complete jobs against identical task checksums; reports observations and agent cost estimates without claiming billed-model rankings |
 | Cost calculator | **Working** | Interactive hypothetical scenario analysis, separate from measured performance |
 | Harbor receipt importer | **Experimental** | Converts pinned Harbor trial result files into local, **agent-reported price estimates**; refuses missing cost and mismatched identities |
 | Mock-backed coding-agent execution | **CI verified** | Harbor 0.26.0 and Pi 0.85.1 now exercise both a single-call failed task and a two-call scripted tool repair accepted by an independent verifier; paid-model execution is still outstanding |
@@ -69,6 +70,17 @@ cost-to-done report-harbor path/to/harbor-job --output harbor-evidence.html
 ```
 
 The resulting offline HTML shows Harbor-reported passes, failures, infrastructure errors, task and result hashes, elapsed time, and cost estimates where available. **It does not rank models, independently validate a historical verifier, or claim invoiced costs.** Missing cost data stays explicitly unavailable. See [Direct Harbor report](docs/direct-harbor-report.md).
+
+## Compare existing Harbor jobs — zero inference
+
+```bash
+cost-to-done compare-harbor \
+  fast=path/to/first-job \
+  careful=path/to/second-job \
+  --output harbor-comparison.html
+```
+
+This offline report pairs matching task outcomes and available agent-reported price estimates. It refuses missing trials, duplicated task IDs, and mismatched task checksums. It **does not rank models or claim independently verified outcomes or provider invoices**. See [Matched Harbor comparison](docs/compare-harbor.md).
 
 ## Import Harbor trials (experimental)
 

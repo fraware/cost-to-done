@@ -14,6 +14,7 @@ from .execute import Launch, execute, plan
 from .evidence import EvidenceRequest, write_evidence_receipt
 from .harbor import inspect_harbor_job, write_harbor_receipts
 from .harbor_report import write_harbor_overview
+from .harbor_compare import write_harbor_comparison
 from .gateway import PriceSchedule, serve_local
 from .ledger import BudgetLedger
 from .report import write_report
@@ -33,6 +34,10 @@ def main(argv: list[str] | None = None) -> int:
     p = subs.add_parser("import-harbor", help="Normalize pinned Harbor trial results (estimates, not invoices)")
     p.add_argument("manifest", type=Path)
     p.add_argument("--output", required=True, type=Path)
+    p = subs.add_parser("compare-harbor", help="Generate an offline, unranked comparison of complete matched Harbor jobs")
+    p.add_argument("jobs", nargs="+", help="2–8 named Harbor jobs in NAME=PATH form")
+    p.add_argument("--output", type=Path, default=Path("harbor-comparison.html"))
+    p.add_argument("--title", default="Harbor comparison")
     p = subs.add_parser("report-harbor", help="Render a standalone, unranked HTML overview from one Harbor job")
     p.add_argument("job", type=Path, help="Existing Harbor job directory")
     p.add_argument("--output", type=Path, default=Path("harbor-evidence.html"))
@@ -137,6 +142,9 @@ def main(argv: list[str] | None = None) -> int:
             result = execute(cfg, acknowledged=args.acknowledge_no_dollar_cap) if args.execute else plan(cfg)
             print(json.dumps(result, indent=2))
             return 0 if result["status"] in ("dry_run_only", "completed_with_cost_estimate", "completed_cost_unavailable") else 2
+        if args.command == "compare-harbor":
+            print(json.dumps(write_harbor_comparison(args.jobs, args.output, title=args.title), indent=2))
+            return 0
         if args.command == "report-harbor":
             print(json.dumps(write_harbor_overview(args.job, args.output, title=args.title), indent=2))
             return 0
