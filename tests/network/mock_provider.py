@@ -18,7 +18,8 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
     def do_POST(self) -> None:
-        if self.path != '/v1/chat/completions' or self.headers.get('Authorization') != 'Bearer mock-provider-key':
+        expected_key = os.environ.get('CTD_MOCK_PROVIDER_KEY', 'mock-provider-key')
+        if self.path != '/v1/chat/completions' or self.headers.get('Authorization') != f'Bearer {expected_key}':
             self.send_error(403)
             return
         try:

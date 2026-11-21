@@ -1,0 +1,44 @@
+# TEST ONLY: added to the live runner's Compose file by the CI-only script.
+# The real credential-loader, token admission and SQLite ledger remain in use.
+services:
+  main:
+    command: ["sh", "-c", "python /fixture/probe_egress.py && exec sleep infinity"]
+    environment:
+      CTD_TEST_GATEWAY_HOST: ctd_gateway
+    volumes:
+      - ${CTD_REPO_ROOT:?missing-root}/tests/harbor/probe_egress.py:/fixture/probe_egress.py:ro
+      - ${CTD_EVIDENCE_DIR:?missing-evidence}:/evidence
+
+  ctd_gateway:
+    command: ["python", "-u", "/fixture/mock_live_gateway.py"]
+    environment:
+      CTD_REHEARSAL_ONLY: "1"
+    volumes:
+      - ${CTD_REPO_ROOT:?missing-root}/tests/live/mock_live_gateway.py:/fixture/mock_live_gateway.py:ro
+    depends_on:
+      ctd_mock_provider:
+        condition: service_healthy
+
+  ctd_mock_provider:
+    image: python:3.12-slim-bookworm
+    command: ["python", "-u", "/fixture/isolated_provider.py"]
+    networks: [ctd_provider_net]
+    environment:
+      CTD_PROVIDER_IP_PATH: /evidence/provider-ip.txt
+      CTD_PROVIDER_LOG_PATH: /evidence/provider-calls.txt
+      CTD_MOCK_SCENARIO: scripted-repair
+      CTD_MOCK_PROVIDER_KEY: ctd-fake-upstream-key-for-tests-12345678
+    volumes:
+      - ${CTD_REPO_ROOT:?missing-root}/tests/network/mock_provider.py:/fixture/mock_provider.py:ro
+      - ${CTD_REPO_ROOT:?missing-root}/tests/harbor/isolated_provider.py:/fixture/isolated_provider.py:ro
+      - ${CTD_REPO_ROOT:?missing-root}/tests/harbor/mock_repair.py:/fixture/mock_repair.py:ro
+      - ${CTD_EVIDENCE_DIR:?missing-evidence}:/evidence
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8770), timeout=1).close()"]
+      interval: 2s
+      timeout: 2s
+      retries: 30

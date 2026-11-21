@@ -56,7 +56,10 @@ def main() -> None:
     address = provider_ip(evidence / "provider-ip.txt")
     # Positive control prevents a false pass from an entirely disconnected task.
     try:
-        with socket.create_connection(("ctd_mock_gateway", 8866), timeout=4):
+        gateway_host = os.environ.get("CTD_TEST_GATEWAY_HOST", "ctd_mock_gateway")
+        if gateway_host not in {"ctd_mock_gateway", "ctd_gateway"}:
+            raise IsolationError("unrecognized rehearsal gateway hostname")
+        with socket.create_connection((gateway_host, 8866), timeout=4):
             pass
     except OSError as exc:
         raise IsolationError("the actual agent cannot reach the metering gateway") from exc
