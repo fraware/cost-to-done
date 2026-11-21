@@ -28,7 +28,7 @@ from .harbor import inspect_harbor_job
 from .ledger import BudgetLedger, _units
 from .network_audit import audit_live_compose
 
-HARBOR_VERSION = "0.26.0"
+HARBOR_VERSION = "0.27.0"
 PI_VERSION = "0.85.1"
 _MODEL = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,120}\Z")
 _JOB = re.compile(r"[a-z][a-z0-9-]{1,60}\Z")
