@@ -22,10 +22,10 @@ Token prices describe a unit of inference. Developers purchase **completed work*
 | Mock-backed coding-agent execution | **CI verified** | Harbor 0.26.0 and Pi 0.85.1 now exercise both a single-call failed task and a two-call scripted tool repair accepted by an independent verifier; paid-model execution is still outstanding |
 | Mock Harbor agent network isolation | **CI verified for one topology** | The actual Harbor task reaches the gateway while direct provider DNS, provider IP, and public IP probes fail; not a production security guarantee |
 | Harbor + gateway receipt reconciliation | **Mock-CI verified** | Joins one completed Harbor trial and a dedicated, fully settled gateway ledger into a canonical JSONL receipt and audit metadata; monetary values remain estimates |
-| Opt-in real-provider gateway runner | **Prepared, not paid-tested** | Experimental one-task Harbor path with gateway-only provider credential mount, internal agent network and zero-spend planning; independent provider cap remains mandatory |
+| Credential-isolated live runner | **Mock-rehearsed, not paid-tested** | Harbor 0.27.0 and Pi 0.85.1 execute a scripted repair using the production credential loader, admission ledger and internal Docker network; commercial-provider execution and independent billing remain outstanding |
 | Public model leaderboard | **Not yet published** | Awaiting controlled runs and independently checked verification/provenance |
 
-**An [opt-in real-provider gateway path](docs/live-gateway.md) is prepared.** It accepts the qualified allocation-repair task only, confines upstream credentials to a dedicated gateway container, preserves a separate metering ledger, and never publishes results automatically. The path has not yet completed a paid model trial.
+**The [credential-isolated real-provider gateway path](docs/live-gateway.md) is mock-rehearsed.** It accepts only the qualified allocation-repair task and mounts upstream credentials in a dedicated gateway container. Its separate [live-runner rehearsal](docs/live-rehearsal.md) completed a verified two-request scripted repair using a fake provider in [CI run 44926843287](https://github.com/fraware/cost-to-done/actions/runs/44926843287). This is execution-system evidence, not a commercial-model or invoice result.
 
 **There are no real-model benchmark results in this repository yet.** The example report uses generated synthetic data from fictional configurations. It cannot support claims about the performance or cost of actual providers.
 
@@ -147,13 +147,17 @@ This is early-stage infrastructure with an intentionally demanding evidence stan
 
 ## Run the first model-backed smoke test (opt-in)
 
-The new `run-harbor` command provides a no-spend execution plan and a one-trial Harbor/Pi launch with archived local evidence:
+Use the **credential-isolated** path for new experiments. Harbor 0.27.0, Docker and a dated official price schedule are prerequisites. This command is a **zero-spend plan** until execution is explicitly authorized:
 
 ```bash
-cost-to-done run-harbor --model openai/YOUR_MODEL_ID
+cost-to-done run-harbor-gateway \
+  --model YOUR_EXACT_CHAT_COMPLETIONS_MODEL_ID \
+  --price-schedule /absolute/path/to/prices.json \
+  --provider-key-file /secure/path/upstream-key \
+  --budget-usd 0.25
 ```
 
-This command defaults to **dry-run**; it does not contact an inference provider. For a real trial, supply `--execute --acknowledge-no-dollar-cap`, a dedicated provider API key, Harbor 0.26.0, Docker, and an externally enforced provider spending quota. It limits the trial count, agent turns, and local elapsed time, **not dollars**. A paid-model integration test has not yet been completed. See [Model smoke-test procedure](docs/model-smoke.md) for exact commands, security assumptions, and evidence limitations.
+The model key is held by the gateway service instead of the evaluated agent. The displayed budget governs **estimated request admission**, not final billed expenditure. Confirm the provider's separately **enforced** spending limit before opting into real execution. [Live-runner instructions](docs/live-gateway.md) describe the financial and isolation limitations. The prior `run-harbor` interface permits direct provider-key exposure to the agent; it is retained for explicit legacy experiments and is **not the recommended security path**. No commercial-model trial has been completed.
 
 ## Docker gateway isolation experiment
 
