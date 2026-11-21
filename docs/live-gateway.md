@@ -87,3 +87,7 @@ A canonical local receipt is generated separately with `cost-to-done reconcile-h
 ## Verified scope and outstanding work
 
 This new live route has static topology checks, exact-price validation, credential-scope tests, simulated process tests, and unit tests for authorization failures. It has **not** executed a paid model in CI and does not claim container-sandbox security beyond the separately verified mock configuration. The next empirical gate is a manually authorized, provider-capped real-model trial with independent usage reconciliation and audited task outcome. A multi-model public comparison follows only with a fixed task panel, matching retry policy and independently auditable costs.
+
+## Offline acceptance test
+
+The [credential-isolated live-runner rehearsal](live-rehearsal.md) exercises this execution route against a fake provider in GitHub Actions. The test preserves the provider-secret mount and agent network declaration; its upstream transport and additional bypass probes are test-only. It does not attest to commercial-provider reachability or actual charges.
