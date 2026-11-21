@@ -4,7 +4,7 @@
 
 > The cheapest AI model might be the most expensive way to finish your work.
 
-[Explore the static experience](docs/index.html) · [Sample evidence report](docs/report.html) · [Interactive cost calculator](docs/calculator.html) · [Methodology](docs/methodology.md) · [Model smoke test](docs/model-smoke.md) · [Harbor mock integration](docs/harbor-mock.md) · [Isolated Harbor test](docs/harbor-isolated.md) · [Receipt reconciliation](docs/ledger-reconciliation.md) · [Vision](docs/vision.md) · [Private real-provider trial](docs/live-gateway.md)
+[Direct Harbor report](docs/direct-harbor-report.md) · [Explore the static experience](docs/index.html) · [Sample evidence report](docs/report.html) · [Interactive cost calculator](docs/calculator.html) · [Methodology](docs/methodology.md) · [Model smoke test](docs/model-smoke.md) · [Harbor mock integration](docs/harbor-mock.md) · [Isolated Harbor test](docs/harbor-isolated.md) · [Receipt reconciliation](docs/ledger-reconciliation.md) · [Vision](docs/vision.md) · [Private real-provider trial](docs/live-gateway.md)
 
 Token prices describe a unit of inference. Developers purchase **completed work**. A model that generates cheap tokens while wasting attempts, hallucinating fixes, or failing tests can incur more expense per successful task than a higher-priced model.
 
@@ -59,6 +59,16 @@ cost-to-done report path/to/trials.jsonl --output real-report.html
 ```
 
 Valid receipts alone **do not** authenticate a verifier execution or establish that charges were genuinely billed. This version accepts declared provenance, checks consistency, and preserves the cost basis. Future releases will strengthen provenance with linked raw evidence and an independently executed verifier.
+
+## Report an existing Harbor job in one command
+
+Already have Harbor trial artifacts? No model credentials, manifest, or new inference run is needed:
+
+```bash
+cost-to-done report-harbor path/to/harbor-job --output harbor-evidence.html
+```
+
+The resulting offline HTML shows Harbor-reported passes, failures, infrastructure errors, task and result hashes, elapsed time, and cost estimates where available. **It does not rank models, independently validate a historical verifier, or claim invoiced costs.** Missing cost data stays explicitly unavailable. See [Direct Harbor report](docs/direct-harbor-report.md).
 
 ## Import Harbor trials (experimental)
 
