@@ -1,0 +1,63 @@
+name: Credential-isolated live-runner mock rehearsal
+
+on:
+  push:
+    paths:
+      - '.github/workflows/live-rehearsal.yml'
+      - 'tests/live/**'
+      - 'tests/network/mock_provider.py'
+      - 'tests/harbor/probe_egress.py'
+      - 'scripts/run_live_rehearsal.py'
+      - 'scripts/check_live_rehearsal.py'
+      - 'experiments/live/**'
+      - 'src/cost_to_done/live.py'
+      - 'src/cost_to_done/live_gateway.py'
+      - 'src/cost_to_done/gateway.py'
+      - 'src/cost_to_done/ledger.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CTD_REHEARSAL_ONLY: '1'
+      CTD_OUTPUT_ROOT: ${{ github.workspace }}/runs/rehearsal-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned Harbor
+        run: |
+          python -m pip install 'harbor==0.26.0'
+          python -m pip install -e .
+          harbor --version
+          docker info --format '{{.OSType}}'
+      - name: Generate a public, fictional provider secret outside checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s\n' 'ctd-fake-upstream-key-for-tests-12345678' > "$RUNNER_TEMP/ctd-fake-key"
+          chmod 600 "$RUNNER_TEMP/ctd-fake-key"
+      - name: Execute real live runner with mock-only transport
+        run: >-
+          python scripts/run_live_rehearsal.py
+          "$GITHUB_WORKSPACE" "$CTD_OUTPUT_ROOT" "$RUNNER_TEMP/ctd-fake-key"
+      - name: Audit independent verifier, network proof and metering
+        run: python scripts/check_live_rehearsal.py "$CTD_OUTPUT_ROOT"
+      - name: Archive fictional trial evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-runner-mock-${{ github.run_id }}
+          path: |
+            ${{ github.workspace }}/runs/rehearsal-ci/rehearsal-scripted/
+            ${{ github.workspace }}/runs/rehearsal-ci/.sessions/rehearsal-scripted/evidence/
+            ${{ github.workspace }}/runs/rehearsal-ci/.sessions/rehearsal-scripted/run-summary.json
+          if-no-files-found: warn
+          retention-days: 14
