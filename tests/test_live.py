@@ -120,6 +120,8 @@ class LiveContractTests(unittest.TestCase):
             self.assertNotIn("OPENAI_API_KEY", env)
             self.assertNotIn("ANTHROPIC_API_KEY", env)
             self.assertNotIn("GITHUB_TOKEN", env)
+            self.assertEqual(env["CTD_RUN_UID"], str(os.getuid()))
+            self.assertEqual(env["CTD_RUN_GID"], str(os.getgid()))
             self.assertNotIn("sk-example-unit-test", " ".join(cmd))
             self.assertEqual(env["CTD_PROVIDER_KEY_FILE"], str(self.key))
             self.assertTrue((Path(env["CTD_EVIDENCE_DIR"])).is_dir())

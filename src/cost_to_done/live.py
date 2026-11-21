@@ -28,7 +28,7 @@ from .harbor import inspect_harbor_job
 from .ledger import BudgetLedger, _units
 from .network_audit import audit_live_compose
 
-HARBOR_VERSION = "0.26.0"
+HARBOR_VERSION = "0.27.0"
 PI_VERSION = "0.85.1"
 _MODEL = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,120}\Z")
 _JOB = re.compile(r"[a-z][a-z0-9-]{1,60}\Z")
@@ -230,6 +230,10 @@ def execute_live(config: LiveConfig, *, acknowledged: bool = False) -> dict[str,
         "CTD_PROVIDER_KEY_FILE": str(c.key_file),
         "CTD_BUDGET_USD": c.budget_usd,
         "CTD_GATEWAY_TOKEN": gateway_token,
+        # Run the gateway as the same non-root owner as the private evidence and
+        # chmod-0600 provider secret files mounted from the operator host.
+        "CTD_RUN_UID": str(os.getuid()),
+        "CTD_RUN_GID": str(os.getgid()),
     })
     command = c.command(task_copy=task_copy, token=gateway_token)
     outcome: dict[str, Any] = {

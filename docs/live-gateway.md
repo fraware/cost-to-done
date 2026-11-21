@@ -7,7 +7,7 @@ The purpose of `run-harbor-gateway` is to obtain **one privately inspected, veri
 ## Preconditions
 
 - Linux containers under a trusted, current Docker Engine and Docker Compose v2, on a host that you administer. Do not attach privileged containers, a Docker socket, or arbitrary Compose overrides.
-- Python 3.12+, `harbor==0.26.0`, and Cost to Done installed from a pinned repository revision. The task image installs Pi 0.85.1 at build time. npm transitive dependencies are not hermetically pinned.
+- Python 3.12+, `harbor==0.27.0`, and Cost to Done installed from a pinned repository revision. The task image installs Pi 0.85.1 at build time. npm transitive dependencies are not hermetically pinned.
 - One supported **OpenAI Chat Completions** model ID and an official, dated pricing schedule with the matching model identifier. Check current pricing and endpoint compatibility independently. The gateway declines unknown fields, unsupported modalities, and missing terminal token usage.
 - A **dedicated provider project with a separately enforced financial limit**, configured and inspected by the operator. Gateway reservations are **estimated**, and billing could exceed them. The interface does not create provider budgets.
 - A private credential file outside this repository and outside the run directory, mode 0600. Place the upstream key in the file as its only line. Never copy its contents into shell arguments, source control, a GitHub Actions secret used by public PRs, or task input.
@@ -65,7 +65,7 @@ cost-to-done run-harbor-gateway \
 
 The runner first validates the combined Docker Compose configuration and **refuses to start the model trial** if the agent would gain provider-network access, the upstream key could mount into the agent, host ports are published, or unapproved services or capabilities appear. This preflight is a configuration check, not a proof of the dynamic Harbor runtime.
 
-The runner copies the known task to a private session directory, substitutes the pinned Pi image, generates a fresh gateway token, and starts one Harbor trial. A minimal environment is passed to Harbor and **the upstream key is omitted from that environment**. A dedicated Compose secret mounts the key in `ctd_gateway`; `main` stays solely on `ctd_agent_net` with `internal: true`. No service publishes a host port.
+The runner copies the known task to a private session directory, substitutes the pinned Pi image, generates a fresh gateway token, and starts one Harbor trial. The gateway service runs with the invoking host user\'s numeric UID/GID. This matches the owner of the chmod-0600 provider-key file and chmod-0700 evidence directory while retaining dropped Linux capabilities. Do not run this experimental launcher as host root. A minimal environment is passed to Harbor and **the upstream key is omitted from that environment**. A dedicated Compose secret mounts the key in `ctd_gateway`; `main` stays solely on `ctd_agent_net` with `internal: true`. No service publishes a host port.
 
 Pi receives the gateway token for `http://ctd_gateway:8866/v1` and is capped at three completed turns and 4,096 generated tokens per request. The gateway validates model identity and reserves a conservative estimated charge for each forwarded request in a per-run SQLite ledger. The task verifier grades the resulting patch independently of the model response. Harbor's end-to-end runtime and reported usage are recorded.
 
@@ -87,3 +87,7 @@ A canonical local receipt is generated separately with `cost-to-done reconcile-h
 ## Verified scope and outstanding work
 
 This new live route has static topology checks, exact-price validation, credential-scope tests, simulated process tests, and unit tests for authorization failures. It has **not** executed a paid model in CI and does not claim container-sandbox security beyond the separately verified mock configuration. The next empirical gate is a manually authorized, provider-capped real-model trial with independent usage reconciliation and audited task outcome. A multi-model public comparison follows only with a fixed task panel, matching retry policy and independently auditable costs.
+
+## Offline acceptance test
+
+The [credential-isolated live-runner rehearsal](live-rehearsal.md) exercises this execution route against a fake provider in GitHub Actions. The test preserves the provider-secret mount and agent network declaration; its upstream transport and additional bypass probes are test-only. It does not attest to commercial-provider reachability or actual charges.
