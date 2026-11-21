@@ -39,6 +39,19 @@ harbor run --path tasks/allocation-repair --agent oracle --job-name controls-ora
 python scripts/check_harbor_controls.py --nop control-jobs/controls-nop --oracle control-jobs/controls-oracle
 ```
 
+## Cross-version controls for the live runner (November 21, 2026)
+
+The production credential-isolated runner pins **Harbor 0.27.0**, whose Pi adapter accepts the explicit per-turn output-token setting. Historical control artifacts use **Harbor 0.26.0** and retain their original identities. The [two-version qualification CI run](https://github.com/fraware/cost-to-done/actions/runs/44927457238) independently reran the no-op and oracle controls for both releases, using the same checked-out source tree and Dockerfile.
+
+| Harbor release | No-op reward | Oracle reward | Harbor task checksum |
+| --- | ---: | ---: | --- |
+| 0.26.0 | 0.0 | 1.0 | `bb735f2d886e659f4f2bb98713c4ebbd81617b60bc3c235df43ed7656f9fd963` |
+| 0.27.0 | 0.0 | 1.0 | `5294bd40c0c86162053d83c17e317b927acb4bf98bad353d84dd97d3af784039` |
+
+Both jobs passed the strict checker, and their local qualification digests were identical: starter `244f4c8b11920d671fdefcb76faa773d6d64fbeb4b3d0cb5ff80b7765fa6b59b`, verifier `06fdc2f59ce61a95dcd8e4ff3e44252d4fdc44e8393cfbb44a2450ff83295e73`, reference script `a5f203d0f60c23a3209753cb98f7af9ed90b9806758dbfe36c29b640292ed21c`.
+
+**The Harbor task checksums differ across releases.** The observed control verdicts establish acceptance behavior for each pinned release, not interchangeable task identities or version-independent equivalence of the execution environments. For a real 0.27.0 evaluation, use its own observed task checksum and independently audit the verifier, task image and input artifacts. The qualified task remains a single narrow engineering smoke test; the controls yield no model-quality or cost evidence.
+
 ## What qualifies as the next, real agent-economics datum
 
 A model-backed evaluation must use the exact same task and verifier, a pinned agent and model configuration, an explicit monetary spending policy enforced outside the agent, a fresh environment, full usage telemetry, raw verifier evidence, and a cost basis clearly identified as invoice-reconciled or usage-priced. Stop immediately at the specified budget; model-generated text cannot override the budget or verifier. A no-op/oracle control never enters the model-cost leaderboard.
