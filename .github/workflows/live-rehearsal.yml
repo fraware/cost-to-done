@@ -48,6 +48,23 @@ jobs:
         run: >-
           python scripts/run_live_rehearsal.py
           "$GITHUB_WORKSPACE" "$CTD_OUTPUT_ROOT" "$RUNNER_TEMP/ctd-fake-key"
+      - name: Print scrubbed mock-only Harbor diagnostic on failure
+        if: failure()
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import os
+          import re
+          path = Path(os.environ["CTD_OUTPUT_ROOT"]) / ".sessions/rehearsal-scripted/harbor.driver.log"
+          if path.is_file():
+              content = path.read_text(encoding="utf-8", errors="replace")[-8000:]
+              # The rehearsal uses only a fictional provider key. Suppress
+              # other high-entropy strings (e.g. the random gateway token).
+              content = re.sub(r"[A-Za-z0-9_\-]{32,}", "[redacted]", content)
+              print(content)
+          else:
+              print("No Harbor process log was created")
+          PY
       - name: Audit independent verifier, network proof and metering
         run: python scripts/check_live_rehearsal.py "$CTD_OUTPUT_ROOT"
       - name: Archive fictional trial evidence
