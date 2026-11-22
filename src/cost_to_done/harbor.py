@@ -161,7 +161,7 @@ def inspect_harbor_job(job_dir: Path, *, reward_key: str = "reward") -> dict[str
             isinstance(context, dict) and context.get("cost_usd") is not None
             for context in contexts
         )
-        cost = str(_agent_cost(raw)) if has_cost else None
+        cost = format(_agent_cost(raw), "f") if has_cost else None
         rows.append({
             "id": _text(raw.get("id"), "trial id"),
             "task": _text(raw.get("task_name"), "task_name"),
@@ -269,7 +269,7 @@ def import_harbor(manifest_file: Path) -> list[dict[str, Any]]:
                 "harness_digest": digest,
                 "retry_policy": "independent-trials",
                 "attempts": [{
-                    "cost_usd": str(_agent_cost(raw)),
+                    "cost_usd": format(_agent_cost(raw), "f"),
                     "seconds": _elapsed(raw),
                     "outcome": _outcome(raw, reward_key=reward_key),
                     "cost_source": "rate_card_estimate",
