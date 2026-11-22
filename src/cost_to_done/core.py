@@ -181,6 +181,8 @@ def _paired_task_bootstrap(trials: list[Trial], configs: list[str], task_ids: li
 
 def analyze(trials: list[Trial]) -> dict[str, Any]:
     """Summarize attempts and withhold ranking for unmatched trial designs."""
+    if not trials:
+        raise ReceiptError("analysis requires at least one trial")
     by_config: dict[str, list[Trial]] = defaultdict(list)
     definition: dict[str, tuple[str, str]] = {}
     harness: dict[str, str] = {}
@@ -206,10 +208,16 @@ def analyze(trials: list[Trial]) -> dict[str, Any]:
             counts[t.task_id] += 1
         signatures.append(tuple(sorted(counts.items())))
     matched = len(set(signatures)) == 1
-    if not matched:
+    if len(configs) < 2:
+        warnings.append("At least two configurations are necessary for a comparative ranking.")
+        matched = False
+    elif not matched:
         warnings.append("Configurations do not cover identical task IDs with identical numbers of trials. No comparative ranking or confidence intervals are produced.")
     if len(set(policies.values())) > 1:
         warnings.append("Retry policies differ. Monetary rankings are withheld because the compared configurations use different execution policies.")
+        matched = False
+    if any(not any(t.passed for t in group) for group in by_config.values()):
+        warnings.append("Cost per completion is undefined for configurations with zero verified successes. Ranking and bootstrap intervals are withheld.")
         matched = False
     cost_sources = {c: set().union(*(t.sources for t in group)) for c, group in by_config.items()}
     if len(set(tuple(sorted(s)) for s in cost_sources.values())) > 1 or any(len(s) != 1 for s in cost_sources.values()):
@@ -244,5 +252,7 @@ def analyze(trials: list[Trial]) -> dict[str, Any]:
             row["bootstrap_95_usd"] = [lo if math.isfinite(lo) else None, hi if math.isfinite(hi) else None]
         rows.append(row)
     if matched:
-        rows.sort(key=lambda r: (float(r["cost_per_success_usd"]) if r["cost_per_success_usd"] is not None else math.inf, r["configuration"]))
+        # Exact decimal ordering is critical: binary floats can tie distinct
+        # sub-cent prices and silently pick the alphabetically earlier model.
+        rows.sort(key=lambda r: (Decimal(r["cost_per_success_usd"]) if r["cost_per_success_usd"] is not None else Decimal("Infinity"), r["configuration"]))
     return {"eligible_for_ranking": matched, "tasks": len(task_ids), "trials": len(trials), "warnings": warnings, "rows": rows}

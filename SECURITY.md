@@ -8,14 +8,18 @@ Report a security issue privately through a GitHub security advisory if the repo
 
 ## Experimental inference gateway
 
-The gateway binds to IPv4 loopback and authenticates with a gateway-specific
-session token. Keep `OPENAI_API_KEY` exclusively in the trusted gateway process;
-never expose it to an evaluated agent. Do not use the gateway with untrusted
-agent containers until their direct provider egress has been blocked and
-independently tested. The API only supports text/function-tool non-streaming
-Chat Completions and an exact model name. Requests outside this envelope are
-rejected, not forwarded. A price authorization based on a token estimate is
-**not a hard provider invoice limit**. See [docs/gateway.md](docs/gateway.md).
+The standalone gateway binds to IPv4 loopback and authenticates with a gateway-specific
+session token. The separate, containerized live gateway listens on an internal
+Docker network and publishes no host port. Keep `OPENAI_API_KEY` exclusively
+in the trusted gateway process; never expose it to an evaluated agent.
+The supported Chat Completions surface includes bounded, text/function-tool
+requests with either JSON replies or **fully buffered** streaming replies.
+Streaming must terminate with reported usage before its reservation is settled;
+this gateway does not forward streaming chunks incrementally. Unsupported models,
+modalities, routes and request fields are rejected. Direct provider egress from
+an evaluated agent must be blocked and independently checked. A price authorization
+based on a heuristic token estimate is **not a hard provider invoice limit**.
+See [docs/gateway.md](docs/gateway.md).
 
 ## Operator-only real-provider gateway
 

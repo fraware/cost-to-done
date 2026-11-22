@@ -127,5 +127,75 @@ class ReceiptTests(unittest.TestCase):
         self.assertEqual(len(first["rows"][0]["bootstrap_95_usd"]), 2)
 
 
+    def test_single_configuration_is_not_a_ranking(self):
+        report = analyze([parse_trial(receipt("A", "task", cost="0.25"))])
+        self.assertFalse(report["eligible_for_ranking"])
+        self.assertTrue(any("At least two" in w for w in report["warnings"]))
+        self.assertIn("<strong>NO</strong>", render_html(report, title="One config"))
+
+    def test_empty_analysis_is_explicitly_rejected(self):
+        with self.assertRaisesRegex(ReceiptError, "at least one trial"):
+            analyze([])
+
+    def test_sub_cent_model_order_is_exact(self):
+        # Both amounts round to the same binary float. The cheaper model's
+        # name sorts last alphabetically, exposing a float-based ranking bug.
+        expensive = "1000000000.000000000002"
+        cheaper = "1000000000.000000000001"
+        self.assertEqual(float(expensive), float(cheaper))
+        report = analyze([
+            parse_trial(receipt("A-expensive", "task", cost=expensive)),
+            parse_trial(receipt("Z-cheaper", "task", cost=cheaper)),
+        ])
+        self.assertTrue(report["eligible_for_ranking"])
+        self.assertEqual([r["configuration"] for r in report["rows"]],
+                         ["Z-cheaper", "A-expensive"])
+
+    def test_html_displays_nonzero_microcharges_without_rounding(self):
+        report = analyze([
+            parse_trial(receipt("A", "task", cost="0.000000000002")),
+            parse_trial(receipt("B", "task", cost="0.000000000001")),
+        ])
+        html = render_html(report, title="Microcharge check")
+        self.assertIn("$0.000000000001", html)
+        self.assertIn("$0.000000000002", html)
+        self.assertNotIn("$0.0000</span>", html)
+
+    def test_html_retains_high_precision_large_charges(self):
+        report = analyze([
+            parse_trial(receipt("A", "task", cost="1000000000.000000000002")),
+            parse_trial(receipt("B", "task", cost="1000000000.000000000001")),
+        ])
+        html = render_html(report, title="Large charge check")
+        self.assertIn("$1,000,000,000.000000000001", html)
+        self.assertIn("$1,000,000,000.000000000002", html)
+
+    def test_money_formats_zero_and_unbounded_limits(self):
+        from cost_to_done.report import _money
+        self.assertEqual(_money("0"), "$0.00")
+        self.assertEqual(_money("1.2"), "$1.20")
+        self.assertEqual(_money("0.000000000001"), "$0.000000000001")
+        self.assertEqual(_money(float("inf")), "Unbounded")
+        self.assertEqual(_money(None), "Not established")
+        with self.assertRaises(ValueError):
+            _money(float("nan"))
+    def test_zero_success_configurations_are_not_assigned_rank_numbers(self):
+        trials = [
+            parse_trial(receipt("A", "task", result="fail")),
+            parse_trial(receipt("B", "task", result="pass")),
+        ]
+        report = analyze(trials)
+        self.assertFalse(report["eligible_for_ranking"])
+        self.assertIsNone(report["rows"][0]["cost_per_success_usd"])
+        self.assertIn("—", render_html(report, title="Incomplete evidence"))
+        self.assertTrue(any("zero verified successes" in warning for warning in report["warnings"]))
+
+    def test_all_failed_configurations_do_not_produce_winner(self):
+        rows = [parse_trial(receipt(c, "task", result="fail")) for c in ("A", "B")]
+        report = analyze(rows)
+        self.assertFalse(report["eligible_for_ranking"])
+        self.assertTrue(all(x["cost_per_success_usd"] is None for x in report["rows"]))
+
+
 if __name__ == "__main__":
     unittest.main()
