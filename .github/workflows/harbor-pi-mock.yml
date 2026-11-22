@@ -8,7 +8,10 @@ on:
       - 'tests/harbor/Dockerfile.mock-pi'
       - 'tests/network/mock_provider.py'
       - 'tests/network/mock_gateway.py'
-      - 'tests/harbor/Dockerfile.mock-pi'
+      - 'src/cost_to_done/harbor.py'
+      - 'src/cost_to_done/core.py'
+      - 'src/cost_to_done/gateway.py'
+      - 'src/cost_to_done/ledger.py'
       - 'scripts/check_harbor_mock.py'
   workflow_dispatch:
 
