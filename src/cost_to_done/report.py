@@ -2,30 +2,46 @@
 
 from __future__ import annotations
 
+from decimal import Decimal, InvalidOperation
 from html import escape
 from pathlib import Path
 from typing import Any
 
 
 def _money(value: str | float | None) -> str:
+    """Display exact USD amounts, including twelve-decimal microcharges.
+
+    Receipt values arrive as decimal strings. Converting them to float would
+    round tiny nonzero charges to "$0.0000" and obscure close comparisons.
+    Bootstrap endpoints are approximate floats and are labeled as such.
+    """
     if value is None:
         return "Not established"
-    amount = float(value)
-    if amount == float("inf"):
+    if isinstance(value, bool):
+        raise ValueError("invalid monetary amount")
+    try:
+        amount = Decimal(str(value))
+    except (InvalidOperation, ValueError, TypeError) as exc:
+        raise ValueError("invalid monetary amount") from exc
+    if amount == Decimal("Infinity"):
         return "Unbounded"
-    return f"${amount:,.4f}" if amount < 1 else f"${amount:,.2f}"
+    if not amount.is_finite() or amount < 0:
+        raise ValueError("amount must be finite and nonnegative")
+    whole, dot, fractional = format(amount, "f").partition(".")
+    fractional = fractional.rstrip("0").ljust(2, "0")
+    return f"${int(whole):,}.{fractional}"
 
 
 def render_html(report: dict[str, Any], *, title: str, demo: bool = False) -> str:
     """Generate an HTML file fully usable offline, without code execution."""
     safe_title = escape(title, quote=True)
     rows = report["rows"]
-    finite = [float(r["cost_per_success_usd"]) for r in rows if r["cost_per_success_usd"] is not None]
-    largest = max(finite, default=1)
+    finite = [Decimal(r["cost_per_success_usd"]) for r in rows if r["cost_per_success_usd"] is not None]
+    largest = max(finite, default=Decimal("1"))
     table_rows = []
     for i, row in enumerate(rows, 1):
         cost = row["cost_per_success_usd"]
-        ratio = max(2, round(100 * float(cost) / largest)) if cost is not None and largest > 0 else 100
+        ratio = max(2, round(Decimal(100) * Decimal(cost) / largest)) if cost is not None and largest > 0 else 100
         ci = row.get("bootstrap_95_usd")
         ci_text = (f"95% task bootstrap [{_money(ci[0])}, " + f"{'Unbounded' if ci[1] is None else _money(ci[1])}]") if ci else "No interval"
         table_rows.append(f'''
@@ -78,7 +94,7 @@ footer{{border-top:1px solid #c9c6bd;padding:30px 0 48px;font-size:12px;color:#6
 <section class="section-head"><h2>Cost per verified completion</h2><span>Lower is better · failures included in spend</span></section>
 <div class="table-wrap"><table><thead><tr><th>#</th><th>Configuration</th><th>Verified</th><th>Total spend</th><th>Cost / success</th><th>Time</th></tr></thead><tbody>{''.join(table_rows)}</tbody></table></div>
 {warning_markup}
-<section class="method"><div><h3>Accounting contract</h3><p>Cost per success equals the full spend across completed trials divided by their verified successes. Expenses from unsuccessful trials are retained. The ratio is undefined if no trial passes. Exact decimal strings avoid floating-point drift in summed charges.</p></div><div><h3>Comparability contract</h3><p>Rankings are withheld if task sets or per-task replication differ, or billing and rate-card estimates are mixed. A common task verifier and pinned task digest are mandatory. Five or more distinct tasks unlock descriptive task-cluster bootstrap intervals.</p></div></section>
+<section class="method"><div><h3>Accounting contract</h3><p>Cost per success equals the full spend across completed trials divided by their verified successes. Expenses from unsuccessful trials are retained. The ratio is undefined if no trial passes. Exact decimal strings avoid floating-point drift in summed charges.</p></div><div><h3>Comparability contract</h3><p>Rankings need at least two configurations and matched tasks, retry policies, replication, and cost basis. Billed and rate-card-estimated expenses are never mixed. A common task verifier and pinned task digest are mandatory. Five or more distinct tasks unlock descriptive task-cluster bootstrap intervals.</p></div></section>
 </main><footer class="shell"><span>COST TO DONE · Local-first report format v0.1</span><span>No external scripts, analytics, or network requests.</span></footer>
 </body></html>'''
 
