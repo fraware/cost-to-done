@@ -70,6 +70,29 @@ class InspectHarborTests(unittest.TestCase):
         with self.assertRaisesRegex(ReceiptError, "symlink"):
             inspect_harbor_job(link)
 
+    def test_tiny_positive_cost_cannot_round_to_zero(self):
+        trial = json.loads(self.path.read_text())
+        trial["agent_result"]["cost_usd"] = "0.0000000000001"
+        self.path.write_text(json.dumps(trial))
+        with self.assertRaisesRegex(ReceiptError, "positive agent cost"):
+            inspect_harbor_job(self.root)
+
+    def test_one_pico_dollar_is_preserved(self):
+        trial = json.loads(self.path.read_text())
+        trial["agent_result"]["cost_usd"] = "0.000000000001"
+        self.path.write_text(json.dumps(trial))
+        self.assertEqual(inspect_harbor_job(self.root)["trials"][0]["agent_reported_cost_usd"],
+                         "0.000000000001")
+
+    def test_extreme_cost_exponents_fail_with_domain_error(self):
+        for value in ("1e1000", "1e-1000", "1" * 65):
+            with self.subTest(value=value[:20]):
+                trial = json.loads(self.path.read_text())
+                trial["agent_result"]["cost_usd"] = value
+                self.path.write_text(json.dumps(trial))
+                with self.assertRaises(ReceiptError):
+                    inspect_harbor_job(self.root)
+
 
 if __name__ == "__main__":
     unittest.main()

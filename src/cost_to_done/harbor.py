@@ -11,7 +11,7 @@ import hashlib
 import json
 import math
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -64,15 +64,28 @@ def _agent_cost(raw: dict[str, Any]) -> Decimal:
         value = context.get("cost_usd")
         if isinstance(value, bool) or not isinstance(value, (int, float, str)):
             raise ReceiptError("missing or unsupported agent cost_usd")
+        if isinstance(value, str) and len(value) > 64:
+            raise ReceiptError("agent cost has an excessive decimal representation")
         try:
             unit = Decimal(str(value))
         except ArithmeticError as exc:
             raise ReceiptError("invalid agent cost_usd") from exc
         if not unit.is_finite() or unit < 0:
             raise ReceiptError("negative/nonfinite agent cost")
-        amount += unit
-    # Allow 12 decimal places in the lossless public receipt schema.
-    return amount.quantize(Decimal("0.000000000001"))
+        try:
+            amount += unit
+        except InvalidOperation as exc:
+            raise ReceiptError("agent cost exceeds the supported decimal range") from exc
+    # Harbor estimates are quantized to the public receipt's 12-place limit.
+    # Keep nonzero microcharges nonzero; never silently turn a positive cost
+    # into a zero-cost task, and reject unrepresentable extreme magnitudes.
+    try:
+        rounded = amount.quantize(Decimal("0.000000000001"))
+    except InvalidOperation as exc:
+        raise ReceiptError("agent cost exceeds the supported receipt precision") from exc
+    if amount > 0 and rounded == 0:
+        raise ReceiptError("positive agent cost is below the 12-place receipt precision")
+    return rounded
 
 
 def _outcome(raw: dict[str, Any], *, reward_key: str) -> str:
