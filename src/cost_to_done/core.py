@@ -216,6 +216,9 @@ def analyze(trials: list[Trial]) -> dict[str, Any]:
     if len(set(policies.values())) > 1:
         warnings.append("Retry policies differ. Monetary rankings are withheld because the compared configurations use different execution policies.")
         matched = False
+    if any(not any(t.passed for t in group) for group in by_config.values()):
+        warnings.append("Cost per completion is undefined for configurations with zero verified successes. Ranking and bootstrap intervals are withheld.")
+        matched = False
     cost_sources = {c: set().union(*(t.sources for t in group)) for c, group in by_config.items()}
     if len(set(tuple(sorted(s)) for s in cost_sources.values())) > 1 or any(len(s) != 1 for s in cost_sources.values()):
         warnings.append("Billed and/or estimated expenses are mixed. Monetary rankings are withheld until a common cost basis is established.")

@@ -179,6 +179,23 @@ class ReceiptTests(unittest.TestCase):
         self.assertEqual(_money(None), "Not established")
         with self.assertRaises(ValueError):
             _money(float("nan"))
+    def test_zero_success_configurations_are_not_assigned_rank_numbers(self):
+        trials = [
+            parse_trial(receipt("A", "task", result="fail")),
+            parse_trial(receipt("B", "task", result="pass")),
+        ]
+        report = analyze(trials)
+        self.assertFalse(report["eligible_for_ranking"])
+        self.assertIsNone(report["rows"][0]["cost_per_success_usd"])
+        self.assertIn("—", render_html(report, title="Incomplete evidence"))
+        self.assertTrue(any("zero verified successes" in warning for warning in report["warnings"]))
+
+    def test_all_failed_configurations_do_not_produce_winner(self):
+        rows = [parse_trial(receipt(c, "task", result="fail")) for c in ("A", "B")]
+        report = analyze(rows)
+        self.assertFalse(report["eligible_for_ranking"])
+        self.assertTrue(all(x["cost_per_success_usd"] is None for x in report["rows"]))
+
 
 if __name__ == "__main__":
     unittest.main()
