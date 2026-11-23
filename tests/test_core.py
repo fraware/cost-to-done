@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import unittest
 from decimal import Decimal
 
@@ -195,6 +196,47 @@ class ReceiptTests(unittest.TestCase):
         report = analyze(rows)
         self.assertFalse(report["eligible_for_ranking"])
         self.assertTrue(all(x["cost_per_success_usd"] is None for x in report["rows"]))
+
+    def test_report_refuses_to_destroy_its_input(self):
+        """Using the receipt itself as --output must leave it byte-identical."""
+        import tempfile
+        from pathlib import Path
+        from contextlib import redirect_stderr
+        from io import StringIO
+        from cost_to_done.cli import main
+
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "receipts.jsonl"
+            source.write_text(json.dumps(receipt("A", "task")) + "\n", encoding="utf-8")
+            original = source.read_bytes()
+            with redirect_stderr(StringIO()):
+                status = main(["report", str(source), "--output", str(source)])
+            self.assertEqual(status, 2)
+            self.assertEqual(source.read_bytes(), original)
+
+    def test_standard_html_report_private_and_nonoverwriting(self):
+        import stat
+        import tempfile
+        from pathlib import Path
+        from cost_to_done.report import write_report
+
+        report = analyze([parse_trial(receipt("A", "task"))])
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "summary.html"
+            write_report(report, output, title="Example")
+            contents = output.read_bytes()
+            self.assertEqual(stat.S_IMODE(output.stat().st_mode), 0o600)
+            with self.assertRaisesRegex(ReceiptError, "already exists"):
+                write_report(report, output, title="Another")
+            self.assertEqual(output.read_bytes(), contents)
+
+            target = Path(directory) / "source.jsonl"
+            target.write_text("private historical trial\n")
+            alias = Path(directory) / "alias.html"
+            alias.symlink_to(target)
+            with self.assertRaisesRegex(ReceiptError, "already exists"):
+                write_report(report, alias, title="Example")
+            self.assertEqual(target.read_text(), "private historical trial\n")
 
 
 if __name__ == "__main__":

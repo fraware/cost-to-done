@@ -129,6 +129,22 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(meta["gateway_request_count"], 2)
         self.assertEqual(meta["harbor_trial_raw_sha256"], "a" * 64)
 
+    def test_evidence_files_are_private_and_protected_against_overwrite(self):
+        import stat
+
+        destination = self.root / "receipt.jsonl"
+        with patch("cost_to_done.evidence.inspect_harbor_job", return_value=self.fake_job):
+            result = write_evidence_receipt(self.request, destination)
+            original_receipt = destination.read_bytes()
+            sidecar = Path(result["evidence"])
+            original_sidecar = sidecar.read_bytes()
+            self.assertEqual(stat.S_IMODE(destination.stat().st_mode), 0o600)
+            self.assertEqual(stat.S_IMODE(sidecar.stat().st_mode), 0o600)
+            with self.assertRaisesRegex(ReceiptError, "already exists"):
+                write_evidence_receipt(self.request, destination)
+            self.assertEqual(destination.read_bytes(), original_receipt)
+            self.assertEqual(sidecar.read_bytes(), original_sidecar)
+
 
 if __name__ == "__main__":
     unittest.main()

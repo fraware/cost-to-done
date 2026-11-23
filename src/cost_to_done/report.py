@@ -7,6 +7,8 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
+from .private_files import publish_private_texts
+
 
 def _money(value: str | float | None) -> str:
     """Display exact USD amounts, including twelve-decimal microcharges.
@@ -101,4 +103,4 @@ footer{{border-top:1px solid #c9c6bd;padding:30px 0 48px;font-size:12px;color:#6
 
 def write_report(report: dict[str, Any], output: str | Path, *, title: str, demo: bool = False) -> None:
     """Write HTML in UTF-8 with deterministic content for the same inputs."""
-    Path(output).write_text(render_html(report, title=title, demo=demo), encoding="utf-8")
+    publish_private_texts([(Path(output), render_html(report, title=title, demo=demo))])
