@@ -27,8 +27,8 @@ jobs:
       CTD_REPO_ROOT: ${{ github.workspace }}
       CTD_EVIDENCE_DIR: ${{ github.workspace }}/.ctd-harbor-mock-evidence
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Install pinned Harbor and local inspector
@@ -69,7 +69,7 @@ jobs:
         run: python scripts/check_harbor_mock.py harbor-pi-mock-jobs/harbor-pi-mock --evidence "$CTD_EVIDENCE_DIR"
       - name: Archive raw mock evaluation evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: harbor-pi-mock-${{ github.run_id }}
           path: |
