@@ -27,8 +27,8 @@ jobs:
       matrix:
         harbor-version: ['0.26.0', '0.27.0']
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Local baseline and reference qualification
@@ -59,7 +59,7 @@ jobs:
           cat harbor-runner-version.json
       - name: Archive control receipts and logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: harbor-controls-${{ matrix.harbor-version }}-${{ github.run_id }}
           path: |

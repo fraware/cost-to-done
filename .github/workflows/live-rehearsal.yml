@@ -29,8 +29,8 @@ jobs:
       CTD_REHEARSAL_ONLY: '1'
       CTD_OUTPUT_ROOT: ${{ github.workspace }}/runs/rehearsal-ci
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Install pinned Harbor
@@ -71,7 +71,7 @@ jobs:
         run: python scripts/check_live_rehearsal.py "$CTD_OUTPUT_ROOT"
       - name: Archive fictional trial evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: live-runner-mock-${{ github.run_id }}
           path: |
