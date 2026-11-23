@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from .core import ReceiptError, parse_trial
+from .private_files import publish_private_texts
 from .gateway import PriceSchedule
 from .harbor import inspect_harbor_job
 from .ledger import BudgetLedger
@@ -175,27 +176,14 @@ def inspect_evidence(request: EvidenceRequest) -> tuple[dict[str, Any], dict[str
 def write_evidence_receipt(request: EvidenceRequest, output: Path) -> dict[str, Any]:
     """Create a receipt and adjacent audit record; never overwrite evidence."""
     receipt, provenance = inspect_evidence(request)
+    output = Path(output)
     sidecar = output.with_name(output.name + ".evidence.json")
-    if output == sidecar or output.exists() or sidecar.exists() or output.is_symlink() or sidecar.is_symlink():
-        raise ReceiptError("receipt or evidence sidecar already exists")
-    output.parent.mkdir(parents=True, exist_ok=True)
-    temp = output.with_name(output.name + ".tmp")
-    temp_meta = sidecar.with_name(sidecar.name + ".tmp")
-    if temp.exists() or temp_meta.exists():
-        raise ReceiptError("temporary output exists; refusing overwrite")
-    try:
-        with temp.open("x", encoding="utf-8") as file:
-            file.write(json.dumps(receipt, sort_keys=True, allow_nan=False) + "\n")
-        with temp_meta.open("x", encoding="utf-8") as file:
-            json.dump(provenance, file, sort_keys=True, indent=2, allow_nan=False)
-            file.write("\n")
-        # Filesystem rename protects each file individually. Atomic pair
-        # publication is not possible, so audit tools require both files.
-        temp_meta.replace(sidecar)
-        temp.replace(output)
-    finally:
-        temp.unlink(missing_ok=True)
-        temp_meta.unlink(missing_ok=True)
+    # Stage both completed files. Publish the sidecar first so the receipt
+    # is never independently published before its audit metadata.
+    publish_private_texts([
+        (sidecar, json.dumps(provenance, sort_keys=True, indent=2, allow_nan=False) + "\n"),
+        (output, json.dumps(receipt, sort_keys=True, allow_nan=False) + "\n"),
+    ])
     return {"receipt": str(output), "evidence": str(sidecar),
             "trial_id": receipt["trial_id"], "cost_basis": "rate_card_estimate",
             "provider_invoice_reconciled": False}

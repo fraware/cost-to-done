@@ -22,6 +22,10 @@ With at least five distinct tasks, the analyzer draws 2,000 bootstrap resamples 
 
 A real public comparison will need a larger and more representative task panel, prespecified handling of missing trials and infrastructure events, paired contrast intervals, and task-source provenance.
 
+## Local artifact publication
+
+The CLI's receipt exporters and standard HTML report now publish private (POSIX mode 0600) UTF-8 artifacts exclusively. Existing outputs and symlinks are rejected, including attempts to use a receipt file as its own HTML destination. A complete payload is first staged in the destination directory and then published by an exclusive hard link, preventing overwrites and preventing partially written final files. Exporting a receipt together with its provenance sidecar is not one atomic filesystem transaction; an unsuccessful publication rolls back links created by the invocation when still owned by it. The destination filesystem must support local hard links.
+
 ## Provenance limits
 
 The current receipt schema validates structure and consistency, **not authenticity**. It does not independently prove a verifier ran, validate the underlying artifacts against its digest, or reconcile invoice charges. The Harbor importer reads trial results from disk and requires a user-pinned manifest, but remains downstream of Harbor's execution and telemetry trust boundary.

@@ -176,6 +176,23 @@ class ImportHarborTests(unittest.TestCase):
         with self.assertRaisesRegex(ReceiptError, "one Harbor attempt"):
             import_harbor(self.root / "manifest.json")
 
+    def test_receipt_export_is_private_and_refuses_existing_symlink(self):
+        import stat
+
+        destination = self.root / "receipts.jsonl"
+        write_harbor_receipts(self.root / "manifest.json", destination)
+        self.assertEqual(stat.S_IMODE(destination.stat().st_mode), 0o600)
+        before = destination.read_bytes()
+        with self.assertRaisesRegex(ReceiptError, "already exists"):
+            write_harbor_receipts(self.root / "manifest.json", destination)
+        self.assertEqual(destination.read_bytes(), before)
+
+        alias = self.root / "alias.jsonl"
+        alias.symlink_to(destination)
+        with self.assertRaisesRegex(ReceiptError, "already exists"):
+            write_harbor_receipts(self.root / "manifest.json", alias)
+        self.assertEqual(destination.read_bytes(), before)
+
 
 if __name__ == "__main__":
     unittest.main()

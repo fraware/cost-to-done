@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from .core import ReceiptError, parse_trial
+from .private_files import publish_private_texts
 
 
 def _object(value: Any, name: str) -> dict[str, Any]:
@@ -285,19 +286,10 @@ def import_harbor(manifest_file: Path) -> list[dict[str, Any]]:
 
 
 def write_harbor_receipts(manifest: Path, output: Path) -> int:
-    """Atomically write normalized receipts; leave no partial files on failure."""
+    """Publish normalized receipts privately, atomically and without overwrite."""
     rows = import_harbor(manifest)
-    if output.exists():
-        raise ReceiptError(f"output already exists: {output}")
-    output.parent.mkdir(parents=True, exist_ok=True)
-    temporary = output.with_name(output.name + ".tmp")
-    if temporary.exists():
-        raise ReceiptError(f"temporary output already exists: {temporary}")
-    try:
-        with temporary.open("x", encoding="utf-8") as file:
-            for row in rows:
-                file.write(json.dumps(row, sort_keys=True, allow_nan=False) + "\n")
-        temporary.replace(output)
-    finally:
-        temporary.unlink(missing_ok=True)
+    payload = "".join(
+        json.dumps(row, sort_keys=True, allow_nan=False) + "\n" for row in rows
+    )
+    publish_private_texts([(output, payload)])
     return len(rows)

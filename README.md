@@ -50,7 +50,7 @@ cost-to-done report examples/synthetic-trials.jsonl \
 python -m unittest discover -s tests -v
 ```
 
-Open `report.html` locally. Or open `docs/index.html`, then use the interactive calculator. The calculator takes **assumptions**, not model measurements.
+Open `report.html` locally. Reports and exported receipt/evidence files are created privately and never overwrite existing destinations; choose a fresh output filename for each run. Or open `docs/index.html`, then use the interactive calculator. The calculator takes **assumptions**, not model measurements.
 
 To analyze real trial receipts supplied by a trusted executor:
 
