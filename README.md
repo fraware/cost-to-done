@@ -86,6 +86,16 @@ cost-to-done compare-harbor \
 
 This offline report pairs matching task outcomes and available agent-reported price estimates. It refuses missing trials, duplicated task IDs, and mismatched task checksums. It **does not rank models or claim independently verified outcomes or provider invoices**. See [Matched Harbor comparison](docs/compare-harbor.md).
 
+## Plan a matched development panel (experimental)
+
+From a trusted repository checkout, generate a frozen zero-spend plan for the three bundled tasks and two native OpenAI configurations:
+
+```bash
+cost-to-done plan-panel --output panel.json
+```
+
+This records task/configuration identities, deterministic run order and estimated admission allowances. It does not execute models or authorize expenditure. See [the comparative protocol](docs/comparative-protocol.md).
+
 ## Import Harbor trials (experimental)
 
 Harbor provides sandboxed agent execution and structured per-trial results. Cost to Done reads those existing outputs rather than reproducing Harbor's agent loop. Import is guarded by a manifest with pinned task checksums, verifier digests, agent identity, and harness identity.

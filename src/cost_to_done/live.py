@@ -145,27 +145,41 @@ class LiveConfig:
         ]
 
 
+def staged_task_inputs(root: Path, task: Path) -> tuple[tuple[str, ...], bytes]:
+    """Resolve the exact staged input names and generated Dockerfile bytes."""
+    module = TRUSTED_TASK_MODULES.get(task.name)
+    if module is None or task != root / "tasks" / task.name or task.resolve() != task:
+        raise ReceiptError("unknown or unsafe trusted task")
+    template_path = root / "experiments/live/Dockerfile.pi"
+    if template_path.is_symlink() or not template_path.is_file():
+        raise ReceiptError("missing trusted Pi Dockerfile template")
+    template = template_path.read_text(encoding="utf-8")
+    marker = "COPY allocate.py /app/allocate.py"
+    if template.count(marker) != 1:
+        raise ReceiptError("unexpected trusted Pi Dockerfile template")
+    files = ("instruction.md", "task.toml", f"environment/{module}",
+             "tests/test.sh", "tests/test_state.py", "solution/solve.sh")
+    for name in files:
+        source = task / name
+        if not source.is_file() or source.is_symlink() or source.resolve() != source:
+            raise ReceiptError("missing or unsafe staged task input")
+    return files, template.replace(marker, f"COPY {module} /app/{module}").encode("utf-8")
+
+
 def prepare_task(config: LiveConfig, task_copy: Path) -> None:
     """Stage only the declared fixture files, excluding incidental local artifacts.
 
     The operator must trust the checkout, including the task and runner template.
     This is not a general untrusted repository execution facility.
     """
-    module = TRUSTED_TASK_MODULES[config.task.name]
-    template = (config.repo_root / "experiments/live/Dockerfile.pi").read_text(encoding="utf-8")
-    marker = "COPY allocate.py /app/allocate.py"
-    if template.count(marker) != 1:
-        raise ReceiptError("unexpected trusted Pi Dockerfile template")
-    files = ("instruction.md", "task.toml", f"environment/{module}",
-             "tests/test.sh", "tests/test_state.py", "solution/solve.sh")
+    files, dockerfile = staged_task_inputs(config.repo_root, config.task)
     task_copy.mkdir(mode=0o700)
     for name in files:
         source = config.task / name
         destination = task_copy / name
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
-    dockerfile = task_copy / "environment/Dockerfile"
-    dockerfile.write_text(template.replace(marker, f"COPY {module} /app/{module}"), encoding="utf-8")
+    (task_copy / "environment/Dockerfile").write_bytes(dockerfile)
 
 
 def plan_live(config: LiveConfig) -> dict[str, Any]:

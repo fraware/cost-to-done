@@ -66,3 +66,19 @@ Pi and the credential-isolated gateway, including low-effort opaque reasoning
 replay and the independent task verifier. Its scripted repairs and fictional
 usage are not model performance measurements. Paid matrix execution is a
 separate gate after both the frontier pilot and the expanded mock checks pass.
+
+## Freeze the development-panel plan (zero spend)
+
+```bash
+cost-to-done plan-panel --output panel.json
+cost-to-done plan-panel --repetitions 3 --max-total-usd 18 --output panel-18.json
+```
+
+The default plan lists six episodes (three public tasks, two native low-effort
+configurations, one repetition). The larger plan lists eighteen. Task/repetition
+blocks are shuffled with a declared seed, and configuration order alternates
+across blocks. Each plan includes content hashes of the actual staged task files,
+the generated Dockerfile, runner source files, price schedules and the complete
+prospective plan. The summed local admission allowances must fit the explicit
+aggregate ceiling. This is a planning artifact only: the CLI does not execute
+inference, validate provider billing, or establish a hard invoice cap.
