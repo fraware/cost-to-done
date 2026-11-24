@@ -67,6 +67,20 @@ class LiveContractTests(unittest.TestCase):
                     plan_live(alternate)
                 self.assertFalse(self.c.jobs_dir.exists())
 
+    def test_explicit_responses_plan_and_command(self):
+        from dataclasses import replace
+        cfg = replace(self.c, api="responses", reasoning_effort="low")
+        plan = plan_live(cfg)
+        self.assertEqual(plan["api"], "responses")
+        self.assertEqual(plan["reasoning_effort"], "low")
+        args = cfg.command(task_copy=Path("/task"), token="stub")
+        self.assertEqual(args[args.index("--api-format") + 1], "openai_responses")
+        self.assertIn("model_api=openai-responses", args)
+        self.assertIn("reasoning_effort=low", args)
+        self.assertFalse(self.c.jobs_dir.exists())
+        with self.assertRaises(ReceiptError):
+            plan_live(replace(cfg, api="invalid"))
+
     def test_gpt54_mini_turns_off_reasoning_for_chat_function_tools(self):
         self.price.write_text(json.dumps(vars(PriceSchedule(
             "gpt-5.4-mini", "2026-11-23", "https://example.com/pricing",

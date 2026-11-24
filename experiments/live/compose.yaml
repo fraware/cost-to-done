@@ -19,6 +19,7 @@ services:
     command: ["python", "-m", "cost_to_done.live_gateway"]
     environment:
       PYTHONPATH: /runtime/src
+      CTD_GATEWAY_ROUTE: ${CTD_GATEWAY_ROUTE:-/v1/chat/completions}
       CTD_PRICE_PATH: /run/prices.json
       CTD_LEDGER_PATH: /evidence/ledger.sqlite3
       CTD_GATEWAY_TOKEN: ${CTD_GATEWAY_TOKEN:?must-set-CTD_GATEWAY_TOKEN}

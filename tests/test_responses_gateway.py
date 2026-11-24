@@ -59,6 +59,15 @@ class ResponsesGatewayTests(unittest.TestCase):
         self.assertIs(self.seen[0]["store"], False)
         self.assertEqual(self.seen[0]["include"], ["reasoning.encrypted_content"])
 
+    def test_pi_cache_key_and_optional_schema_normalization(self):
+        tools = [{"type": "function", "name": "write", "parameters": {"type": "object"}}]
+        self.gateway.handle(request(prompt_cache_key="session-test", tools=tools,
+                                    reasoning={"effort": "low", "summary": "auto"}), "pi")
+        self.assertNotIn("prompt_cache_key", self.seen[0])
+        self.assertIs(self.seen[0]["tools"][0]["strict"], False)
+        with self.assertRaises(ReceiptError):
+            self.gateway.handle(request(prompt_cache_key={"bad": True}), "bad-cache")
+
     def test_stateless_tool_continuation(self):
         items = [
             {"role": "user", "content": "Repair task"},

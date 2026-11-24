@@ -13,7 +13,7 @@ from .core import ReceiptError
 ROUTE = "/v1/responses"
 _ALLOWED = frozenset({
     "model", "input", "instructions", "max_output_tokens", "store", "stream",
-    "tools", "tool_choice", "parallel_tool_calls", "reasoning", "include",
+    "tools", "tool_choice", "parallel_tool_calls", "reasoning", "include", "prompt_cache_key",
 })
 
 
@@ -144,17 +144,25 @@ def bounded_request(data: bytes, *, model: str, max_output_cap: int,
                  "only local JSON function tools supported")
         _require(tool["name"] not in names, "duplicate function name")
         names.add(tool["name"])
+        # Pi schemas have optional fields. Preserve non-strict semantics.
+        tool.setdefault("strict", False)
     _require(obj.get("tool_choice", "auto") in ("auto", "none", "required"),
              "unsupported Responses tool_choice")
     _require(type(obj.get("parallel_tool_calls", False)) is bool,
              "parallel_tool_calls must be boolean")
     if "reasoning" in obj:
         reason = obj["reasoning"]
-        _require(_fields(reason, {"effort"}) and reason.get("effort") in
+        _require(_fields(reason, {"effort", "summary"}) and reason.get("summary", "auto") in
+                 ("auto", "concise", "detailed") and reason.get("effort") in
                  ("none", "minimal", "low", "medium", "high", "xhigh"),
                  "unsupported reasoning settings")
     _require(obj.get("include", []) in ([], ["reasoning.encrypted_content"]),
              "unsupported Responses include fields")
+    # Drop Pi session cache-routing identifiers; use undiscounted input rates.
+    if "prompt_cache_key" in obj:
+        key = obj.pop("prompt_cache_key")
+        _require(isinstance(key, str) and 0 < len(key) <= 128,
+                 "invalid prompt_cache_key")
     # Explicitly disable stored conversation state and request replayable reasoning.
     obj["store"] = False
     obj["include"] = ["reasoning.encrypted_content"]

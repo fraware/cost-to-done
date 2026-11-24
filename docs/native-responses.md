@@ -41,3 +41,16 @@ promised. The parser does not validate the full output semantics. Supported
 provider event types are intentionally narrow and need real-provider conformance.
 
 Reference: https://developers.openai.com/api/reference/resources/responses/streaming-events
+
+## Pinned Pi wire observations
+
+The direct local-mock probe passed twice on 04f43af (runs 45313040270 and
+45313024025). Pi 0.85.1 sends prompt_cache_key alongside stateless input,
+stream=true, store=false, max_output_tokens and function declarations. The
+second request contains function_call and function_call_output items. The
+metered route drops the client cache-routing key and defaults omitted tool
+strictness to false to preserve optional fields in Pi schemas. All input tokens
+continue to be priced at the undiscounted rate. Native reasoning and actual
+Harbor isolation need separate qualification. The internal LiveConfig selects
+the matching Harbor API format and gateway endpoint explicitly; the public CLI
+and paid smoke workflow have not been enabled for this new route.
