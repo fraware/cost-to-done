@@ -25,12 +25,16 @@ def run(root: Path, outputs: Path, key_file: Path) -> dict:
     if overlay.is_symlink() or not overlay.is_file():
         raise RuntimeError("trusted rehearsal overlay missing")
 
+    api = os.environ.get("CTD_REHEARSAL_API", "chat")
+    if api not in ("chat", "responses"):
+        raise RuntimeError("invalid rehearsal API")
     config = LiveConfig(
         repo_root=root, task=root / "tasks/allocation-repair",
         jobs_dir=outputs, model="test-model-1",
         price_schedule=root / "tests/fixtures/mock-price-schedule.json",
         key_file=key_file, budget_usd="5",
         job_name="rehearsal-scripted", max_turns=3, max_wall_seconds=900,
+        api=api, reasoning_effort="off",
     )
     production_command = LiveConfig.command
 
@@ -45,6 +49,7 @@ def run(root: Path, outputs: Path, key_file: Path) -> dict:
     return {
         "status": "mock-live-rehearsal-complete",
         "mock_only": True,
+        "api": api,
         "verifier_outcome": result["trial"]["outcome"],
         "fictional_estimate_usd": result["gateway_snapshot"]["settled"],
         "provider_invoice_reconciled": result["provider_invoice_reconciled"],

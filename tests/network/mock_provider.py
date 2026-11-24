@@ -19,7 +19,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         expected_key = os.environ.get('CTD_MOCK_PROVIDER_KEY', 'mock-provider-key')
-        if self.path != '/v1/chat/completions' or self.headers.get('Authorization') != f'Bearer {expected_key}':
+        route = os.environ.get('CTD_GATEWAY_ROUTE', '/v1/chat/completions')
+        if route not in ('/v1/chat/completions', '/v1/responses') or self.path != route or self.headers.get('Authorization') != f'Bearer {expected_key}':
             self.send_error(403)
             return
         try:
@@ -34,6 +35,24 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         scenario = os.environ.get('CTD_MOCK_SCENARIO', 'noop')
+        if route == '/v1/responses':
+            if scenario != 'scripted-repair':
+                self.send_error(422, 'unsupported native mock scenario')
+                return
+            from mock_repair import native_scripted_reply
+            try:
+                response = native_scripted_reply(body)
+            except (ValueError, TypeError):
+                self.send_error(422, 'invalid native tool exchange')
+                return
+            with COUNT_PATH.open('a', encoding='utf-8') as record:
+                record.write('forwarded\n')
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/event-stream')
+            self.send_header('Content-Length', str(len(response)))
+            self.end_headers()
+            self.wfile.write(response)
+            return
         if scenario == 'scripted-repair':
             from mock_repair import scripted_reply
             try:

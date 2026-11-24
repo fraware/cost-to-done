@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -16,6 +17,9 @@ def check(root: Path) -> dict:
     summary = json.loads((session / "run-summary.json").read_text(encoding="utf-8"))
     if summary.get("status") != "completed_with_unverified_rate_card_estimate":
         raise AssertionError("live runner did not finish cleanly")
+    expected_api = os.environ.get("CTD_REHEARSAL_API", "chat")
+    if summary.get("api", "chat") != expected_api:
+        raise AssertionError("rehearsal used wrong API protocol")
     if summary.get("provider_invoice_reconciled") is not False or summary.get("provider_side_hard_cap_verified") is not False:
         raise AssertionError("mock must not claim invoiced charges or provider budget")
     inspected = inspect_harbor_job(root / "rehearsal-scripted")
@@ -44,7 +48,7 @@ def check(root: Path) -> dict:
         raise AssertionError("agent network bypass proof missing or failed")
     return {
         "status": "isolated-live-runner-mock-verified",
-        "mock_only": True, "billing_verified": False,
+        "mock_only": True, "billing_verified": False, "api": expected_api,
         "verifier_outcome": "pass", "gateway_calls": 2,
         "fictional_rate_card_usd": snapshot.settled,
         "harbor_trial_sha256": trial["raw_result_sha256"],

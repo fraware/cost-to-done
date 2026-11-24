@@ -25,7 +25,7 @@ def shape(value):
     return type(value).__name__
 
 
-def events(response_id, item, *, tool):
+def events(response_id, item, *, tool, input_tokens=100, output_tokens=40):
     model = {"id": response_id, "object": "response", "created_at": 0,
              "model": MODEL, "status": "in_progress", "output": [], "usage": None}
     initial = dict(item)
@@ -62,7 +62,8 @@ def events(response_id, item, *, tool):
         {"type": "response.output_item.done", "output_index": 0, "item": item},
         {"type": "response.completed", "response": {
             **model, "status": "completed", "output": [item],
-            "usage": {"input_tokens": 100, "output_tokens": 40, "total_tokens": 140,
+            "usage": {"input_tokens": input_tokens, "output_tokens": output_tokens,
+                      "total_tokens": input_tokens + output_tokens,
                       "input_tokens_details": {"cached_tokens": 0},
                       "output_tokens_details": {"reasoning_tokens": 0}}}},
     ]

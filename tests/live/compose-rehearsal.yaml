@@ -29,11 +29,13 @@ services:
       CTD_PROVIDER_IP_PATH: /evidence/provider-ip.txt
       CTD_PROVIDER_LOG_PATH: /evidence/provider-calls.txt
       CTD_MOCK_SCENARIO: scripted-repair
+      CTD_GATEWAY_ROUTE: ${CTD_GATEWAY_ROUTE:-/v1/chat/completions}
       CTD_MOCK_PROVIDER_KEY: ctd-fake-upstream-key-for-tests-12345678
     volumes:
       - ${CTD_REPO_ROOT:?missing-root}/tests/network/mock_provider.py:/fixture/mock_provider.py:ro
       - ${CTD_REPO_ROOT:?missing-root}/tests/harbor/isolated_provider.py:/fixture/isolated_provider.py:ro
       - ${CTD_REPO_ROOT:?missing-root}/tests/harbor/mock_repair.py:/fixture/mock_repair.py:ro
+      - ${CTD_REPO_ROOT:?missing-root}/tests/pi_wire/native_responses_mock.py:/fixture/native_responses_mock.py:ro
       - ${CTD_EVIDENCE_DIR:?missing-evidence}:/evidence
     read_only: true
     tmpfs: [/tmp]

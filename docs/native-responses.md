@@ -54,3 +54,15 @@ continue to be priced at the undiscounted rate. Native reasoning and actual
 Harbor isolation need separate qualification. The internal LiveConfig selects
 the matching Harbor API format and gateway endpoint explicitly; the public CLI
 and paid smoke workflow have not been enabled for this new route.
+
+## Isolated native rehearsal gate
+
+The existing mock-only Harbor workflow now runs both chat and native Responses
+configurations with the same qualified task, independent verifier, network
+bypass probes and fictional price schedule. Native mode uses the actual
+credential loader and ledger with a separate local scripted provider. It must
+settle exactly two provider calls ($0.0236 fictional), pass the independent
+verifier, and demonstrate the previously tested network checks. Reasoning is
+explicitly off for this protocol fixture; a thinking-enabled native replay and
+real-model paid trials require their own evidence. CI status is the source of
+truth for qualification; committing these fixtures does not establish success.

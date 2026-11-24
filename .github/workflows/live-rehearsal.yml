@@ -15,6 +15,9 @@ on:
       - 'src/cost_to_done/harbor.py'
       - 'src/cost_to_done/core.py'
       - 'src/cost_to_done/gateway.py'
+      - 'src/cost_to_done/responses.py'
+      - 'tests/pi_wire/native_responses_mock.py'
+      - 'tests/harbor/mock_repair.py'
       - 'src/cost_to_done/ledger.py'
   workflow_dispatch:
 
@@ -25,7 +28,12 @@ jobs:
   rehearsal:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [chat, responses]
     env:
+      CTD_REHEARSAL_API: ${{ matrix.api }}
       CTD_REHEARSAL_ONLY: '1'
       CTD_OUTPUT_ROOT: ${{ github.workspace }}/runs/rehearsal-ci
     steps:
@@ -73,9 +81,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: live-runner-mock-${{ github.run_id }}
+          name: live-runner-mock-${{ matrix.api }}-${{ github.run_id }}
           path: |
-            ${{ github.workspace }}/runs/rehearsal-ci/rehearsal-scripted/
             ${{ github.workspace }}/runs/rehearsal-ci/.sessions/rehearsal-scripted/evidence/
             ${{ github.workspace }}/runs/rehearsal-ci/.sessions/rehearsal-scripted/run-summary.json
           if-no-files-found: warn
