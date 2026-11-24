@@ -27,6 +27,7 @@ from .gateway import PriceSchedule
 from .harbor import inspect_harbor_job
 from .ledger import BudgetLedger, _units
 from .network_audit import audit_live_compose
+from .model_compat import chat_tools_need_no_reasoning, validate_chat_tool_route
 
 HARBOR_VERSION = "0.27.0"
 PI_VERSION = "0.85.1"
@@ -70,6 +71,7 @@ class LiveConfig:
                 raise ReceiptError("task contains a symlink or escaped artifact")
         if not _MODEL.fullmatch(self.model):
             raise ReceiptError("model must be an exact OpenAI Chat Completions model ID")
+        validate_chat_tool_route(self.model)
         if not _JOB.fullmatch(self.job_name):
             raise ReceiptError("job_name must be lowercase hyphenated text, length 2–61")
         if type(self.max_turns) is not int or not 1 <= self.max_turns <= 10:
@@ -112,6 +114,7 @@ class LiveConfig:
             "--ak", f"version={PI_VERSION}", "--ak", "skip_install=true",
             "--ak", "model_api=openai-completions",
             "--ak", f"max_turns={self.max_turns}",
+            *(["--ak", "reasoning_effort=off"] if chat_tools_need_no_reasoning(self.model) else []),
             "--ak", "max_output_tokens=4096",
             "--agent-env", f"CTD_GATEWAY_TOKEN={token}",
             "--extra-docker-compose", str(self.repo_root / "experiments/live/compose.yaml"),

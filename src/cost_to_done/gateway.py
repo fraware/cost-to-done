@@ -26,6 +26,7 @@ from urllib.parse import urlsplit
 
 from .core import ReceiptError
 from .ledger import BudgetLedger, _usd, _units
+from .model_compat import chat_tools_need_no_reasoning, validate_chat_tool_route
 
 MAX_REQUEST_BYTES = 256_000
 MAX_RESPONSE_BYTES = 4_000_000
@@ -34,7 +35,7 @@ _RATE = re.compile(r"(?:0|[1-9][0-9]*)(?:\.[0-9]{1,12})?\Z")
 _DATE = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
 _ROUTE = "/v1/chat/completions"
 _UPSTREAM = "api.openai.com"
-_ALLOWED_TOP = frozenset({"model", "messages", "max_completion_tokens", "stream", "stream_options", "store", "tools", "tool_choice"})
+_ALLOWED_TOP = frozenset({"model", "messages", "max_completion_tokens", "stream", "stream_options", "store", "tools", "tool_choice", "reasoning_effort"})
 _ALLOWED_MESSAGE = frozenset({"role", "content", "tool_calls", "tool_call_id", "name", "refusal"})
 
 
@@ -176,10 +177,23 @@ def _bounded_request(data: bytes, *, model: str, max_output_cap: int = 4096) -> 
             raise ReceiptError("unsupported function declaration")
     if "tool_choice" in obj and obj["tool_choice"] not in ("none", "auto", "required"):
         raise ReceiptError("unsupported tool_choice")
-    # The envelope includes every UTF-8 byte in the API request four times
-    # plus a per-message allowance. It is intentionally not described as a
-    # formal upper bound for provider-side prompt tokenization.
-    token_envelope = 4 * len(data) + 32 * len(messages) + 64
+    # The gateway can serve text-only requests on some GPT-6 models, but not
+    # agent function tools. Fail before ledger admission to avoid another
+    # series of charged or ambiguous HTTP 400 provider responses.
+    uses_tools = bool(tools) or any(bool(msg.get("tool_calls")) for msg in messages)
+    if uses_tools:
+        validate_chat_tool_route(model)
+    if "reasoning_effort" in obj and (
+        not chat_tools_need_no_reasoning(model) or obj["reasoning_effort"] != "none"
+    ):
+        raise ReceiptError("reasoning_effort is unsupported for this Chat Completions route")
+    if uses_tools and chat_tools_need_no_reasoning(model):
+        # OpenAI's GPT-5.4 Chat Completions function tools require none. The
+        # Pi model is configured thinking=off; pin the transmitted value too.
+        obj["reasoning_effort"] = "none"
+    # Include any injected field in the admission envelope, retaining the
+    # original request bytes as a conservative lower bound for byte accounting.
+    token_envelope = 4 * max(len(data), len(_canonical(obj))) + 32 * len(messages) + 64
     return obj, token_envelope
 
 
