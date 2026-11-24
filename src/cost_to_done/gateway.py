@@ -25,6 +25,7 @@ from typing import Any, Callable, Mapping
 from urllib.parse import urlsplit
 
 from .core import ReceiptError
+from . import responses
 from .ledger import BudgetLedger, _usd, _units
 from .model_compat import chat_tools_need_no_reasoning, validate_chat_tool_route
 
@@ -213,10 +214,19 @@ Transport = Callable[[bytes, str], UpstreamResponse]
 
 
 def openai_transport(body: bytes, api_key: str) -> UpstreamResponse:
-    """Send one non-redirectable HTTPS request to the fixed provider host."""
+    """Send one Chat Completions request to the fixed provider host."""
+    return _openai_transport(body, api_key, _ROUTE)
+
+
+def openai_responses_transport(body: bytes, api_key: str) -> UpstreamResponse:
+    """Send one native Responses request to the fixed provider host."""
+    return _openai_transport(body, api_key, responses.ROUTE)
+
+
+def _openai_transport(body: bytes, api_key: str, route: str) -> UpstreamResponse:
     conn = http.client.HTTPSConnection(_UPSTREAM, timeout=90, context=ssl.create_default_context())
     try:
-        conn.request("POST", _ROUTE, body=body, headers={
+        conn.request("POST", route, body=body, headers={
             "Authorization": f"Bearer {api_key}", "Content-Type": "application/json",
             "Accept": "application/json", "User-Agent": "cost-to-done-gateway/0.1",
         })
@@ -310,8 +320,10 @@ class Gateway:
     """
 
     def __init__(self, ledger: BudgetLedger, price: PriceSchedule, *, client_token: str,
-                 provider_key: str, transport: Transport = openai_transport,
-                 max_output_cap: int = 4096):
+                 provider_key: str, transport: Transport | None = None,
+                 max_output_cap: int = 4096, route: str = _ROUTE):
+        if route not in (_ROUTE, responses.ROUTE):
+            raise ReceiptError("unsupported gateway route")
         price.validate()
         if type(max_output_cap) is not int or not 1 <= max_output_cap <= 65536:
             raise ReceiptError("max_output_cap must be an integer in [1,65536]")
@@ -326,7 +338,9 @@ class Gateway:
         self.price = price
         self.client_token = client_token
         self.provider_key = provider_key
-        self.transport = transport
+        self.route = route
+        self.transport = transport if transport is not None else (
+            openai_responses_transport if route == responses.ROUTE else openai_transport)
         self.max_output_cap = max_output_cap
 
     def authorize(self, bearer: str | None) -> bool:
@@ -337,9 +351,16 @@ class Gateway:
         """Preauthorize, forward once, settle or retain uncertain reservation."""
         if not _ID.fullmatch(request_id):
             raise ReceiptError("invalid request ID")
-        obj, input_envelope = _bounded_request(data, model=self.price.model, max_output_cap=self.max_output_cap)
+        if self.route == responses.ROUTE:
+            obj, input_envelope = responses.bounded_request(
+                data, model=self.price.model, max_output_cap=self.max_output_cap,
+                max_request_bytes=MAX_REQUEST_BYTES)
+            output_cap = obj["max_output_tokens"]
+        else:
+            obj, input_envelope = _bounded_request(data, model=self.price.model, max_output_cap=self.max_output_cap)
+            output_cap = obj["max_completion_tokens"]
         bound_units = (_money_estimate(input_envelope, _dec(self.price.input_per_million_usd))
-                       + _money_estimate(obj["max_completion_tokens"], _dec(self.price.output_per_million_usd)))
+                       + _money_estimate(output_cap, _dec(self.price.output_per_million_usd)))
         if bound_units <= 0:
             raise ReceiptError("zero-priced routes are not supported by this gateway")
         if bound_units > 100_000 * 10**12:
@@ -355,7 +376,11 @@ class Gateway:
                 self.ledger.mark_uncertain(request_id)
                 return 502, _canonical({"error": "upstream request failed; charge uncertain", "request_id": request_id})
             mime = response.content_type.split(";", 1)[0].strip().lower()
-            if obj.get("stream", False):
+            if self.route == responses.ROUTE:
+                if mime != "application/json":
+                    raise ReceiptError("Responses content type mismatch; charge uncertain")
+                prompt, completion = responses.token_usage(response.body, self.price.model)
+            elif obj.get("stream", False):
                 if mime != "text/event-stream":
                     raise ReceiptError("streaming response content type mismatch; charge uncertain")
                 prompt, completion = _stream_token_usage(response.body, self.price.model)
@@ -371,7 +396,7 @@ class Gateway:
                 prompt, completion = usage.get("prompt_tokens"), usage.get("completion_tokens")
                 if type(prompt) is not int or type(completion) is not int or prompt < 0 or completion < 0:
                     raise ReceiptError("invalid usage fields; charge uncertain")
-            if prompt > input_envelope or completion > obj["max_completion_tokens"]:
+            if prompt > input_envelope or completion > output_cap:
                 raise ReceiptError("provider reported usage above reserved envelope; charge uncertain")
             estimated = (_money_estimate(prompt, _dec(self.price.input_per_million_usd))
                          + _money_estimate(completion, _dec(self.price.output_per_million_usd)))
@@ -415,7 +440,7 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         gw = self.server.gateway
-        if self.path != _ROUTE:
+        if self.path != gw.route:
             self._reply(404, b'{"error":"route not supported"}')
             return
         if not gw.authorize(self.headers.get("Authorization")):
