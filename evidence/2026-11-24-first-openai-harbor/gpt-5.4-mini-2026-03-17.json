@@ -1,0 +1,20 @@
+{
+  "evidence_kind": "single_real_provider_smoke_local_observation",
+  "gateway_breached": false,
+  "gateway_pending": 0,
+  "gateway_rate_card_estimate_usd": "0.010698",
+  "gateway_recorded_calls": 5,
+  "gateway_uncertain": 0,
+  "harbor_raw_result_sha256": "7d9d3abd318bd3d0cf84181984dd72b05e5f444b02837fd72a07a5c841b97015",
+  "harbor_reported_elapsed_seconds": 68.739646,
+  "harbor_task_checksum": "440c8d60d992606488e02f420e9fc93bafda8b215dc2aaec6dde76ed46183b35",
+  "harbor_trial_outcome": "pass",
+  "model": "gpt-5.4-mini-2026-03-17",
+  "price_schedule_sha256": "49ecc709ccc1d7603e7067004a43c450fd0ceb5a8f160adbb24b2fe7dc5c736c",
+  "provider_invoice_reconciled": false,
+  "provider_spend_limit_verified": false,
+  "publication_scope": "redacted_status_and_hashes_only",
+  "schema_version": 1,
+  "trial_status": "completed_with_unverified_rate_card_estimate",
+  "verifier_independently_reexecuted": false
+}
