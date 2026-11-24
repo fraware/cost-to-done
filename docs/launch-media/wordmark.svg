@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="Cost to Done wordmark">
+  <rect width="240" height="240" fill="#181818"/>
+  <g fill="#ffffff" font-family="system-ui, sans-serif" font-size="44" font-weight="650" letter-spacing="-1.5">
+    <text x="29" y="85">Cost</text>
+    <text x="29" y="136">to</text>
+    <text x="29" y="187">Done.</text>
+  </g>
+</svg>

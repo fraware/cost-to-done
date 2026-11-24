@@ -1,0 +1,77 @@
+name: Public launch media
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/launch-media.yml'
+      - 'scripts/capture_launch_media.cjs'
+      - 'docs/launch-media/wordmark.svg'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/launch-media.yml'
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - run: |
+          npm install --no-save --package-lock=false playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Capture and verify original product screenshots
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory docs > "$RUNNER_TEMP/media-http.log" 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:8765/index.html >/dev/null; then break; fi
+            sleep 1
+          done
+          export CTD_MEDIA_OUTPUT="$RUNNER_TEMP/launch-media"
+          node scripts/capture_launch_media.cjs
+          python3 - <<'PY'
+          import os, struct
+          from pathlib import Path
+          root = Path(os.environ["CTD_MEDIA_OUTPUT"])
+          names = {"logo.png", "01-home.png", "02-evidence.png", "03-calculator.png", "04-report.png"}
+          assert {p.name for p in root.glob("*.png")} == names
+          for name in sorted(names):
+              data = (root / name).read_bytes()
+              assert data[:8] == b"\x89PNG\r\n\x1a\n"
+              width, height = struct.unpack(">II", data[16:24])
+              assert (width, height) == ((240, 240) if name == "logo.png" else (1270, 760))
+              assert 0 < len(data) < 2_000_000
+              print(name, width, height, len(data))
+          PY
+          (cd "$CTD_MEDIA_OUTPUT" && sha256sum *.png > media-SHA256SUMS)
+          python3 -m zipfile -c "$RUNNER_TEMP/cost-to-done-launch-media.zip" "$CTD_MEDIA_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: launch-media-${{ github.run_id }}
+          path: ${{ runner.temp }}/cost-to-done-launch-media.zip
+          if-no-files-found: error
+          retention-days: 30
+  publish:
+    needs: capture
+    if: github.repository == 'fraware/cost-to-done' && github.ref == 'refs/heads/main' && github.event_name == 'push' && github.run_attempt == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: launch-media-${{ github.run_id }}
+          path: media
+      - name: Attach public launch media to existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload v0.1.0 media/cost-to-done-launch-media.zip --repo "$GITHUB_REPOSITORY"

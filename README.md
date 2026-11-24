@@ -4,7 +4,7 @@
 
 Measure the cost of a completed task, including every unsuccessful attempt. Compare agent configurations against the same acceptance criteria and inspect the evidence behind each result.
 
-[v0.1.0 release](https://github.com/fraware/cost-to-done/releases/tag/v0.1.0) · [Project website](https://fraware.github.io/cost-to-done/) · [Interactive calculator](https://fraware.github.io/cost-to-done/calculator.html) · [Documentation](docs/README.md) · [Methodology](docs/methodology.md) · [Repository tasks](docs/repository-task.md)
+[v0.1.0 release](https://github.com/fraware/cost-to-done/releases/tag/v0.1.0) · [38-second product walkthrough](https://github.com/fraware/cost-to-done/releases/download/v0.1.0/cost-to-done-v0.1.0-demo.mp4) · [Project website](https://fraware.github.io/cost-to-done/) · [Interactive calculator](https://fraware.github.io/cost-to-done/calculator.html) · [Documentation](docs/README.md) · [Methodology](docs/methodology.md) · [Repository tasks](docs/repository-task.md)
 
 ## Quick start
 
