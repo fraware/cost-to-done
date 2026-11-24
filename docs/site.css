@@ -52,7 +52,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,[t
 .chart-label strong {font-size:19px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .chart-track {height:11px;background:#e3e3e3;border-radius:2px;overflow:hidden}
 .chart-bar {display:block;height:100%;background:#222;border-radius:2px}
-.chart-row:first-of-type .chart-bar {background:#727272}
+.chart-row:not(.chart-row+.chart-row) .chart-bar {background:#727272}
 .panel-bottom {margin-top:21px;border-top:1px solid var(--line);padding-top:15px}
 .panel-bottom strong {font-size:23px;letter-spacing:-.035em}
 .panel-bottom p {font-size:12px;margin-top:4px}

@@ -19,7 +19,7 @@
 <div>
 <p class="eyebrow">Open-source accounting for AI work</p>
 <h1 id="hero-title">What does completed AI work actually cost?</h1>
-<p class="lead">Compare agent configurations by the money spent on successful tasks, including every failed attempt. Use your existing Harbor runs or inspect our recorded experiments.</p>
+<p class="lead">Compare agent configurations by total expenditure per verified completion, including every failed attempt. Use your existing Harbor runs or inspect our recorded experiments.</p>
 <div class="actions"><a class="button primary" href="#use">Get started</a><a class="button" href="calculator.html">Cost calculator</a></div>
 <p class="micro">Local reports. No API key for offline analysis. MIT licensed.</p>
 </div>
@@ -36,8 +36,10 @@
 <div class="quick-grid">
 <div class="code-panel"><div class="code-head"><span>Install and explore</span><span>Synthetic demo</span></div><pre><code>git clone https://github.com/fraware/cost-to-done.git
 cd cost-to-done
+python -m venv .venv
+source .venv/bin/activate
 python -m pip install -e .
-cost-to-done demo --output demo.html</code></pre><p class="code-foot">Open demo.html in your browser. Use a virtual environment and a fresh output filename.</p></div>
+cost-to-done demo --output demo.html</code></pre><p class="code-foot">Open demo.html in your browser. On Windows use .venv\Scripts\activate. Choose a fresh output filename.</p></div>
 <div class="code-panel"><div class="code-head"><span>Compare two Harbor jobs</span><span>Existing results</span></div><pre><code>cost-to-done compare-harbor \
   fast=./jobs/fast \
   careful=./jobs/careful \
