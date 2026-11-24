@@ -10,8 +10,6 @@ import argparse
 import hashlib
 import json
 import stat
-import subprocess
-import sys
 import zipfile
 from pathlib import Path
 
@@ -30,9 +28,13 @@ def unique_object(pairs):
     return obj
 
 
+def reject_constant(value: str):
+    raise ReceiptError("nonfinite JSON")
+
+
 def load_json(raw: bytes):
     return json.loads(raw.decode("utf-8"), object_pairs_hook=unique_object,
-                      parse_constant=lambda _: (_ for _ in ()).throw(ReceiptError("nonfinite JSON")))
+                      parse_constant=reject_constant)
 
 
 def audit(archive: Path, historical_plan: dict, reference: dict) -> tuple[dict, dict, list[dict]]:

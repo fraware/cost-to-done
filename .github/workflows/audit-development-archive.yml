@@ -42,7 +42,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh api repos/fraware/cost-to-done/actions/artifacts/14887210683/zip > "$RUNNER_TEMP/original-panel.zip"
-          echo '18373500dc766d16d8995ec3ed17b4c6fa14878459140c8d70393fd2aa442614  ' "$RUNNER_TEMP/original-panel.zip" | sha256sum --check
+          printf '%s  %s\n' '18373500dc766d16d8995ec3ed17b4c6fa14878459140c8d70393fd2aa442614' "$RUNNER_TEMP/original-panel.zip" | sha256sum --check
       - name: Audit original archive and recompute accounting
         run: |
           python -m pip install -e .
