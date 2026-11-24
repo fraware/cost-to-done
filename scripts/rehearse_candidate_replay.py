@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 from cost_to_done import live
 from cost_to_done.replay import captured_candidate, replay_candidate
+from cost_to_done.private_files import publish_private_texts
 from scripts.run_live_rehearsal import run
 from scripts.check_live_rehearsal import check
 
@@ -35,14 +36,17 @@ def main() -> int:
     # The existing rehearsal refuses all non-fictional credentials.
     with patch.object(live, "prepare_task", stage_with_capture):
         run(root, output, key)
-    check(output)
+    harbor_check = check(output)
     candidate = captured_candidate(output / "rehearsal-scripted", task)
     positive = replay_candidate(root, task, candidate)
     negative = replay_candidate(root, task, root / "tasks" / task / "environment" / module)
+    report = {"scope": "mock_only", "harbor_trial_sha256": harbor_check["harbor_trial_sha256"],
+              "candidate_replay": positive, "unchanged_starter_replay": negative}
+    payload = json.dumps(report, sort_keys=True, indent=2) + "\n"
+    publish_private_texts([(output / "candidate-replay.json", payload)])
+    print(payload, end="")
     if positive["outcome"] != "pass" or negative["outcome"] != "fail":
         raise RuntimeError("fresh candidate replay or negative control did not agree")
-    print(json.dumps({"scope": "mock_only", "candidate_replay": positive,
-                      "unchanged_starter_replay": negative}, sort_keys=True, indent=2))
     return 0
 
 

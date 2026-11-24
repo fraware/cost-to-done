@@ -27,3 +27,19 @@ cohort must explicitly enable artifact capture, archive candidate bytes
 under a reviewed publication policy, and bind the replay results to trial
 identities and the frozen plan. Do not retrofit these claims onto previous
 redacted observations.
+
+## Local replay command
+
+From a trusted checkout on a POSIX host with a local Linux Docker daemon and
+the pinned replay image already present, run:
+
+```bash
+cost-to-done replay-candidate --task allocation-repair \\
+  --candidate /absolute/path/to/candidate.py --output replay.json
+```
+
+Or select a Harbor job with an explicit collected candidate artifact using
+`--harbor-job` instead of `--candidate`. Exit statuses are 0 for a pass,
+1 for a failed acceptance suite and 2 for unresolved execution or invalid
+inputs. No inference is performed. The command does not independently
+attribute an arbitrary supplied source file to a model or historical trial.

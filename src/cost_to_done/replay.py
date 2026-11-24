@@ -35,6 +35,8 @@ REPLAY_SCRIPT = (
 
 def _read_regular(path: Path, limit: int) -> bytes:
     """Reject symlinks, directories, devices, FIFOs, and oversized inputs."""
+    if os.name != "posix" or not hasattr(os, "O_NOFOLLOW"):
+        raise ReceiptError("candidate replay requires a POSIX host with no-follow file access")
     if path.resolve(strict=True) != path:
         raise ReceiptError("replay input must not traverse symlinks")
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
@@ -146,7 +148,8 @@ def replay_candidate(root: Path, task: str, candidate: Path, *, timeout: int = 4
     return {"schema_version": 1, "task": task, "outcome": outcome,
             "candidate_sha256": hashlib.sha256(source).hexdigest(),
             "verifier_sha256": hashlib.sha256(verifier).hexdigest(),
-            "image": IMAGE, "cleanup_confirmed": cleanup_confirmed,
+            "image": IMAGE, "replay_script_sha256": hashlib.sha256(REPLAY_SCRIPT.encode("utf-8")).hexdigest(),
+            "cleanup_confirmed": cleanup_confirmed,
             "network_mode": "none", "provider_credentials_mounted": False,
             "independent_process_reexecution": outcome in ("pass", "fail"),
             "adversarial_verifier_integrity_established": False}

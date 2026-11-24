@@ -10,7 +10,7 @@ from pathlib import Path
 
 from .core import ReceiptError, analyze, parse_trial, read_trials
 from .demo import demo_rows
-from .live import LiveConfig, execute_live, plan_live
+from .live import LiveConfig, execute_live, plan_live, TRUSTED_TASK_MODULES
 from .execute import Launch, execute, plan
 from .evidence import EvidenceRequest, write_evidence_receipt
 from .harbor import inspect_harbor_job, write_harbor_receipts
@@ -47,6 +47,13 @@ def main(argv: list[str] | None = None) -> int:
     p = subs.add_parser("summarize-panel", help="Recompute accounting from a frozen panel and redacted observations")
     p.add_argument("directory", type=Path, help="Directory containing plan.json and individual trial JSON records")
     p.add_argument("--output", type=Path, help="Optional new private summary JSON file")
+    p = subs.add_parser("replay-candidate", help="Run pristine bundled tests against a source file in a fresh offline Docker container")
+    p.add_argument("--repo-root", type=Path, default=Path.cwd())
+    p.add_argument("--task", choices=tuple(TRUSTED_TASK_MODULES), required=True)
+    source = p.add_mutually_exclusive_group(required=True)
+    source.add_argument("--candidate", type=Path)
+    source.add_argument("--harbor-job", type=Path, help="Job with an explicit candidate artifact collection manifest")
+    p.add_argument("--output", type=Path, help="Optional new private replay evidence JSON")
     p = subs.add_parser("import-harbor", help="Normalize pinned Harbor trial results (estimates, not invoices)")
     p.add_argument("manifest", type=Path)
     p.add_argument("--output", required=True, type=Path)
@@ -133,6 +140,18 @@ def main(argv: list[str] | None = None) -> int:
                 publish_private_texts([(args.output, payload)])
             print(payload, end="")
             return 0
+        if args.command == "replay-candidate":
+            from .replay import captured_candidate, replay_candidate
+            if args.output is not None and (args.output.exists() or args.output.is_symlink()):
+                raise ReceiptError("replay output already exists")
+            candidate = (captured_candidate(args.harbor_job, args.task)
+                         if args.harbor_job is not None else args.candidate)
+            result = replay_candidate(args.repo_root, args.task, candidate)
+            payload = json.dumps(result, sort_keys=True, indent=2, allow_nan=False) + "\n"
+            if args.output is not None:
+                publish_private_texts([(args.output, payload)])
+            print(payload, end="")
+            return {"pass": 0, "fail": 1, "unresolved": 2}[result["outcome"]]
         if args.command == "gateway-status":
             ledger = BudgetLedger(args.ledger)
             print(json.dumps({"snapshot": ledger.snapshot().to_dict(), "entries": ledger.entries()}, indent=2))

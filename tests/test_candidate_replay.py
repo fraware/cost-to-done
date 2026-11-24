@@ -74,3 +74,18 @@ class CandidateReplayTests(unittest.TestCase):
             result = replay_candidate(ROOT, "allocation-repair", self.candidate)
         self.assertEqual(result["outcome"], "unresolved")
         self.assertFalse(result["independent_process_reexecution"])
+
+    def test_cli_preserves_failed_verdict_and_refuses_overwrite(self):
+        from contextlib import redirect_stdout, redirect_stderr
+        from io import StringIO
+        from cost_to_done.cli import main
+        output = self.job / "replay.json"
+        args = ["replay-candidate", "--repo-root", str(ROOT),
+                "--task", "allocation-repair", "--candidate", str(self.candidate),
+                "--output", str(output)]
+        with patch("cost_to_done.replay.replay_candidate", return_value={"outcome": "fail"}) as run, \
+             redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+            self.assertEqual(main(args), 1)
+            self.assertEqual(json.loads(output.read_text()), {"outcome": "fail"})
+            self.assertEqual(main(args), 2)
+            self.assertEqual(run.call_count, 1)

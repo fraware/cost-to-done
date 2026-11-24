@@ -48,3 +48,11 @@ jobs:
         run: >-
           python -m scripts.rehearse_candidate_replay
           "$GITHUB_WORKSPACE" "$RUNNER_TEMP/replay-jobs" "$RUNNER_TEMP/ctd-fake-key"
+      - name: Archive replay identities and control outcomes only
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: candidate-replay-${{ matrix.task }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/replay-jobs/candidate-replay.json
+          if-no-files-found: warn
+          retention-days: 30
