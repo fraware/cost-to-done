@@ -82,3 +82,27 @@ the generated Dockerfile, runner source files, price schedules and the complete
 prospective plan. The summed local admission allowances must fit the explicit
 aggregate ceiling. This is a planning artifact only: the CLI does not execute
 inference, validate provider billing, or establish a hard invoice cap.
+
+## Execute the bounded development panel
+
+PR qualification runs all three reasoning-enabled mock tasks. On the first
+trusted-main push of the dedicated development-panel workflow, the paid job
+runs only after those checks pass. It freezes the 18-episode plan, executes
+serially in its predeclared order, uses fresh dedicated ledgers and stops on
+unresolved execution or financial state. Missing trials remain explicit.
+The $18 sum is an estimated admission allowance, not a provider hard cap.
+No automated retry of the paid workflow is authorized. The plan and redacted
+attestations are archived; raw private workspaces and logs are excluded.
+Cost-per-completion ratios are withheld if task support, checksum identity,
+verifier outcomes or financial settlement are incomplete. This is public-task
+development evidence only; independent verifier replay remains outstanding.
+
+Recompute the accounting from downloaded evidence, even after an interrupted
+run whose derived summary is absent:
+
+```bash
+cost-to-done summarize-panel path/to/extracted-panel --output audited-summary.json
+```
+
+This checks declared identities and matching support, not authenticity of the
+execution or the provider invoice. It refuses duplicate raw trial hashes.

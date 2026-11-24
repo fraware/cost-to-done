@@ -20,6 +20,7 @@ from .gateway import PriceSchedule, serve_local
 from .ledger import BudgetLedger
 from .report import write_report
 from .panel import build_panel
+from .panel_results import summarize_panel
 from .private_files import publish_private_texts
 
 
@@ -43,6 +44,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--budget-per-trial", default="1")
     p.add_argument("--max-total-usd", default="6")
     p.add_argument("--output", type=Path, help="Optional new private plan JSON file")
+    p = subs.add_parser("summarize-panel", help="Recompute accounting from a frozen panel and redacted observations")
+    p.add_argument("directory", type=Path, help="Directory containing plan.json and individual trial JSON records")
+    p.add_argument("--output", type=Path, help="Optional new private summary JSON file")
     p = subs.add_parser("import-harbor", help="Normalize pinned Harbor trial results (estimates, not invoices)")
     p.add_argument("manifest", type=Path)
     p.add_argument("--output", required=True, type=Path)
@@ -116,6 +120,15 @@ def main(argv: list[str] | None = None) -> int:
             panel = build_panel(args.repo_root, repetitions=args.repetitions, seed=args.seed,
                                 budget_per_trial=args.budget_per_trial, max_total_usd=args.max_total_usd)
             payload = json.dumps(panel, sort_keys=True, indent=2, allow_nan=False) + "\n"
+            if args.output is not None:
+                publish_private_texts([(args.output, payload)])
+            print(payload, end="")
+            return 0
+        if args.command == "summarize-panel":
+            from .panel_results import read_panel_directory
+            panel, observations = read_panel_directory(args.directory)
+            result = summarize_panel(panel, observations)
+            payload = json.dumps(result, sort_keys=True, indent=2, allow_nan=False) + "\n"
             if args.output is not None:
                 publish_private_texts([(args.output, payload)])
             print(payload, end="")
