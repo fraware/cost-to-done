@@ -50,7 +50,7 @@ def _read_regular(path: Path, limit: int) -> bytes:
     return data
 
 
-def captured_candidate(job: Path, task: str) -> Path:
+def captured_candidate(job: Path, task: str, *, expected_result_sha256: str | None = None) -> Path:
     """Resolve the single Harbor 0.27 artifact from its collection manifest."""
     module = TRUSTED_TASK_MODULES.get(task)
     if module is None:
@@ -62,6 +62,14 @@ def captured_candidate(job: Path, task: str) -> Path:
     if len(manifests) != 1:
         raise ReceiptError("expected one Harbor artifact manifest")
     manifest = manifests[0]
+    if expected_result_sha256 is not None:
+        # Bind the artifact to the exact trial result inspected by the runner.
+        results = sorted(root.glob("*/result.json"))
+        if results != [manifest.parent.parent / "result.json"]:
+            raise ReceiptError("candidate collection belongs to an unexpected trial")
+        raw_result = _read_regular(results[0], 2_000_000)
+        if hashlib.sha256(raw_result).hexdigest() != expected_result_sha256:
+            raise ReceiptError("candidate trial result digest mismatch")
     entries = json.loads(_read_regular(manifest, MAX_TEST_BYTES))
     if not isinstance(entries, list):
         raise ReceiptError("invalid artifact manifest")

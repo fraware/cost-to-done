@@ -88,6 +88,16 @@ cost-to-done compare-harbor \
 
 This offline report pairs matching task outcomes and available agent-reported price estimates. It refuses missing trials, duplicated task IDs, and mismatched task checksums. It **does not rank models or claim independently verified outcomes or provider invoices**. See [Matched Harbor comparison](docs/compare-harbor.md).
 
+## Inspect a matched development panel (experimental)
+
+Generate a self-contained HTML report from an extracted panel artifact:
+
+```bash
+cost-to-done report-panel path/to/extracted-panel --output panel-report.html
+```
+
+Every planned trial is shown, including missing or unresolved trials. The command recomputes accounting from source attestations, ignores any precomputed summary, and does not rank configurations on these public development fixtures.
+
 ## Plan a matched development panel (experimental)
 
 From a trusted repository checkout, generate a frozen zero-spend plan for the three bundled tasks and two native OpenAI configurations:

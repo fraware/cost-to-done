@@ -89,3 +89,28 @@ class CandidateReplayTests(unittest.TestCase):
             self.assertEqual(json.loads(output.read_text()), {"outcome": "fail"})
             self.assertEqual(main(args), 2)
             self.assertEqual(run.call_count, 1)
+
+    def test_artifact_is_bound_to_exact_result(self):
+        import hashlib
+        result = self.artifacts.parent / "result.json"
+        result.write_text('{"example":true}')
+        digest = hashlib.sha256(result.read_bytes()).hexdigest()
+        self.assertEqual(captured_candidate(self.job, "allocation-repair",
+                                           expected_result_sha256=digest), self.candidate)
+        with self.assertRaises(ReceiptError):
+            captured_candidate(self.job, "allocation-repair", expected_result_sha256="a"*64)
+
+    def test_replay_does_not_erase_cost_or_claim_agreement(self):
+        from scripts.run_real_candidate_replay import replay_record
+        outcome = {"api": "responses", "reasoning_effort": "low",
+                   "candidate_capture_requested": True, "private_job_dir": str(self.job),
+                   "status": "completed_with_unverified_rate_card_estimate",
+                   "trial": {"outcome": "pass", "raw_result_sha256": "a"*64},
+                   "gateway_snapshot": {"settled": "0.02"}, "gateway_entries": [{}]}
+        with patch("scripts.run_real_candidate_replay.captured_candidate", return_value=self.candidate), \
+             patch("scripts.run_real_candidate_replay.replay_candidate", return_value={
+                 "outcome": "fail", "independent_process_reexecution": True}):
+            record = replay_record(ROOT, outcome, "gpt-6.1-terra")
+        self.assertEqual(record["gateway_rate_card_estimate_usd"], "0.02")
+        self.assertTrue(record["verifier_independently_reexecuted"])
+        self.assertFalse(record["harbor_replay_agreement"])

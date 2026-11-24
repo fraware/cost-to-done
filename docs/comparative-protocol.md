@@ -106,3 +106,10 @@ cost-to-done summarize-panel path/to/extracted-panel --output audited-summary.js
 
 This checks declared identities and matching support, not authenticity of the
 execution or the provider invoice. It refuses duplicate raw trial hashes.
+
+Use `cost-to-done report-panel path/to/extracted-panel --output panel-report.html`
+for a standalone offline review. The manifest must contain the complete
+Cartesian task/configuration/repetition support; a recomputed self-declared
+hash alone does not establish that property. Reports show every planned
+episode, include known charges from failed trials, and never treat missing
+records as free executions. No model ranking is produced.

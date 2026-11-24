@@ -7,7 +7,8 @@ from typing import Any
 
 from .core import ReceiptError
 from .ledger import _units, _usd
-from .panel import _canonical, _sha
+from .panel import _canonical, _sha, CONFIGURATIONS
+from .live import TRUSTED_TASK_MODULES
 
 COMPLETE = "completed_with_unverified_rate_card_estimate"
 
@@ -16,15 +17,67 @@ def _digest(value: Any) -> bool:
     return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
 
 
+def validate_plan(plan: dict) -> None:
+    """Check prospective matched support independently of the self-declared hash.
+
+    Historical manifests need not match the current checkout; this validates
+    structure, not the authenticity of the original experimental execution.
+    """
+    if not isinstance(plan, dict) or plan.get("schema_version") != 1:
+        raise ReceiptError("unsupported panel plan")
+    if plan.get("plan_sha256") != _sha(_canonical({k: v for k, v in plan.items()
+                                                  if k != "plan_sha256"})):
+        raise ReceiptError("panel plan digest mismatch")
+    repetitions = plan.get("repetitions")
+    tasks = plan.get("tasks")
+    configs = plan.get("configurations")
+    trials = plan.get("trials")
+    if (plan.get("scope") != "public_development_fixtures"
+            or plan.get("status") != "plan_only"
+            or type(repetitions) is not int or not 1 <= repetitions <= 10
+            or not isinstance(tasks, dict) or set(tasks) != set(TRUSTED_TASK_MODULES)
+            or not isinstance(configs, dict) or set(configs) != set(CONFIGURATIONS)
+            or not isinstance(trials, list)
+            or plan.get("provider_hard_cap_verified") is not False
+            or plan.get("paid_execution_authorized") is not False):
+        raise ReceiptError("invalid bundled panel definition")
+    for name, configuration in configs.items():
+        model, price_path = CONFIGURATIONS[name]
+        if (not isinstance(configuration, dict) or configuration.get("model") != model
+                or configuration.get("price_schedule") != price_path
+                or not _digest(configuration.get("price_schedule_sha256"))
+                or configuration.get("api") != "responses"
+                or configuration.get("reasoning_effort") != "low"):
+            raise ReceiptError("invalid panel configuration")
+    required = {(task, config, rep) for task in tasks for config in configs
+                for rep in range(1, repetitions + 1)}
+    actual = set()
+    allowance_units = 0
+    for trial in trials:
+        if not isinstance(trial, dict):
+            raise ReceiptError("invalid planned episode")
+        task, config, rep = (trial.get(k) for k in ("task", "configuration", "repetition"))
+        if (not isinstance(task, str) or not isinstance(config, str)
+                or type(rep) is not int or (task, config, rep) not in required
+                or (task, config, rep) in actual
+                or trial.get("trial_id") != f"panel-{task}-{config}-r{rep:02d}"):
+            raise ReceiptError("invalid or duplicate planned task/configuration/repetition")
+        actual.add((task, config, rep))
+        allowance_units += _units(trial.get("estimated_admission_allowance_usd"), allow_zero=False)
+    if (actual != required or type(plan.get("planned_trial_count")) is not int
+            or plan["planned_trial_count"] != len(required)
+            or allowance_units != _units(plan.get("estimated_admission_total_usd"))
+            or allowance_units > _units(plan.get("declared_ceiling_usd"), allow_zero=False)):
+        raise ReceiptError("unmatched planned support or invalid aggregate allowance")
+
+
 def summarize_panel(plan: dict, records: list[dict]) -> dict:
     """Account for every planned episode; never impute unknown spend as zero.
 
     Ratios are descriptive only, and withheld globally if any task support,
     verifier outcome, monetary liability, or task identity is unresolved.
     """
-    if plan.get("plan_sha256") != _sha(_canonical({k: v for k, v in plan.items()
-                                                  if k != "plan_sha256"})):
-        raise ReceiptError("panel plan digest mismatch")
+    validate_plan(plan)
     trials = plan["trials"]
     expected = {x["trial_id"]: x for x in trials}
     if len(expected) != len(trials) or len(trials) != plan["planned_trial_count"]:
@@ -32,6 +85,8 @@ def summarize_panel(plan: dict, records: list[dict]) -> dict:
     seen = {}
     raw_hashes = set()
     for record in records:
+        if not isinstance(record, dict):
+            raise ReceiptError("panel observation must be an object")
         tid = record.get("trial_id")
         if not isinstance(tid, str) or tid not in expected or tid in seen:
             raise ReceiptError("unexpected or duplicate panel trial")

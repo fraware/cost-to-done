@@ -43,3 +43,19 @@ Or select a Harbor job with an explicit collected candidate artifact using
 1 for a failed acceptance suite and 2 for unresolved execution or invalid
 inputs. No inference is performed. The command does not independently
 attribute an arbitrary supplied source file to a model or historical trial.
+
+## Production opt-in and real-candidate qualification
+
+The production runner now has an explicit candidate-capture option. It defaults
+to false and does not change earlier task identities. The mock replay workflow
+exercises the same opt-in path and binds collection to the exact raw result
+SHA-256. The new real-replay cohort uses one allocation repair per frontier
+configuration, with the same low-effort native protocol and USD 1 estimated
+allowance per trial. It is deliberately distinct from the 18-trial panel.
+Its paid jobs require successful completion of the original panel, successful
+mock replay qualification, and the first trusted-main push. The provider
+secret file is removed before fresh replay. Only redacted outcome/hash
+attestations are archived; generated source is not automatically published.
+Replay failure or disagreement retains the financial observation and does
+not count as independently confirmed completion. This is not a provider
+invoice audit or adversarial test-integrity guarantee.
