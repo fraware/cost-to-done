@@ -39,6 +39,16 @@ Token prices describe a unit of inference. Developers purchase **completed work*
 
 **Reproducible integration evidence:** [Harbor Pi mock integration](docs/harbor-mock.md) verifies a single-turn failed task. The [isolated Harbor integration](docs/harbor-isolated.md) now checks two scenarios under the same network policy: a one-call, failed task ($0.0036 simulated expenditure), and a two-call scripted repair with an actual agent tool invocation and passing independent verifier ($0.0236 simulated expenditure). [GitHub Actions run 44828369078](https://github.com/fraware/cost-to-done/actions/runs/44828369078) passed both scenarios. Runtime tests check direct-provider DNS and IP bypass attempts inside Harbor's `main` container. **The repaired code was scripted by a fake provider, and the costs are fictional. No real model or paid provider was contacted.** The same workflow now validates the [canonical receipt export](docs/ledger-reconciliation.md) for both outcomes, retaining the verifier verdict, aggregated charges, raw Harbor result hash, and ledger price-schedule identity.
 
+## Bring your own Python repository task (experimental)
+
+The [repository task adapter](docs/repository-task.md) packages explicit committed source files and acceptance tests into a pinned Harbor task. No provider key, inference, dependency installation or working-tree checkout. Qualify the starter and a known correct reference before evaluating models. Credential-isolated paid execution of arbitrary tasks is not enabled yet.
+
+```bash
+cost-to-done prepare-repo-task --repository ./my-repo --name repair-addition \
+  --source app/calc.py --test acceptance/test_calc.py \
+  --instruction repair.md --output ./repair-task
+```
+
 ## Quick start
 
 Python 3.11+; no API credentials or paid services needed for the local prototype.
