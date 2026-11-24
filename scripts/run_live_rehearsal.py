@@ -12,7 +12,7 @@ from cost_to_done.live import LiveConfig, execute_live
 FAKE_KEY = "ctd-fake-upstream-key-for-tests-12345678"
 
 
-def run(root: Path, outputs: Path, key_file: Path) -> dict:
+def run(root: Path, outputs: Path, key_file: Path, *, capture_candidate: bool = False) -> dict:
     """Substitute one trusted Compose overlay; refuse real provider secrets."""
     if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("CTD_REHEARSAL_ONLY") != "1":
         raise RuntimeError("CI-only rehearsal guard absent")
@@ -41,7 +41,7 @@ def run(root: Path, outputs: Path, key_file: Path) -> dict:
         price_schedule=root / "tests/fixtures/mock-price-schedule.json",
         key_file=key_file, budget_usd="5",
         job_name="rehearsal-scripted", max_turns=3, max_wall_seconds=900,
-        api=api, reasoning_effort=effort,
+        api=api, reasoning_effort=effort, capture_candidate=capture_candidate,
     )
     production_command = LiveConfig.command
 

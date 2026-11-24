@@ -59,6 +59,7 @@ class LiveConfig:
     max_wall_seconds: int = 900
     api: str = "chat"
     reasoning_effort: str = "low"
+    capture_candidate: bool = False
 
     def validated(self, *, check_key: bool = False) -> "LiveConfig":
         """Check immutable inputs without creating anything or reading secrets."""
@@ -86,6 +87,8 @@ class LiveConfig:
             raise ReceiptError("qualified task fixture is incomplete")
         if not _MODEL.fullmatch(self.model):
             raise ReceiptError("model must be an exact OpenAI model ID")
+        if type(self.capture_candidate) is not bool:
+            raise ReceiptError("candidate capture must be explicitly boolean")
         if self.api not in ("chat", "responses"):
             raise ReceiptError("unsupported live API protocol")
         if self.reasoning_effort not in ("off", "minimal", "low", "medium", "high", "xhigh"):
@@ -121,7 +124,7 @@ class LiveConfig:
                 raise ReceiptError("provider credential file must be outside repository and run outputs")
         return LiveConfig(root, task, jobs, self.model, self.price_schedule.resolve(),
                           self.key_file.resolve(strict=check_key), self.budget_usd,
-                          self.job_name, self.max_turns, self.max_wall_seconds, self.api, self.reasoning_effort)
+                          self.job_name, self.max_turns, self.max_wall_seconds, self.api, self.reasoning_effort, self.capture_candidate)
 
     def command(self, *, task_copy: Path, token: str) -> list[str]:
         """Prepare shell-free Harbor invocation without any provider credential."""
@@ -180,6 +183,12 @@ def prepare_task(config: LiveConfig, task_copy: Path) -> None:
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
     (task_copy / "environment/Dockerfile").write_bytes(dockerfile)
+    if config.capture_candidate:
+        # This changes task identity; historical cohorts keep capture disabled.
+        task_toml = task_copy / "task.toml"
+        module = TRUSTED_TASK_MODULES[config.task.name]
+        with task_toml.open("a", encoding="utf-8") as stream:
+            stream.write(f'\n[[artifacts]]\nsource = "/app/{module}"\ndestination = "candidate.py"\n')
 
 
 def plan_live(config: LiveConfig) -> dict[str, Any]:
@@ -187,6 +196,7 @@ def plan_live(config: LiveConfig) -> dict[str, Any]:
     c = config.validated()
     return {
         "status": "plan_only", "model": c.model,
+        "candidate_capture_requested": c.capture_candidate,
         "api": c.api, "reasoning_effort": c.reasoning_effort if c.api == "responses" else None,
         "agent": "pi", "agent_version": PI_VERSION,
         "harbor_version": HARBOR_VERSION, "task": str(c.task),
@@ -304,6 +314,7 @@ def execute_live(config: LiveConfig, *, acknowledged: bool = False) -> dict[str,
         "status": "started", "model": c.model,
         "api": c.api, "reasoning_effort": c.reasoning_effort if c.api == "responses" else None,
         "task_fixture": c.task.name,
+        "candidate_capture_requested": c.capture_candidate,
         "job_name": c.job_name, "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "price_schedule_sha256": PriceSchedule.load(c.price_schedule).digest,
         "operator_budget_usd": c.budget_usd, "provider_invoice_reconciled": False,

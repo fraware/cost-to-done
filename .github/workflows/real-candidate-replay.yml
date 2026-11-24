@@ -1,0 +1,108 @@
+name: Real candidate replay qualification and bounded paid cohort
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/real-candidate-replay.yml'
+      - 'scripts/run_real_candidate_replay.py'
+      - 'scripts/rehearse_candidate_replay.py'
+      - 'src/cost_to_done/live.py'
+      - 'src/cost_to_done/replay.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/real-candidate-replay.yml'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [allocation-repair, interval-union-repair, dependency-order-repair]
+    env:
+      CTD_REHEARSAL_API: responses
+      CTD_REHEARSAL_REASONING: low
+      CTD_REHEARSAL_TASK: ${{ matrix.task }}
+      CTD_REHEARSAL_ONLY: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install pinned harness
+        run: |
+          python -m pip install 'harbor==0.27.0'
+          python -m pip install -e .
+          docker pull 'python:3.12.8-slim-bookworm@sha256:2199a62885a12290dc9c5be3ca0681d367576ab7bf037da120e564723292a2f0'
+      - name: Create fictional credential
+        run: |
+          umask 077
+          printf '%s\n' 'ctd-fake-upstream-key-for-tests-12345678' > "$RUNNER_TEMP/ctd-fake-key"
+      - name: Capture final source and replay in fresh isolated containers
+        run: >-
+          python -m scripts.rehearse_candidate_replay
+          "$GITHUB_WORKSPACE" "$RUNNER_TEMP/replay-jobs" "$RUNNER_TEMP/ctd-fake-key"
+      - name: Archive replay identities and control outcomes only
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: candidate-replay-${{ matrix.task }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/replay-jobs/candidate-replay.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  prior-panel:
+    if: github.repository == 'fraware/cost-to-done' && github.ref == 'refs/heads/main' && github.event_name == 'push' && github.run_attempt == '1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require the original development panel to have completed successfully
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api repos/fraware/cost-to-done/actions/runs/45317198614 --jq 'select(.head_sha == "343046ab49a722c4d702231352deaa83e1212762" and .status == "completed" and .conclusion == "success") | .id' | grep -x 45317198614
+  paid:
+    needs: [replay, prior-panel]
+    if: github.repository == 'fraware/cost-to-done' && github.ref == 'refs/heads/main' && github.event_name == 'push' && github.run_attempt == '1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        configuration: [terra-low, sol-low]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install pinned harness and offline replay image
+        run: |
+          python -m pip install 'harbor==0.27.0'
+          python -m pip install -e .
+          docker pull 'python:3.12.8-slim-bookworm@sha256:2199a62885a12290dc9c5be3ca0681d367576ab7bf037da120e564723292a2f0'
+      - name: Run one paid allocation repair and offline replay
+        env:
+          CTD_REPLAY_AUTHORIZED: '1'
+          CTD_OPENAI_SECRET: ${{ secrets.OPENAI_API_KEY }}
+        run: >-
+          python -m scripts.run_real_candidate_replay
+          --repo-root "$GITHUB_WORKSPACE"
+          --configuration "${{ matrix.configuration }}"
+          --output "$RUNNER_TEMP/replay-attestation.json"
+      - name: Archive redacted replay attestation only
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: real-replay-${{ matrix.configuration }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/replay-attestation.json
+          if-no-files-found: warn
+          retention-days: 30
