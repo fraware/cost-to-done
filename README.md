@@ -6,7 +6,7 @@ Measure the cost of a completed task, including every unsuccessful attempt. Comp
 
 [Project website](https://fraware.github.io/cost-to-done/) · [Interactive calculator](https://fraware.github.io/cost-to-done/calculator.html) · [Methodology](docs/methodology.md) · [Repository tasks](docs/repository-task.md)
 
-## Get started in one minute
+## Quick start
 
 Python 3.11+ for the local reporting tools. No API key, Docker or paid service needed for this example.
 
@@ -106,7 +106,7 @@ cost-to-done validate ./trials.jsonl
 cost-to-done report ./trials.jsonl --output report.html
 ```
 
-Each JSONL record describes a trial, potentially containing multiple charged attempts. See [example receipts](examples/synthetic-trials.jsonl) and the [methodology](docs/methodology.md). Billed charges and rate-card estimates are distinct cost sources. Receipt consistency does not authenticate execution or billing. Reports are offline, escape dynamic values, and refuse to overwrite existing destinations.
+Each JSONL record describes a trial, potentially containing multiple charged attempts. Generate example receipts with `python examples/generate_synthetic.py`; see the [methodology](docs/methodology.md) for the receipt format. Billed charges and rate-card estimates are distinct cost sources. Receipt consistency does not authenticate execution or billing. Reports are offline, escape dynamic values, and refuse to overwrite existing destinations.
 
 ## Evidence and implementation
 
