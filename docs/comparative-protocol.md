@@ -113,3 +113,5 @@ Cartesian task/configuration/repetition support; a recomputed self-declared
 hash alone does not establish that property. Reports show every planned
 episode, include known charges from failed trials, and never treat missing
 records as free executions. No model ranking is produced.
+
+The first matched panel completed all eighteen paid episodes. See [the recorded observations](development-panel-observations.md) for the original workflow, individual log observations and interpretation limits.
