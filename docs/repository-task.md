@@ -58,3 +58,21 @@ runner. Paid arbitrary-repository execution remains a separate milestone.
 For existing matched Harbor model jobs, use `cost-to-done compare-harbor`
 to obtain offline descriptive comparisons. Available agent-reported costs
 are estimates, not invoices.
+
+## Bind the qualification evidence
+
+```bash
+cost-to-done qualify-repo-task \
+  --starter ./repair-task --reference ./reference-task \
+  --starter-job ./qualification/starter --reference-job ./qualification/reference \
+  --output qualification.json
+```
+
+The command requires identical declared task name, tests, instructions,
+wrapper and source path support, two distinct commits, and complete Harbor
+nop outcomes of fail and pass respectively. It records the two original
+result hashes and task checksums. The receipt is a local operator-supplied
+content binding, not authenticated proof that the supplied jobs executed
+those exact bytes. The separate experimental external gateway path is
+restricted to a CI-only fictional provider key and mock transport. A
+public CLI invocation rejects paid execution of prepared external tasks.

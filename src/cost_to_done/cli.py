@@ -47,6 +47,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--output", type=Path, required=True, help="New task directory with an existing parent")
     p = subs.add_parser("validate-repo-task", help="Check prepared task files and reject undeclared build inputs; no execution")
     p.add_argument("task", type=Path)
+    p = subs.add_parser("qualify-repo-task", help="Bind matched starter/reference nop controls to a prepared task; no inference")
+    p.add_argument("--starter", type=Path, required=True)
+    p.add_argument("--reference", type=Path, required=True)
+    p.add_argument("--starter-job", type=Path, required=True)
+    p.add_argument("--reference-job", type=Path, required=True)
+    p.add_argument("--output", type=Path, required=True)
     p = subs.add_parser("plan-panel", help="Freeze the bundled matched native development panel; no inference")
     p.add_argument("--repo-root", type=Path, default=Path.cwd())
     p.add_argument("--repetitions", type=int, default=1)
@@ -104,6 +110,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--provider-key-file", required=True, type=Path,
                    help="Private chmod-600 file outside the repository; never pass key contents")
     p.add_argument("--budget-usd", required=True, help="Exact USD allowance for estimated gateway admission")
+    p.add_argument("--repository-task-sha256", help="Separately pinned prepared task digest (external plan only)")
+    p.add_argument("--repository-qualification", type=Path, help="Local starter/reference control receipt")
     p.add_argument("--job-name", default="gateway-smoke-01")
     p.add_argument("--max-turns", type=int, default=3)
     p.add_argument("--max-wall-seconds", type=int, default=900)
@@ -147,6 +155,13 @@ def main(argv: list[str] | None = None) -> int:
             from .repository_task import validate_repository_task
             result = validate_repository_task(args.task)
             print(json.dumps(result, sort_keys=True, indent=2, allow_nan=False))
+            return 0
+        if args.command == "qualify-repo-task":
+            from .repository_qualification import qualify_repository_task
+            result = qualify_repository_task(args.starter, args.reference, args.starter_job, args.reference_job)
+            payload = json.dumps(result, sort_keys=True, indent=2, allow_nan=False) + "\n"
+            publish_private_texts([(args.output, payload)])
+            print(payload, end="")
             return 0
         if args.command == "plan-panel":
             panel = build_panel(args.repo_root, repetitions=args.repetitions, seed=args.seed,
@@ -222,7 +237,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "run-harbor-gateway":
             cfg = LiveConfig(args.repo_root, args.task, args.jobs_dir, args.model,
                              args.price_schedule, args.provider_key_file, args.budget_usd,
-                             args.job_name, args.max_turns, args.max_wall_seconds, args.api, args.reasoning_effort)
+                             args.job_name, args.max_turns, args.max_wall_seconds, args.api, args.reasoning_effort,
+                             repository_task_sha256=args.repository_task_sha256,
+                             repository_qualification=args.repository_qualification)
+            if args.execute and (args.repository_task_sha256 is not None or args.repository_qualification is not None):
+                raise ReceiptError("external repository execution remains mock-only")
             result = execute_live(cfg, acknowledged=args.acknowledge_provider_limit) if args.execute else plan_live(cfg)
             print(json.dumps(result, indent=2))
             return 0 if result["status"] in ("plan_only", "completed_with_unverified_rate_card_estimate") else 2

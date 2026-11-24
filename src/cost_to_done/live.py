@@ -60,6 +60,8 @@ class LiveConfig:
     api: str = "chat"
     reasoning_effort: str = "low"
     capture_candidate: bool = False
+    repository_task_sha256: str | None = None
+    repository_qualification: Path | None = None
 
     def validated(self, *, check_key: bool = False) -> "LiveConfig":
         """Check immutable inputs without creating anything or reading secrets."""
@@ -71,20 +73,39 @@ class LiveConfig:
         if any(not x.is_file() or x.is_symlink() for x in expected):
             raise ReceiptError("repository is missing a trusted gateway execution fixture")
         task = self.task.resolve(strict=True)
-        if (task.name not in TRUSTED_TASK_MODULES or task != root / "tasks" / task.name
-                or (root / "tasks").is_symlink()):
-            raise ReceiptError("this experimental gateway runner accepts only bundled qualified tasks")
         if self.task.is_symlink() or not task.is_dir():
             raise ReceiptError("task must be a real directory")
-        for path in task.rglob("*"):
-            if path.is_symlink() or not path.resolve().is_relative_to(task):
-                raise ReceiptError("task contains a symlink or escaped artifact")
-        module = TRUSTED_TASK_MODULES[task.name]
-        required = ("instruction.md", "task.toml", "environment/Dockerfile",
-                    f"environment/{module}", "tests/test.sh", "tests/test_state.py",
-                    "solution/solve.sh")
-        if any(not (task / name).is_file() for name in required):
-            raise ReceiptError("qualified task fixture is incomplete")
+        external = self.repository_task_sha256 is not None or self.repository_qualification is not None
+        if external:
+            from .repository_qualification import check_qualification
+            if self.repository_task_sha256 is None or self.repository_qualification is None:
+                raise ReceiptError("external task requires both a pinned digest and qualification receipt")
+            if self.capture_candidate:
+                raise ReceiptError("external candidate collection is not qualified")
+            if task.is_relative_to(root):
+                raise ReceiptError("prepared external task must be outside the trusted runner checkout")
+            check_qualification(task, self.repository_qualification, self.repository_task_sha256)
+            overlay = root / "tests/live/compose-rehearsal.yaml"
+            if not overlay.is_file() or overlay.is_symlink():
+                raise ReceiptError("missing trusted repository rehearsal overlay")
+            if check_key and (os.environ.get("GITHUB_ACTIONS") != "true"
+                              or os.environ.get("CTD_REHEARSAL_ONLY") != "1"
+                              or self.model != "test-model-1" or self.api != "responses"
+                              or self.reasoning_effort != "low"):
+                raise ReceiptError("external task execution is mock-only; paid execution is disabled")
+        else:
+            if (task.name not in TRUSTED_TASK_MODULES or task != root / "tasks" / task.name
+                    or (root / "tasks").is_symlink()):
+                raise ReceiptError("this experimental gateway runner accepts only bundled qualified tasks")
+            for path in task.rglob("*"):
+                if path.is_symlink() or not path.resolve().is_relative_to(task):
+                    raise ReceiptError("task contains a symlink or escaped artifact")
+            module = TRUSTED_TASK_MODULES[task.name]
+            required = ("instruction.md", "task.toml", "environment/Dockerfile",
+                        f"environment/{module}", "tests/test.sh", "tests/test_state.py",
+                        "solution/solve.sh")
+            if any(not (task / name).is_file() for name in required):
+                raise ReceiptError("qualified task fixture is incomplete")
         if not _MODEL.fullmatch(self.model):
             raise ReceiptError("model must be an exact OpenAI model ID")
         if type(self.capture_candidate) is not bool:
@@ -120,11 +141,14 @@ class LiveConfig:
             if key.stat().st_mode & 0o077:
                 raise ReceiptError("provider credential file must not be readable by group or others (chmod 600)")
             resolved = key.resolve(strict=True)
-            if resolved.is_relative_to(root) or resolved.is_relative_to(jobs):
+            if resolved.is_relative_to(root) or resolved.is_relative_to(jobs) or resolved.is_relative_to(task):
                 raise ReceiptError("provider credential file must be outside repository and run outputs")
+            if external and (key.read_bytes().strip() != b"ctd-fake-upstream-key-for-tests-12345678"):
+                raise ReceiptError("external rehearsal requires the exact fictional key")
         return LiveConfig(root, task, jobs, self.model, self.price_schedule.resolve(),
                           self.key_file.resolve(strict=check_key), self.budget_usd,
-                          self.job_name, self.max_turns, self.max_wall_seconds, self.api, self.reasoning_effort, self.capture_candidate)
+                          self.job_name, self.max_turns, self.max_wall_seconds, self.api, self.reasoning_effort, self.capture_candidate,
+                          self.repository_task_sha256, self.repository_qualification.resolve() if external else None)
 
     def command(self, *, task_copy: Path, token: str) -> list[str]:
         """Prepare shell-free Harbor invocation without any provider credential."""
@@ -145,7 +169,8 @@ class LiveConfig:
             "--extra-docker-compose", str(self.repo_root / "experiments/live/compose.yaml"),
             "--job-name", self.job_name, "--jobs-dir", str(self.jobs_dir),
             "--n-concurrent", "1", "--n-attempts", "1",
-        ]
+        ] + (["--extra-docker-compose", str(self.repo_root / "tests/live/compose-rehearsal.yaml")]
+             if self.repository_task_sha256 is not None else [])
 
 
 def staged_task_inputs(root: Path, task: Path) -> tuple[tuple[str, ...], bytes]:
@@ -175,6 +200,31 @@ def prepare_task(config: LiveConfig, task_copy: Path) -> None:
     The operator must trust the checkout, including the task and runner template.
     This is not a general untrusted repository execution facility.
     """
+    if config.repository_task_sha256 is not None:
+        from .repository_qualification import check_qualification, _manifest
+        from .repository_task import validate_repository_task
+        check_qualification(config.task, config.repository_qualification, config.repository_task_sha256)
+        # Copy the exact declared inputs, validate the staged bytes before changing
+        # the Dockerfile, and never include the manifest or incidental files in
+        # the image context. The trusted runner supplies the Pi setup.
+        manifest = _manifest(config.task)
+        if manifest["task_input_sha256"] != config.repository_task_sha256:
+            raise ReceiptError("repository manifest changed before staging")
+        task_copy.mkdir(mode=0o700)
+        for name in (*manifest["files"], "ctd-task-manifest.json"):
+            dest = task_copy / name
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(config.task / name, dest)
+        copied = validate_repository_task(task_copy)
+        if copied["task_input_sha256"] != config.repository_task_sha256:
+            raise ReceiptError("staged repository task digest mismatch")
+        (task_copy / "ctd-task-manifest.json").unlink()
+        template = (config.repo_root / "experiments/live/Dockerfile.pi").read_text(encoding="utf-8")
+        marker = "COPY allocate.py /app/allocate.py"
+        if template.count(marker) != 1:
+            raise ReceiptError("unexpected trusted Pi Dockerfile template")
+        (task_copy / "environment/Dockerfile").write_text(template.replace(marker, "COPY workspace/ /app/"), encoding="utf-8")
+        return
     files, dockerfile = staged_task_inputs(config.repo_root, config.task)
     task_copy.mkdir(mode=0o700)
     for name in files:
@@ -196,6 +246,8 @@ def plan_live(config: LiveConfig) -> dict[str, Any]:
     c = config.validated()
     return {
         "status": "plan_only", "model": c.model,
+        "repository_task_sha256": c.repository_task_sha256,
+        "repository_execution_scope": "mock_only" if c.repository_task_sha256 else "bundled",
         "candidate_capture_requested": c.capture_candidate,
         "api": c.api, "reasoning_effort": c.reasoning_effort if c.api == "responses" else None,
         "agent": "pi", "agent_version": PI_VERSION,
@@ -308,12 +360,17 @@ def execute_live(config: LiveConfig, *, acknowledged: bool = False) -> dict[str,
         "CTD_RUN_UID": str(os.getuid()),
         "CTD_RUN_GID": str(os.getgid()),
     })
+    if c.repository_task_sha256 is not None:
+        # Only the fixed synthetic repository fixture reaches this mock route.
+        environment.update(CTD_REHEARSAL_TASK="repository-addition-repair", CTD_REHEARSAL_REASONING="low")
     command = c.command(task_copy=task_copy, token=gateway_token)
     outcome: dict[str, Any] = {
         "schema_version": 1,
         "status": "started", "model": c.model,
         "api": c.api, "reasoning_effort": c.reasoning_effort if c.api == "responses" else None,
         "task_fixture": c.task.name,
+        "repository_task_sha256": c.repository_task_sha256,
+        "repository_execution_scope": "mock_only" if c.repository_task_sha256 else "bundled",
         "candidate_capture_requested": c.capture_candidate,
         "job_name": c.job_name, "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "price_schedule_sha256": PriceSchedule.load(c.price_schedule).digest,
