@@ -1,0 +1,59 @@
+name: Audit original paid development archive
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/audit-development-archive.yml'
+      - 'scripts/audit_development_archive.py'
+      - 'evidence/2026-11-24-development-panel/**'
+      - 'src/cost_to_done/panel_results.py'
+      - 'src/cost_to_done/panel_report.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/audit-development-archive.yml'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v7
+        with:
+          ref: 343046ab49a722c4d702231352deaa83e1212762
+          path: historical-panel-source
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Reconstruct plan at the exact historical source commit
+        run: |
+          test "$(git -C historical-panel-source rev-parse HEAD)" = '343046ab49a722c4d702231352deaa83e1212762'
+          PYTHONPATH="$GITHUB_WORKSPACE/historical-panel-source/src" python -m cost_to_done plan-panel \
+            --repo-root "$GITHUB_WORKSPACE/historical-panel-source" \
+            --repetitions 3 --budget-per-trial 1 --max-total-usd 18 \
+            --output "$RUNNER_TEMP/historical-plan.json" >/dev/null
+      - name: Download exact original artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/fraware/cost-to-done/actions/artifacts/14887210683/zip > "$RUNNER_TEMP/original-panel.zip"
+          echo '18373500dc766d16d8995ec3ed17b4c6fa14878459140c8d70393fd2aa442614  ' "$RUNNER_TEMP/original-panel.zip" | sha256sum --check
+      - name: Audit original archive and recompute accounting
+        run: |
+          python -m pip install -e .
+          python -m scripts.audit_development_archive \
+            --archive "$RUNNER_TEMP/original-panel.zip" \
+            --historical-plan "$RUNNER_TEMP/historical-plan.json" \
+            --reference evidence/2026-11-24-development-panel/log-observations.json \
+            --output "$RUNNER_TEMP/audited-panel"
+      - name: Archive derived audit report only
+        uses: actions/upload-artifact@v7
+        with:
+          name: original-panel-audit-${{ github.run_id }}
+          path: ${{ runner.temp }}/audited-panel/
+          retention-days: 30

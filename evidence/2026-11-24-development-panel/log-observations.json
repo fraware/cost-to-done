@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "source": "transcribed_completed_paid_workflow_log",
+  "workflow_run_id": 45317198614,
+  "job_id": 138187607746,
+  "source_commit": "343046ab49a722c4d702231352deaa83e1212762",
+  "plan_sha256": "d14f761a4a2858d1cee40b7c7ca84d4de026408e486cebca3e3738c91a072e56",
+  "artifact_id": 14887210683,
+  "github_reported_zip_sha256": "18373500dc766d16d8995ec3ed17b4c6fa14878459140c8d70393fd2aa442614",
+  "provider_invoice_reconciled": false,
+  "verifier_independently_reexecuted": false,
+  "observations": [
+    {
+      "trial_id": "panel-interval-union-repair-sol-low-r03",
+      "status": "completed_with_unverified_rate_card_estimate",
+      "verifier": "pass",
+      "rate_card_estimate_usd": "0.019854"
+    },
+    {
+      "trial_id": "panel-interval-union-repair-terra-low-r03",
+      "status": "completed_with_unverified_rate_card_estimate",
+      "verifier": "pass",
+      "rate_card_estimate_usd": "0.004673"
+    },
+    {
+      "trial_id": "panel-interval-union-repair-terra-low-r01",
+      "status": "completed_with_unverified_rate_card_estimate",
+      "verifier": "pass",
+      "rate_card_estimate_usd": "0.004737"
+    },
+    {
+      "trial_id": "panel-interval-union-repair-sol-low-r01",
+      "status": "completed_with_unverified_rate_card_estimate",
+      "verifier": "pass",
+      "rate_card_estimate_usd": "0.019072"
+    },
+    {
+      "trial_id": "panel-dependency-order-repair-sol-low-r02",
+      "status": "completed_with_unverified_rate_card_estimate",
+      "verifier": "pass",
+      "rate_card_estimate_usd": "0.020248"
+    },
+    {
+      "trial_id": "panel-dependency-order-repair-terra-low-r02",
+      "status": "completed_with_unverified_rate_card_estimate",
+      "verifier": "pass",
+      "rate_card_estimate_usd": "0.005284"
+    },
+    {
+      "trial_id": "panel-dependency-order-repair-terra-low-r01",
+      "status": "completed_with_unverified_rate_card_estimate",
+      "verifier": "pass",
+      "rate_card_estimate_usd": "0.00553"
+    },
+    {
+      "trial_id": "panel-dependency-order-repair-sol-low-r01",
+      "status": "completed_with_unverified_rate_card_estimate",
+      "verifier": "pass",
+      "rate_card_estimate_usd": "0.020392"
+    },
+    {
+      "trial_id": "panel-allocation-repair-sol-low-r02",
+      "status": "completed_with_unverified_rate_card_estimate",
+      "verifier": "pass",
+      "rate_card_estimate_usd": "0.019564"
+    },
+    {
+      "trial_id": "panel-allocation-repair-terra-low-r02",
+      "status": "completed_with_unverified_rate_card_estimate",
+      "verifier": "pass",
+      "rate_card_estimate_usd": "0.005012"
+    },
+    {
+      "trial_id": "panel-dependency-order-repair-terra-low-r03",
+      "status": "completed_with_unverified_rate_card_estimate",
+      "verifier": "pass",
+      "rate_card_estimate_usd": "0.005462"
+    },
+    {
+      "trial_id": "panel-dependency-order-repair-sol-low-r03",
+      "status": "completed_with_unverified_rate_card_estimate",
+      "verifier": "pass",
+      "rate_card_estimate_usd": "0.020384"
+    },
+    {
+      "trial_id": "panel-interval-union-repair-sol-low-r02",
+      "status": "completed_with_unverified_rate_card_estimate",
+      "verifier": "pass",
+      "rate_card_estimate_usd": "0.018012"
+    },
+    {
+      "trial_id": "panel-interval-union-repair-terra-low-r02",
+      "status": "completed_with_unverified_rate_card_estimate",
+      "verifier": "pass",
+      "rate_card_estimate_usd": "0.004708"
+    },
+    {
+      "trial_id": "panel-allocation-repair-terra-low-r01",
+      "status": "completed_with_unverified_rate_card_estimate",
+      "verifier": "pass",
+      "rate_card_estimate_usd": "0.005122"
+    },
+    {
+      "trial_id": "panel-allocation-repair-sol-low-r01",
+      "status": "completed_with_unverified_rate_card_estimate",
+      "verifier": "pass",
+      "rate_card_estimate_usd": "0.019998"
+    },
+    {
+      "trial_id": "panel-allocation-repair-sol-low-r03",
+      "status": "completed_with_unverified_rate_card_estimate",
+      "verifier": "pass",
+      "rate_card_estimate_usd": "0.019744"
+    },
+    {
+      "trial_id": "panel-allocation-repair-terra-low-r03",
+      "status": "completed_with_unverified_rate_card_estimate",
+      "verifier": "pass",
+      "rate_card_estimate_usd": "0.005158"
+    }
+  ]
+}
