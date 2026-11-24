@@ -1,0 +1,53 @@
+name: Real OpenAI gateway protocol diagnostic (bounded paid calls)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/openai-protocol-diagnostic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openai-gateway-protocol-diagnostic
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    if: github.repository == 'fraware/cost-to-done' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - model: gpt-6.1-terra
+            prices: experiments/live/prices-gpt-6.1-terra-2026-11-23.json
+            label: terra
+          - model: gpt-6.2-sol
+            prices: experiments/live/prices-gpt-6.2-sol-2026-11-23.json
+            label: sol
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e .
+      - name: Probe exactly one priced, bounded Chat Completion
+        env:
+          CTD_OPENAI_SECRET: ${{ secrets.OPENAI_API_KEY }}
+        run: >-
+          python scripts/probe_openai_chat_protocol.py
+          --model "${{ matrix.model }}"
+          --prices "${{ matrix.prices }}"
+          --output "$RUNNER_TEMP/ctd-protocol-${{ matrix.label }}.json"
+      - name: Upload sanitized provider status only
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: openai-protocol-status-${{ matrix.label }}
+          path: ${{ runner.temp }}/ctd-protocol-${{ matrix.label }}.json
+          if-no-files-found: ignore
+          retention-days: 14
