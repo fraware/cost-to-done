@@ -23,13 +23,16 @@ from .live import TRUSTED_TASK_MODULES, _ALLOWED_ENV
 IMAGE = "python:3.12.8-slim-bookworm@sha256:2199a62885a12290dc9c5be3ca0681d367576ab7bf037da120e564723292a2f0"
 MAX_CANDIDATE_BYTES = 256_000
 MAX_TEST_BYTES = 256_000
+# Reserve a distinct exit status for a completed negative test verdict. A
+# generic Python or Docker startup failure must not be classified as a test fail.
+TEST_FAILURE_EXIT = 17
 REPLAY_SCRIPT = (
     "import sys, unittest; "
     "sys.path.insert(0, '/candidate'); "
     "suite=unittest.defaultTestLoader.discover('/verifier', pattern='test_state.py'); "
     "assert suite.countTestCases() > 0; "
     "result=unittest.TextTestRunner(verbosity=0).run(suite); "
-    "sys.exit(0 if result.wasSuccessful() else 1)"
+    f"sys.exit(0 if result.wasSuccessful() else {TEST_FAILURE_EXIT})"
 )
 
 
@@ -123,6 +126,7 @@ def replay_candidate(root: Path, task: str, candidate: Path, *, timeout: int = 4
         command = [
             "docker", "run", "--rm", "--name", name, "--pull", "never",
             "--network", "none", "--read-only", "--user", "65534:65534",
+            "--log-driver", "none",
             "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true",
             "--pids-limit", "64", "--memory", "256m", "--memory-swap", "256m",
             "--cpus", "1", "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=16m",
@@ -134,7 +138,7 @@ def replay_candidate(root: Path, task: str, candidate: Path, *, timeout: int = 4
             proc = subprocess.run(command, env=environment, stdin=subprocess.DEVNULL,
                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                   check=False, timeout=timeout)
-            if proc.returncode in (0, 1):
+            if proc.returncode in (0, TEST_FAILURE_EXIT):
                 outcome = "pass" if proc.returncode == 0 else "fail"
         except (OSError, subprocess.TimeoutExpired):
             pass

@@ -55,3 +55,16 @@ attestations are archived; generated source is not automatically published.
 Replay failure or disagreement retains the financial observation and does
 not count as independently confirmed completion. This is not a provider
 invoice audit or adversarial test-integrity guarantee.
+
+## Replay exit-status interpretation
+
+The current wrapper reserves internal container exit status 17 for a completed
+negative unittest verdict. Exit 0 denotes a completed positive verdict; other
+statuses, including interpreter startup errors, missing test discovery, Docker
+errors and killed processes, are unresolved. The public CLI continues to return
+1 for a recorded test failure and 2 for unresolved execution. Docker's logging
+driver is disabled for these replay containers to avoid retaining generated
+candidate-controlled output in daemon logs. The candidate and verifier still
+share process state: this is not an adversarial-verifier guarantee.
+Historical records preserve the wrapper digest used for their original runs;
+this change does not retrospectively re-execute or alter those results.
