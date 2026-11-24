@@ -37,6 +37,13 @@ def allocate_cents(total_cents: int, weights: list[int]) -> list[int]:
 
 CALL_ID = "ctd-scripted-repair-1"
 
+# Scripted mock outputs only. These are never model observations.
+NATIVE_REPAIRS = {
+    "allocation-repair": ("allocate.py", REPAIR_SOURCE),
+    "interval-union-repair": ("intervals.py", "\"\"\"Normalize the union of half-open integer intervals.\"\"\"\n\n\ndef normalize(intervals):\n    if not isinstance(intervals, list):\n        raise ValueError(\"intervals must be a list\")\n    valid = []\n    for interval in intervals:\n        if not isinstance(interval, tuple) or len(interval) != 2:\n            raise ValueError(\"interval must be a pair\")\n        start, end = interval\n        if type(start) is not int or type(end) is not int or start > end:\n            raise ValueError(\"invalid endpoints\")\n        if start < end:\n            valid.append(interval)\n    result = []\n    for start, end in sorted(valid):\n        if result and start <= result[-1][1]:\n            result[-1] = (result[-1][0], max(result[-1][1], end))\n        else:\n            result.append((start, end))\n    return result\n"),
+    "dependency-order-repair": ("dependency_order.py", "\"\"\"Lexicographically minimal topological order.\"\"\"\nimport heapq\n\n\ndef build_order(dependencies):\n    if not isinstance(dependencies, dict):\n        raise ValueError(\"expected dependency dictionary\")\n    if any(not isinstance(name, str) or not name for name in dependencies):\n        raise ValueError(\"invalid task name\")\n    reverse = {name: [] for name in dependencies}\n    indegree = {}\n    for name, prereqs in dependencies.items():\n        if not isinstance(prereqs, list) or any(not isinstance(p, str) or not p or p not in dependencies for p in prereqs):\n            raise ValueError(\"invalid prerequisite\")\n        unique = set(prereqs)\n        indegree[name] = len(unique)\n        for p in unique:\n            reverse[p].append(name)\n    ready = [name for name, count in indegree.items() if count == 0]\n    heapq.heapify(ready)\n    result = []\n    while ready:\n        name = heapq.heappop(ready)\n        result.append(name)\n        for dependent in reverse[name]:\n            indegree[dependent] -= 1\n            if indegree[dependent] == 0:\n                heapq.heappush(ready, dependent)\n    if len(result) != len(dependencies):\n        raise ValueError(\"dependency cycle\")\n    return result\n"),
+}
+
 
 def scripted_reply(request: dict) -> tuple[dict, str]:
     """Return a tool call, then a final reply once the tool result appears.
@@ -79,7 +86,8 @@ def scripted_reply(request: dict) -> tuple[dict, str]:
     }, "tool_calls"
 
 
-def native_scripted_reply(request: dict, *, reasoning: bool = False) -> bytes:
+def native_scripted_reply(request: dict, *, reasoning: bool = False,
+                          task: str = "allocation-repair") -> bytes:
     """Script the same independent-verifier repair over native Responses SSE."""
     from native_responses_mock import events, REASONING_ID, OPAQUE_REASONING
 
@@ -109,8 +117,11 @@ def native_scripted_reply(request: dict, *, reasoning: bool = False) -> bytes:
                 if isinstance(t, dict) and t.get("type") == "function"}
     if "write" not in declared:
         raise ValueError("native rehearsal needs Pi write tool")
+    if task not in NATIVE_REPAIRS:
+        raise ValueError("unknown native mock task")
+    module, source = NATIVE_REPAIRS[task]
     item = {"type": "function_call", "id": "fc_ctd_repair", "call_id": CALL_ID,
-            "name": "write", "arguments": json.dumps({"path": "/app/allocate.py", "content": REPAIR_SOURCE}),
+            "name": "write", "arguments": json.dumps({"path": "/app/" + module, "content": source}),
             "status": "completed"}
     return events("resp_ctd_repair_1", item, tool=True, input_tokens=100, output_tokens=400,
                   reasoning=reasoning)

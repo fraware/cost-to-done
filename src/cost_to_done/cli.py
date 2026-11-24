@@ -19,6 +19,8 @@ from .harbor_compare import write_harbor_comparison
 from .gateway import PriceSchedule, serve_local
 from .ledger import BudgetLedger
 from .report import write_report
+from .panel import build_panel
+from .private_files import publish_private_texts
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -34,6 +36,13 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--demo", action="store_true", help="Mark report as synthetic example; for bundled fixture only")
     p = subs.add_parser("demo", help="Generate a clearly labeled synthetic report; no API key or repository needed")
     p.add_argument("--output", type=Path, default=Path("cost-to-done-demo.html"))
+    p = subs.add_parser("plan-panel", help="Freeze the bundled matched native development panel; no inference")
+    p.add_argument("--repo-root", type=Path, default=Path.cwd())
+    p.add_argument("--repetitions", type=int, default=1)
+    p.add_argument("--seed", type=int, default=20261124)
+    p.add_argument("--budget-per-trial", default="1")
+    p.add_argument("--max-total-usd", default="6")
+    p.add_argument("--output", type=Path, help="Optional new private plan JSON file")
     p = subs.add_parser("import-harbor", help="Normalize pinned Harbor trial results (estimates, not invoices)")
     p.add_argument("manifest", type=Path)
     p.add_argument("--output", required=True, type=Path)
@@ -102,6 +111,14 @@ def main(argv: list[str] | None = None) -> int:
             write_report(analyze([parse_trial(row) for row in demo_rows()]), args.output,
                          title="Synthetic comparison", demo=True)
             print(f"Synthetic demonstration (no measured model results): {args.output}")
+            return 0
+        if args.command == "plan-panel":
+            panel = build_panel(args.repo_root, repetitions=args.repetitions, seed=args.seed,
+                                budget_per_trial=args.budget_per_trial, max_total_usd=args.max_total_usd)
+            payload = json.dumps(panel, sort_keys=True, indent=2, allow_nan=False) + "\n"
+            if args.output is not None:
+                publish_private_texts([(args.output, payload)])
+            print(payload, end="")
             return 0
         if args.command == "gateway-status":
             ledger = BudgetLedger(args.ledger)

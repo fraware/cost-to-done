@@ -17,6 +17,9 @@ def check(root: Path) -> dict:
     summary = json.loads((session / "run-summary.json").read_text(encoding="utf-8"))
     if summary.get("status") != "completed_with_unverified_rate_card_estimate":
         raise AssertionError("live runner did not finish cleanly")
+    task_name = os.environ.get("CTD_REHEARSAL_TASK", "allocation-repair")
+    if summary.get("task_fixture") != task_name:
+        raise AssertionError("rehearsal used wrong task fixture")
     expected_api = os.environ.get("CTD_REHEARSAL_API", "chat")
     effort = os.environ.get("CTD_REHEARSAL_REASONING", "off")
     if expected_api == "responses" and summary.get("reasoning_effort") != effort:
@@ -53,6 +56,7 @@ def check(root: Path) -> dict:
         "status": "isolated-live-runner-mock-verified",
         "mock_only": True, "billing_verified": False, "api": expected_api,
         "reasoning_effort": effort,
+        "task_fixture": task_name,
         "opaque_reasoning_replay_checked": expected_api == "responses" and effort == "low",
         "verifier_outcome": "pass", "gateway_calls": 2,
         "fictional_rate_card_usd": snapshot.settled,

@@ -18,7 +18,7 @@ import tempfile
 from pathlib import Path
 
 from cost_to_done.core import ReceiptError
-from cost_to_done.live import LiveConfig, execute_live
+from cost_to_done.live import LiveConfig, execute_live, TRUSTED_TASK_MODULES
 from cost_to_done.private_files import publish_private_texts
 
 
@@ -57,7 +57,8 @@ def attestation(outcome: dict, model: str) -> dict:
     if outcome.get("api") == "responses":
         record.update(schema_version=2, api="responses",
                       reasoning_effort=outcome.get("reasoning_effort"),
-                      ledger_observed="gateway_snapshot" in outcome)
+                      ledger_observed="gateway_snapshot" in outcome,
+                      task_fixture=outcome.get("task_fixture", "allocation-repair"))
         if not record["ledger_observed"]:
             record["gateway_recorded_calls"] = None
     return record
@@ -67,6 +68,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo-root", required=True, type=Path)
     parser.add_argument("--model", required=True)
+    parser.add_argument("--task", choices=tuple(TRUSTED_TASK_MODULES), default="allocation-repair")
     parser.add_argument("--prices", required=True, type=Path)
     parser.add_argument("--job-name", required=True)
     parser.add_argument("--attestation-dir", required=True, type=Path)
@@ -85,7 +87,7 @@ def main() -> int:
     }
     if args.api == "responses":
         base.update(schema_version=2, api="responses", reasoning_effort=args.reasoning_effort,
-                    ledger_observed=False, gateway_recorded_calls=None)
+                    ledger_observed=False, gateway_recorded_calls=None, task_fixture=args.task)
     # The credential is injected exclusively into this trusted workflow step.
     # Child Harbor/Compose processes receive a separately constructed allowlist.
     credential = os.environ.pop("CTD_OPENAI_SECRET", "")
@@ -102,7 +104,7 @@ def main() -> int:
         del credential
         config = LiveConfig(
             repo_root=args.repo_root,
-            task=args.repo_root / "tasks/allocation-repair",
+            task=args.repo_root / "tasks" / args.task,
             jobs_dir=args.repo_root / "runs" / "real-provider-smoke",
             model=args.model,
             price_schedule=args.prices,

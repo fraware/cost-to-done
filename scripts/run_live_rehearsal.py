@@ -31,8 +31,12 @@ def run(root: Path, outputs: Path, key_file: Path) -> dict:
     effort = os.environ.get("CTD_REHEARSAL_REASONING", "off")
     if effort not in ("off", "low") or (api == "chat" and effort != "off"):
         raise RuntimeError("invalid rehearsal reasoning setting")
+    task_name = os.environ.get("CTD_REHEARSAL_TASK", "allocation-repair")
+    from cost_to_done.live import TRUSTED_TASK_MODULES
+    if task_name not in TRUSTED_TASK_MODULES or (task_name != "allocation-repair" and api != "responses"):
+        raise RuntimeError("unsupported mock task configuration")
     config = LiveConfig(
-        repo_root=root, task=root / "tasks/allocation-repair",
+        repo_root=root, task=root / "tasks" / task_name,
         jobs_dir=outputs, model="test-model-1",
         price_schedule=root / "tests/fixtures/mock-price-schedule.json",
         key_file=key_file, budget_usd="5",
@@ -47,7 +51,7 @@ def run(root: Path, outputs: Path, key_file: Path) -> dict:
 
     # Pass only the synthetic fixture setting to the Compose interpolation environment.
     from cost_to_done import live
-    with patch.object(live, "_ALLOWED_ENV", (*live._ALLOWED_ENV, "CTD_REHEARSAL_REASONING")), \
+    with patch.object(live, "_ALLOWED_ENV", (*live._ALLOWED_ENV, "CTD_REHEARSAL_REASONING", "CTD_REHEARSAL_TASK")), \
             patch.object(LiveConfig, "command", with_mock_overlay):
         result = execute_live(config, acknowledged=True)
     if result["status"] != "completed_with_unverified_rate_card_estimate":
@@ -57,6 +61,7 @@ def run(root: Path, outputs: Path, key_file: Path) -> dict:
         "mock_only": True,
         "api": api,
         "reasoning_effort": effort,
+        "task_fixture": task_name,
         "verifier_outcome": result["trial"]["outcome"],
         "fictional_estimate_usd": result["gateway_snapshot"]["settled"],
         "provider_invoice_reconciled": result["provider_invoice_reconciled"],
