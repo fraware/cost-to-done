@@ -9,7 +9,6 @@ import subprocess
 from pathlib import Path
 
 WHEEL = "cost_to_done-0.1.0-py3-none-any.whl"
-URL = "https://github.com/fraware/cost-to-done/releases/download/v0.1.0/" + WHEEL
 
 
 def run(command: list[str], cwd: Path, env: dict[str, str]) -> str:
@@ -47,7 +46,7 @@ def main() -> int:
     if "Synthetic demonstration" not in result:
         raise ValueError("Missing synthetic disclosure")
     transcript = (
-        "$ python -m pip install " + WHEEL + "\n"
+        "$ python -m pip install --no-index --no-deps " + WHEEL + "\n"
         + "Successfully installed cost-to-done-0.1.0\n\n"
         + "$ cost-to-done demo --output demo.html\n" + result
     )
@@ -60,8 +59,8 @@ def main() -> int:
 </head><body><main class="container"><div class="page-title"><h1>Install. Generate a report.</h1>
 <p class="lead">Actual v0.1.0 command output captured in a clean environment. The recorded installation used the downloaded and checksum-verified wheel.</p></div>
 <div class="code-panel"><div class="code-head"><span>Captured command transcript</span><span>No model calls</span></div><pre>""" + html.escape(transcript) + """</pre></div>
-<p class="note">The installation output is condensed to its confirmed success line. The demo is synthetic, not measured model performance.</p>
-<p class="note">Published wheel: <a href="""" + URL + """">v0.1.0</a></p></main></body></html>"""
+<p class="note">The installation command uses the downloaded wheel; host-specific absolute paths are omitted. Output is condensed to its confirmed success line. The demo is synthetic, not measured model performance.</p>
+<p class="note">Published wheel: v0.1.0</p></main></body></html>"""
     (args.site / "release-transcript.html").write_text(page, encoding="utf-8")
     return 0
 
