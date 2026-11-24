@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "source": "transcribed_redacted_paid_job_attestations",
+  "workflow_run_id": 45320220501,
+  "source_commit": "dbf621c4bec9abd261e9a74b93707211dc0239fd",
+  "cohort": "frontier-allocation-candidate-replay-v1",
+  "observations": [
+    {
+      "model": "gpt-6.1-terra",
+      "file": "gpt-6.1-terra.json",
+      "job_id": 138197656077,
+      "artifact_id": 14886989712,
+      "github_reported_zip_sha256": "bdf30f89bbed57eaae25959941563e8cd6446831dcf2ae1834200ada66efe053"
+    },
+    {
+      "model": "gpt-6.2-sol",
+      "file": "gpt-6.2-sol.json",
+      "job_id": 138197656129,
+      "artifact_id": 14886984237,
+      "github_reported_zip_sha256": "9159da722bf9372081fa07d50b831b41f55ce140182d181c2c00e7db3ff9c7ab"
+    }
+  ]
+}

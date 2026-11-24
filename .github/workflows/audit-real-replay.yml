@@ -1,0 +1,55 @@
+name: Audit original real-candidate replay archives
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/audit-real-replay.yml'
+      - 'scripts/audit_real_replay.py'
+      - 'scripts/audit_development_archive.py'
+      - 'evidence/2026-11-24-real-candidate-replay/**'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/audit-real-replay.yml'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v7
+        with:
+          ref: dbf621c4bec9abd261e9a74b93707211dc0239fd
+          path: historical-replay-source
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Download exact original replay archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/original-replay"
+          for id in 14886989712 14886984237; do
+            gh api "repos/fraware/cost-to-done/actions/artifacts/$id/zip" > "$RUNNER_TEMP/original-replay/$id.zip"
+          done
+      - name: Validate original redacted attestations
+        run: |
+          test "$(git -C historical-replay-source rev-parse HEAD)" = 'dbf621c4bec9abd261e9a74b93707211dc0239fd'
+          python -m pip install -e .
+          python -m scripts.audit_real_replay \
+            --reference-dir evidence/2026-11-24-real-candidate-replay \
+            --archive-dir "$RUNNER_TEMP/original-replay" \
+            --historical-root historical-replay-source \
+            --output "$RUNNER_TEMP/replay-audit.json"
+      - name: Archive derived audit
+        uses: actions/upload-artifact@v7
+        with:
+          name: original-replay-audit-${{ github.run_id }}
+          path: ${{ runner.temp }}/replay-audit.json
+          retention-days: 30
