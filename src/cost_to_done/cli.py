@@ -37,6 +37,16 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--demo", action="store_true", help="Mark report as synthetic example; for bundled fixture only")
     p = subs.add_parser("demo", help="Generate a clearly labeled synthetic report; no API key or repository needed")
     p.add_argument("--output", type=Path, default=Path("cost-to-done-demo.html"))
+    p = subs.add_parser("prepare-repo-task", help="Package explicitly selected committed Python files as an unqualified Harbor task; no inference")
+    p.add_argument("--repository", type=Path, required=True)
+    p.add_argument("--revision", default="HEAD", help="HEAD or exact full commit hash")
+    p.add_argument("--name", required=True)
+    p.add_argument("--source", action="append", required=True, help="Committed source path; repeat for each file")
+    p.add_argument("--test", action="append", required=True, help="Committed test_*.py path; repeat for each test module")
+    p.add_argument("--instruction", type=Path, required=True)
+    p.add_argument("--output", type=Path, required=True, help="New task directory with an existing parent")
+    p = subs.add_parser("validate-repo-task", help="Check prepared task files and reject undeclared build inputs; no execution")
+    p.add_argument("task", type=Path)
     p = subs.add_parser("plan-panel", help="Freeze the bundled matched native development panel; no inference")
     p.add_argument("--repo-root", type=Path, default=Path.cwd())
     p.add_argument("--repetitions", type=int, default=1)
@@ -125,6 +135,18 @@ def main(argv: list[str] | None = None) -> int:
             write_report(analyze([parse_trial(row) for row in demo_rows()]), args.output,
                          title="Synthetic comparison", demo=True)
             print(f"Synthetic demonstration (no measured model results): {args.output}")
+            return 0
+        if args.command == "prepare-repo-task":
+            from .repository_task import prepare_repository_task
+            result = prepare_repository_task(args.repository, revision=args.revision,
+                                             name=args.name, sources=args.source, tests=args.test,
+                                             instruction=args.instruction, output=args.output)
+            print(json.dumps(result, sort_keys=True, indent=2, allow_nan=False))
+            return 0
+        if args.command == "validate-repo-task":
+            from .repository_task import validate_repository_task
+            result = validate_repository_task(args.task)
+            print(json.dumps(result, sort_keys=True, indent=2, allow_nan=False))
             return 0
         if args.command == "plan-panel":
             panel = build_panel(args.repo_root, repetitions=args.repetitions, seed=args.seed,

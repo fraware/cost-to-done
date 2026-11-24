@@ -1,0 +1,69 @@
+name: User repository task packaging controls
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/repository-task-controls.yml'
+      - 'src/cost_to_done/repository_task.py'
+      - 'src/cost_to_done/cli.py'
+      - 'tests/test_repository_task.py'
+      - 'scripts/check_repository_task_controls.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/repository-task-controls.yml'
+      - 'src/cost_to_done/repository_task.py'
+permissions:
+  contents: read
+jobs:
+  controls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install pinned Harbor and Cost to Done
+        run: |
+          python -m pip install 'harbor==0.27.0'
+          python -m pip install -e .
+      - name: Create independent example Git repository and package two commits
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/example-repo"
+          cd "$RUNNER_TEMP/example-repo"
+          git init -q
+          git config user.name 'fixture'
+          git config user.email 'fixture@example.invalid'
+          mkdir -p app acceptance
+          printf 'def add(a, b): return a-b\n' > app/calc.py
+          printf 'import unittest\nfrom app.calc import add\nclass TestAddition(unittest.TestCase):\n    def test_add(self): self.assertEqual(add(3, 2), 5)\n' > acceptance/test_calc.py
+          git add .
+          git commit -qm 'defective starter'
+          printf 'Repair addition in app/calc.py.\n' > "$RUNNER_TEMP/instruction.md"
+          cost-to-done prepare-repo-task --repository . --name addition-repair \
+            --source app/calc.py --test acceptance/test_calc.py \
+            --instruction "$RUNNER_TEMP/instruction.md" --output "$RUNNER_TEMP/negative"
+          printf 'def add(a, b): return a+b\n' > app/calc.py
+          git add app/calc.py
+          git commit -qm 'known correct reference'
+          cost-to-done prepare-repo-task --repository . --name addition-repair \
+            --source app/calc.py --test acceptance/test_calc.py \
+            --instruction "$RUNNER_TEMP/instruction.md" --output "$RUNNER_TEMP/positive"
+      - name: Grade both generated Harbor tasks with no model
+        run: |
+          set -euo pipefail
+          cost-to-done validate-repo-task "$RUNNER_TEMP/negative"
+          cost-to-done validate-repo-task "$RUNNER_TEMP/positive"
+          harbor run --path "$RUNNER_TEMP/negative" --agent nop --job-name negative --jobs-dir "$RUNNER_TEMP/controls" --n-concurrent 1 --n-attempts 1
+          harbor run --path "$RUNNER_TEMP/positive" --agent nop --job-name positive --jobs-dir "$RUNNER_TEMP/controls" --n-concurrent 1 --n-attempts 1
+          python -m scripts.check_repository_task_controls "$RUNNER_TEMP" > "$RUNNER_TEMP/repository-control-summary.json"
+          cat "$RUNNER_TEMP/repository-control-summary.json"
+      - name: Archive control summary only
+        uses: actions/upload-artifact@v7
+        with:
+          name: repository-task-controls-${{ github.run_id }}
+          path: ${{ runner.temp }}/repository-control-summary.json
+          retention-days: 30
