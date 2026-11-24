@@ -1,0 +1,57 @@
+name: OpenAI model access preflight (zero spend)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/openai-access-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openai-model-access-preflight
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    if: github.repository == 'fraware/cost-to-done' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e .
+      - name: Check only model metadata; never run inference or publish credentials
+        env:
+          CTD_OPENAI_SECRET: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import tempfile
+          from pathlib import Path
+          from cost_to_done.provider_probe import probe_models
+
+          credential = os.environ.pop("CTD_OPENAI_SECRET", "")
+          if not credential:
+              print(json.dumps({
+                  "status": "repository_secret_unavailable",
+                  "expected_secret_name": "OPENAI_API_KEY",
+                  "inference_requests": 0,
+              }, sort_keys=True))
+          else:
+              with tempfile.TemporaryDirectory(dir=os.environ.get("RUNNER_TEMP")) as private:
+                  keyfile = Path(private) / "provider.key"
+                  descriptor = os.open(keyfile, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                  with os.fdopen(descriptor, "w", encoding="ascii") as stream:
+                      stream.write(credential)
+                  del credential
+                  report = probe_models(
+                      keyfile, ("gpt-6.1-terra", "gpt-6.2-sol"),
+                  )
+                  print(json.dumps(report, sort_keys=True))
+          PY
