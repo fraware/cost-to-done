@@ -14,6 +14,13 @@ TASK = Path(__file__).resolve().parents[1] / "tasks" / "allocation-repair"
 
 
 class LocalQualificationTests(unittest.TestCase):
+    def test_expanded_corpus_controls(self):
+        for name in ("interval-union-repair", "dependency-order-repair"):
+            with self.subTest(task=name):
+                evidence = qualify(TASK.parent / name)
+                self.assertEqual(evidence["baseline"], "fail")
+                self.assertEqual(evidence["reference"], "pass")
+
     def test_task_has_failing_starter_and_passing_oracle(self):
         evidence = qualify(TASK)
         self.assertEqual(evidence["baseline"], "fail")
