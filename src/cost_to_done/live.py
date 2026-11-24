@@ -85,9 +85,13 @@ class LiveConfig:
             if task.is_relative_to(root):
                 raise ReceiptError("prepared external task must be outside the trusted runner checkout")
             check_qualification(task, self.repository_qualification, self.repository_task_sha256)
+            overlay = root / "tests/live/compose-rehearsal.yaml"
+            if not overlay.is_file() or overlay.is_symlink():
+                raise ReceiptError("missing trusted repository rehearsal overlay")
             if check_key and (os.environ.get("GITHUB_ACTIONS") != "true"
                               or os.environ.get("CTD_REHEARSAL_ONLY") != "1"
-                              or self.model != "test-model-1" or self.api != "responses"):
+                              or self.model != "test-model-1" or self.api != "responses"
+                              or self.reasoning_effort != "low"):
                 raise ReceiptError("external task execution is mock-only; paid execution is disabled")
         else:
             if (task.name not in TRUSTED_TASK_MODULES or task != root / "tasks" / task.name
@@ -197,13 +201,15 @@ def prepare_task(config: LiveConfig, task_copy: Path) -> None:
     This is not a general untrusted repository execution facility.
     """
     if config.repository_task_sha256 is not None:
-        from .repository_qualification import check_qualification
+        from .repository_qualification import check_qualification, _manifest
         from .repository_task import validate_repository_task
         check_qualification(config.task, config.repository_qualification, config.repository_task_sha256)
         # Copy the exact declared inputs, validate the staged bytes before changing
         # the Dockerfile, and never include the manifest or incidental files in
         # the image context. The trusted runner supplies the Pi setup.
-        manifest = json.loads((config.task / "ctd-task-manifest.json").read_bytes())
+        manifest = _manifest(config.task)
+        if manifest["task_input_sha256"] != config.repository_task_sha256:
+            raise ReceiptError("repository manifest changed before staging")
         task_copy.mkdir(mode=0o700)
         for name in (*manifest["files"], "ctd-task-manifest.json"):
             dest = task_copy / name

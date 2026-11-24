@@ -28,7 +28,9 @@ def _manifest(task: Path) -> dict:
     identity = validate_repository_task(task)
     path = task / "ctd-task-manifest.json"
     obj = json.loads(path.read_bytes())
-    if obj.get("task_input_sha256") != identity["task_input_sha256"]:
+    if (not isinstance(obj, dict)
+            or obj.get("task_input_sha256") != identity["task_input_sha256"]
+            or obj["task_input_sha256"] != _sha(_canonical({k: v for k, v in obj.items() if k != "task_input_sha256"}))):
         raise ReceiptError("prepared task manifest changed during qualification")
     return obj
 

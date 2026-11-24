@@ -12,6 +12,8 @@ from scripts.check_live_rehearsal import check
 
 
 def main() -> int:
+    if len(sys.argv) != 6:
+        raise SystemExit("usage: run_repository_rehearsal ROOT TASK QUALIFICATION OUTPUTS FAKE_KEY")
     root, task, qualification, outputs, key = (Path(x).resolve() for x in sys.argv[1:])
     if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("CTD_REHEARSAL_ONLY") != "1":
         raise RuntimeError("CI-only repository rehearsal guard missing")
