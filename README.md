@@ -20,10 +20,10 @@ Token prices describe a unit of inference. Developers purchase **completed work*
 | Matched Harbor job comparison | **Working (descriptive)** | Compares two to eight complete jobs against identical task checksums; reports observations and agent cost estimates without claiming billed-model rankings |
 | Cost calculator | **Working** | Interactive hypothetical scenario analysis, separate from measured performance |
 | Harbor receipt importer | **Experimental** | Converts pinned Harbor trial result files into local, **agent-reported price estimates**; refuses missing cost and mismatched identities |
-| Mock-backed coding-agent execution | **CI verified** | Harbor 0.26.0 and Pi 0.85.1 now exercise both a single-call failed task and a two-call scripted tool repair accepted by an independent verifier; paid-model execution is still outstanding |
+| Mock-backed coding-agent execution | **CI verified** | Harbor 0.26.0 and Pi 0.85.1 now exercise both a single-call failed task and a two-call scripted tool repair accepted by an independent verifier; the subsequent paid pilot uses a separate qualified live path |
 | Mock Harbor agent network isolation | **CI verified for one topology** | The actual Harbor task reaches the gateway while direct provider DNS, provider IP, and public IP probes fail; not a production security guarantee |
 | Harbor + gateway receipt reconciliation | **Mock-CI verified** | Joins one completed Harbor trial and a dedicated, fully settled gateway ledger into a canonical JSONL receipt and audit metadata; monetary values remain estimates |
-| Credential-isolated live runner | **Mock-rehearsed, not paid-tested** | Harbor 0.27.0 and Pi 0.85.1 execute a scripted repair using the production credential loader, admission ledger and internal Docker network; commercial-provider execution and independent billing remain outstanding |
+| Credential-isolated live runner | **Real-model pilot completed** | Two dated OpenAI model snapshots completed the qualified allocation-repair task according to Harbor; local gateway ledgers settled, with independent verifier replay and billing reconciliation outstanding |
 | Public model leaderboard | **Not yet published** | Awaiting controlled runs and independently checked verification/provenance |
 
 **The [credential-isolated real-provider gateway path](docs/live-gateway.md) has now completed real-model pilot trials.** It accepts only the qualified allocation-repair task and mounts upstream credentials in a dedicated gateway container. Its separate [live-runner rehearsal](docs/live-rehearsal.md) completed a verified two-request scripted repair using a fake provider in [CI run 44926843287](https://github.com/fraware/cost-to-done/actions/runs/44926843287). That earlier scripted test remains mock-only evidence; actual model observations are linked below.
@@ -133,7 +133,7 @@ The hexadecimal digests are **declared identifiers** in this receipt format, not
 ## Long-term roadmap
 
 1. **Evidence foundation.** Local-first receipts, honest cost arithmetic, readable reports, strict comparability. **Implemented.**
-2. **Verified execution.** Pinned Harbor-based trials, task qualifications, controlled model/harness configurations, raw usage and verifier-evidence linkage. **Next.**
+2. **Verified execution.** Pinned Harbor-based trials, task qualifications, controlled model/harness configurations, raw usage and verifier-evidence linkage. **Pilot completed; independent replay and broader evaluation next.**
 3. **Bring your own repository.** Small tasks and acceptance tests from a project; isolation, one-command evaluation, spend caps, reruns, and useful recommendations. **Planned.**
 4. **Open cost-to-done benchmark.** Audited public tasks, third-party reproductions, evolving model choices, empirical cost frontiers, and uncertainty-aware comparisons. **Vision.**
 5. **Workload economics.** Model routing by task class, organizational cost simulations, human-review costs, and completed-work optimization across agents, tools, and environments. **Vision.**
@@ -144,7 +144,7 @@ The ambition is an **open, independently reproducible account of AI labor econom
 
 - The current validator runs locally without executing task code or contacting external services.
 - HTML reports have no third-party scripts, analytics, or remote assets. Dynamic values are escaped.
-- Future agent execution must isolate secrets, source, verifier, filesystem, and network access. Public CI never needs provider API credentials.
+- Future agent execution must isolate secrets, source, verifier, filesystem, and network access. Routine tests run with no provider credentials. Dedicated, explicitly paid experiments use repository-scoped provider secrets.
 - Pin task revisions, verifier binaries, agent/harness versions, model routes, inference settings, price dates, and trial order for any real comparison.
 - Never publish private prompts, proprietary source, API keys, or model traces without explicit authorization.
 
@@ -169,7 +169,7 @@ cost-to-done run-harbor-gateway \
   --budget-usd 0.25
 ```
 
-The model key is held by the gateway service instead of the evaluated agent. The displayed budget governs **estimated request admission**, not final billed expenditure. Confirm the provider's separately **enforced** spending limit before opting into real execution. [Live-runner instructions](docs/live-gateway.md) describe the financial and isolation limitations. The prior `run-harbor` interface permits direct provider-key exposure to the agent; it is retained for explicit legacy experiments and is **not the recommended security path**. No commercial-model trial has been completed.
+The model key is held by the gateway service instead of the evaluated agent. The displayed budget governs **estimated request admission**, not final billed expenditure. Confirm the provider's separately **enforced** spending limit before opting into real execution. [Live-runner instructions](docs/live-gateway.md) describe the financial and isolation limitations. The prior `run-harbor` interface permits direct provider-key exposure to the agent; it is retained for explicit legacy experiments and is **not the recommended security path**. The [first commercial-model pilot](docs/first-real-observations.md) is archived; this path still lacks independent verifier replay and invoice reconciliation.
 
 ## Docker gateway isolation experiment
 
@@ -190,8 +190,8 @@ constrained OpenAI Chat Completions route with buffered streaming and an immutab
 schedule, distinct client/provider credentials, and a persistent SQLite ledger.
 Its monetary accounting is **based on declared rate-card estimates**. The
 estimated authorization is not a universal tokenization bound or a provider
-invoice guarantee. It has not yet been connected to Harbor or used in a paid
-model trial. See [Gateway limitations and usage](docs/gateway.md).
+invoice guarantee. The separate credential-isolated Harbor runner has since
+used the gateway in the [first paid pilot](docs/first-real-observations.md). See [Gateway limitations and usage](docs/gateway.md).
 
 ```bash
 cost-to-done gateway-serve --price-schedule local-price.json \
