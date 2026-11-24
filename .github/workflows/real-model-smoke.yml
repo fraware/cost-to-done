@@ -1,0 +1,61 @@
+name: Bounded real OpenAI Harbor/Pi smoke (explicitly paid)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/real-model-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: first-real-provider-smoke
+  cancel-in-progress: false
+
+jobs:
+  single-task:
+    if: github.repository == 'fraware/cost-to-done' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - model: gpt-6.1-terra
+            pricing: experiments/live/prices-gpt-6.1-terra-2026-11-23.json
+            job: smoke-terra-01
+          - model: gpt-6.2-sol
+            pricing: experiments/live/prices-gpt-6.2-sol-2026-11-23.json
+            job: smoke-sol-01
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install pinned Harbor and Cost to Done
+        run: |
+          python -m pip install 'harbor==0.27.0'
+          python -m pip install -e .
+          docker info --format '{{.OSType}}'
+      - name: Execute exactly one qualified Harbor repair with real OpenAI model
+        env:
+          CTD_OPENAI_SECRET: ${{ secrets.OPENAI_API_KEY }}
+        run: >-
+          python scripts/run_real_model_smoke.py
+          --repo-root "$GITHUB_WORKSPACE"
+          --model "${{ matrix.model }}"
+          --prices "$GITHUB_WORKSPACE/${{ matrix.pricing }}"
+          --job-name "${{ matrix.job }}"
+          --attestation-dir "$RUNNER_TEMP/ctd-smoke-${{ matrix.job }}"
+          --budget-usd 1
+          --max-wall-seconds 900
+      - name: Archive redacted attestation only, never logs or provider credentials
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: real-provider-status-${{ matrix.job }}
+          path: ${{ runner.temp }}/ctd-smoke-${{ matrix.job }}/attestation.json
+          if-no-files-found: ignore
+          retention-days: 30
