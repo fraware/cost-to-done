@@ -13,9 +13,9 @@ import re
 from .core import ReceiptError
 
 _RESPONSES_FOR_TOOLS = re.compile(
-    r"(?:gpt-6\.2-(?:sol|astra)|gpt-6\.1-(?:terra|sol)|gpt-6-astra)(?:-|$)"
+    r"(?:gpt-6\.2-(?:sol|astra)|gpt-6\.1-(?:terra|sol)|gpt-6-astra|gpt-5\.4-pro)(?:-|$)"
 )
-_CHAT_NONE_TOOLS = re.compile(r"gpt-5\.4(?:-mini)?(?:-|$)")
+_CHAT_NONE_TOOLS = re.compile(r"gpt-5\.4(?:-mini)?(?:-\d{4}-\d{2}-\d{2})?\Z")
 
 
 def needs_responses_for_tools(model: str) -> bool:

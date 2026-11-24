@@ -222,7 +222,7 @@ class GatewayTests(unittest.TestCase):
         tools = [{"type": "function", "function": {
             "name": "bash", "parameters": {"type": "object"}}}]
         for model in ("gpt-6.1-terra", "gpt-6.2-sol", "gpt-6.2-astra",
-                      "gpt-6.1-terra-2026-11-01"):
+                      "gpt-6.1-terra-2026-11-01", "gpt-5.4-pro"):
             with self.subTest(model=model):
                 self.gateway.price = PriceSchedule(
                     model, "2026-11-23", "https://example.com/prices", "2", "10")

@@ -56,7 +56,7 @@ class LiveContractTests(unittest.TestCase):
 
 
     def test_responses_only_gpt6_models_fail_closed_during_zero_spend_planning(self):
-        for model in ("gpt-6.1-terra", "gpt-6.2-sol", "gpt-6.2-astra"):
+        for model in ("gpt-6.1-terra", "gpt-6.2-sol", "gpt-6.2-astra", "gpt-5.4-pro"):
             with self.subTest(model=model):
                 self.price.write_text(json.dumps(vars(PriceSchedule(
                     model, "2026-11-23", "https://example.com/pricing", "2", "10"))))
