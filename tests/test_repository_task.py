@@ -74,3 +74,26 @@ class RepositoryTaskTests(unittest.TestCase):
                          "--test", "test_calc.py", "--instruction", str(self.instruction),
                          "--output", str(self.output)])
         self.assertEqual(code, 0)
+
+    def test_validate_rejects_modified_or_extra_files(self):
+        from cost_to_done.repository_task import validate_repository_task
+        self.prepare()
+        valid = validate_repository_task(self.output)
+        self.assertEqual(valid["verified_files"], 6)
+        source = self.output / "environment/workspace/calc.py"
+        extra = source.parent / "incidental.txt"
+        extra.write_text("not in manifest")
+        with self.assertRaisesRegex(ReceiptError, "unexpected staged file"):
+            validate_repository_task(self.output)
+        extra.unlink()
+        source.write_text("modified")
+        with self.assertRaisesRegex(ReceiptError, "identity mismatch"):
+            validate_repository_task(self.output)
+
+    def test_non_root_repository_refused(self):
+        subdirectory = self.repo / "subdirectory"
+        subdirectory.mkdir()
+        with self.assertRaisesRegex(ReceiptError, "root of a local Git"):
+            prepare_repository_task(subdirectory, revision="HEAD", name="addition-repair",
+                                    sources=["calc.py"], tests=["test_calc.py"],
+                                    instruction=self.instruction, output=self.output)

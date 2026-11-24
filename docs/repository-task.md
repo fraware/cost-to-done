@@ -23,7 +23,7 @@ Source paths remain relative to `/app`. Test modules have unique
 `test_*.py` basenames and use Python's standard-library unittest. Tests
 are outside the Docker image build context; Harbor supplies them at grading.
 The task records its exact commit, blob identities, staged file hashes,
-executable bits and pinned runtime. A fresh task is unqualified by design.
+executable bits and pinned runtime. A fresh task is unqualified by design. Run `cost-to-done validate-repo-task ./repair-task` to check every staged file, reject extra files or directories and verify the pinned wrapper. Preserve the original task-input digest separately: a consistent local manifest does not authenticate origin.
 Review selected files and the instructions for secrets and license obligations;
 path filtering is not a secret detector. Only committed regular files are
 accepted, not symlinks, submodules, hidden paths, or Git LFS pointers.

@@ -163,8 +163,13 @@ def prepare_repository_task(repository: Path, *, revision: str, name: str,
     if repository.is_symlink() or not repository.is_dir():
         raise ReceiptError("repository must be a real local Git directory")
     root = repository.resolve(strict=True)
+    top = _git(root, "rev-parse", "--show-toplevel").decode("utf-8").strip()
+    if Path(top).resolve(strict=True) != root:
+        raise ReceiptError("repository must be the root of a local Git working tree")
     if output.exists() or output.is_symlink():
         raise ReceiptError("task output must be new")
+    if not output.parent.is_dir() or output.parent.resolve() != output.parent.absolute():
+        raise ReceiptError("output parent must be an existing non-symlink directory")
     if not sources or not tests or len(sources) + len(tests) > MAX_FILES:
         raise ReceiptError("select 1–100 total source and acceptance-test files, with both groups nonempty")
     source_paths = [_path(x) for x in sources]
@@ -232,3 +237,113 @@ def prepare_repository_task(repository: Path, *, revision: str, name: str,
         shutil.rmtree(output)
         raise
     return manifest
+
+def validate_repository_task(task: Path) -> dict[str, Any]:
+    """Check the entire staged task against its declared file manifest.
+
+    This establishes local content consistency, not origin authentication.
+    A rewritten manifest and files could be mutually consistent; retain the
+    original task_input_sha256 separately for provenance.
+    """
+    if task.is_symlink() or not task.is_dir():
+        raise ReceiptError("task must be a real directory")
+    root = task.resolve(strict=True)
+    manifest_path = root / "ctd-task-manifest.json"
+
+    def read_regular(path: Path, limit: int) -> bytes:
+        if (path.is_symlink() or path.resolve(strict=True) != path
+                or not path.is_file() or path.stat().st_size > limit):
+            raise ReceiptError("unsafe or oversized staged file")
+        data = path.read_bytes()
+        if len(data) > limit:
+            raise ReceiptError("oversized staged file")
+        return data
+
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ReceiptError("duplicate manifest JSON key")
+            result[key] = value
+        return result
+
+    manifest = json.loads(read_regular(manifest_path, 256_000), object_pairs_hook=unique)
+    if not isinstance(manifest, dict):
+        raise ReceiptError("task manifest must be an object")
+    digest = manifest.get("task_input_sha256")
+    if (manifest.get("schema_version") != 1
+            or manifest.get("status") != "prepared_unqualified_repository_task"
+            or manifest.get("scope") != "stdlib_python_explicit_committed_files"
+            or manifest.get("runtime_image") != IMAGE
+            or not isinstance(manifest.get("task"), str) or not _NAME.fullmatch(manifest["task"])
+            or not isinstance(manifest.get("git_commit"), str) or not _OID.fullmatch(manifest["git_commit"])
+            or digest != _sha(_canonical({k: v for k, v in manifest.items() if k != "task_input_sha256"}))
+            or manifest.get("paid_execution_authorized") is not False
+            or manifest.get("baseline_qualified") is not False
+            or manifest.get("reference_qualified") is not False
+            or manifest.get("provider_calls") != 0):
+        raise ReceiptError("invalid or modified task manifest")
+    files = manifest.get("files")
+    objects = manifest.get("source_and_test_objects")
+    if (not isinstance(files, dict) or not isinstance(objects, list)
+            or not 2 <= len(objects) <= MAX_FILES):
+        raise ReceiptError("invalid staged file support")
+    fixed = {"instruction.md", "task.toml", "environment/Dockerfile", "tests/test.sh"}
+    expected = set(fixed)
+    original_paths = set()
+    roles = set()
+    for item in objects:
+        if not isinstance(item, dict):
+            raise ReceiptError("invalid Git object record")
+        relative = _path(item.get("repository_path"))
+        role, oid = item.get("role"), item.get("git_blob")
+        if (role not in ("source", "test") or not isinstance(oid, str)
+                or not _OID.fullmatch(oid) or relative in original_paths):
+            raise ReceiptError("invalid or duplicate Git object record")
+        original_paths.add(relative)
+        roles.add(role)
+        if role == "test" and not re.fullmatch(r"test_[A-Za-z0-9_]+\.py", Path(relative).name):
+            raise ReceiptError("invalid staged test module")
+        destination = ("environment/workspace/" + relative if role == "source"
+                       else "tests/" + Path(relative).name)
+        if item.get("staged_path") != destination or destination in expected:
+            raise ReceiptError("invalid staged path mapping")
+        expected.add(destination)
+    if roles != {"source", "test"} or set(files) != expected:
+        raise ReceiptError("manifest file support mismatch")
+    actual = set()
+    permitted_dirs = {str(parent.as_posix()) for name in expected
+                      for parent in Path(name).parents if parent != Path(".")}
+    total = 0
+    for path in root.rglob("*"):
+        relative = path.relative_to(root).as_posix()
+        if path.is_symlink() or path.resolve(strict=True) != path:
+            raise ReceiptError("symlink in staged task")
+        if path.is_dir():
+            if relative not in permitted_dirs:
+                raise ReceiptError("unexpected staged directory")
+            continue
+        if relative == "ctd-task-manifest.json":
+            continue
+        if relative not in expected:
+            raise ReceiptError("unexpected staged file")
+        data = read_regular(path, MAX_FILE)
+        total += len(data) if relative not in fixed else 0
+        if total > MAX_TOTAL:
+            raise ReceiptError("staged input byte limit exceeded")
+        identity = {"sha256": _sha(data), "executable": bool(path.stat().st_mode & 0o111)}
+        if files.get(relative) != identity:
+            raise ReceiptError("staged file identity mismatch")
+        actual.add(relative)
+    if actual != expected:
+        raise ReceiptError("missing staged file")
+    if ((root / "environment/Dockerfile").read_bytes() != DOCKERFILE.encode("utf-8")
+            or (root / "tests/test.sh").read_bytes() != TEST_SCRIPT.encode("utf-8")
+            or (root / "task.toml").read_bytes() != _task_toml(manifest["task"]).encode("utf-8")
+            or not (root / "tests/test.sh").stat().st_mode & 0o111):
+        raise ReceiptError("unexpected task runtime or verifier wrapper")
+    return {"status": "staged_repository_task_consistent", "task": manifest["task"],
+            "git_commit": manifest["git_commit"], "task_input_sha256": digest,
+            "verified_files": len(actual), "provider_calls": 0,
+            "origin_authenticated": False, "baseline_qualified": False,
+            "reference_qualified": False}

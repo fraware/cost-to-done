@@ -55,6 +55,8 @@ jobs:
       - name: Grade both generated Harbor tasks with no model
         run: |
           set -euo pipefail
+          cost-to-done validate-repo-task "$RUNNER_TEMP/negative"
+          cost-to-done validate-repo-task "$RUNNER_TEMP/positive"
           harbor run --path "$RUNNER_TEMP/negative" --agent nop --job-name negative --jobs-dir "$RUNNER_TEMP/controls" --n-concurrent 1 --n-attempts 1
           harbor run --path "$RUNNER_TEMP/positive" --agent nop --job-name positive --jobs-dir "$RUNNER_TEMP/controls" --n-concurrent 1 --n-attempts 1
           python -m scripts.check_repository_task_controls "$RUNNER_TEMP" > "$RUNNER_TEMP/repository-control-summary.json"

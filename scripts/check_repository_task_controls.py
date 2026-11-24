@@ -6,12 +6,14 @@ import sys
 from pathlib import Path
 
 from cost_to_done.harbor import inspect_harbor_job
+from cost_to_done.repository_task import validate_repository_task
 
 
 def check(root: Path) -> dict:
     rows = {}
     manifests = {}
     for name, expected in (("negative", "fail"), ("positive", "pass")):
+        validate_repository_task(root / name)
         manifest = json.loads((root / name / "ctd-task-manifest.json").read_text())
         inspected = inspect_harbor_job(root / "controls" / name)
         if inspected.get("complete") is not True or inspected.get("observed_trials") != 1:
