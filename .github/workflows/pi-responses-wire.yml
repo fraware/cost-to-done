@@ -1,0 +1,28 @@
+name: Pinned Pi native Responses mock probe
+on:
+  push:
+    paths:
+      - "tests/pi_wire/native_responses_mock.py"
+      - "scripts/test_pi_responses_wire.sh"
+      - ".github/workflows/pi-responses-wire.yml"
+  pull_request:
+    paths:
+      - "tests/pi_wire/native_responses_mock.py"
+      - "scripts/test_pi_responses_wire.sh"
+      - ".github/workflows/pi-responses-wire.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-responses-wire:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Install pinned Pi
+        run: npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.85.1
+      - name: Verify local scripted native function-tool exchange
+        run: bash scripts/test_pi_responses_wire.sh
