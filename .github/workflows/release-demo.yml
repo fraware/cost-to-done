@@ -1,0 +1,88 @@
+name: Recorded public release demonstration
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/release-demo.yml'
+      - 'scripts/record_release_demo.cjs'
+      - 'scripts/prepare_release_demo.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release-demo.yml'
+permissions:
+  contents: read
+concurrency:
+  group: ctd-release-demo-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  record:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Download and verify immutable release distributions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/release"
+          gh release download v0.1.0 --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/release" --pattern 'cost_to_done-0.1.0-*' --pattern 'SHA256SUMS'
+          # Manifest also covers source distribution.
+          gh release download v0.1.0 --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/release" --pattern 'cost_to_done-0.1.0.tar.gz'
+          (cd "$RUNNER_TEMP/release" && sha256sum -c SHA256SUMS)
+          python -m venv "$RUNNER_TEMP/ctd-demo-env"
+          python scripts/prepare_release_demo.py --wheel "$RUNNER_TEMP/release/cost_to_done-0.1.0-py3-none-any.whl" --venv "$RUNNER_TEMP/ctd-demo-env" --site "$RUNNER_TEMP/demo-site"
+      - name: Install browser recorder
+        run: |
+          npm install --no-save --package-lock=false playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Record actual browser interaction and encode video
+        run: |
+          set -euo pipefail
+          python -m http.server 8765 --bind 127.0.0.1 --directory "$RUNNER_TEMP/demo-site" > "$RUNNER_TEMP/demo-http.log" 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:8765/index.html >/dev/null; then break; fi
+            sleep 1
+          done
+          export CTD_DEMO_OUTPUT="$RUNNER_TEMP/demo-output"
+          node scripts/record_release_demo.cjs
+          ffmpeg -hide_banner -loglevel error -i "$CTD_DEMO_OUTPUT/cost-to-done-v0.1.0-demo.webm" -c:v libx264 -preset medium -crf 21 -pix_fmt yuv420p -movflags +faststart -an "$CTD_DEMO_OUTPUT/cost-to-done-v0.1.0-demo.mp4"
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$CTD_DEMO_OUTPUT/cost-to-done-v0.1.0-demo.mp4" | python -c 'import sys; duration=float(sys.stdin.read()); print("Recorded duration:",duration); assert 30 <= duration <= 50'
+          (cd "$CTD_DEMO_OUTPUT" && sha256sum cost-to-done-v0.1.0-demo.mp4 > demo-SHA256SUMS)
+      - uses: actions/upload-artifact@v7
+        with:
+          name: recorded-release-demo-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/demo-output/cost-to-done-v0.1.0-demo.mp4
+            ${{ runner.temp }}/demo-output/demo-SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
+  publish:
+    needs: record
+    if: github.repository == 'fraware/cost-to-done' && github.ref == 'refs/heads/main' && github.event_name == 'push' && github.run_attempt == '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: recorded-release-demo-${{ github.run_id }}
+          path: demo
+      - name: Attach recording to existing alpha release without overwriting distributions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          (cd demo && sha256sum -c demo-SHA256SUMS)
+          gh release upload v0.1.0 demo/cost-to-done-v0.1.0-demo.mp4 demo/demo-SHA256SUMS --repo "$GITHUB_REPOSITORY"
