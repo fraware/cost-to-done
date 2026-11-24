@@ -59,7 +59,7 @@ def attestation(outcome: dict, model: str) -> dict:
                       reasoning_effort=outcome.get("reasoning_effort"),
                       ledger_observed="gateway_snapshot" in outcome,
                       task_fixture=outcome.get("task_fixture", "allocation-repair"))
-        if not record["ledger_observed"]:
+        if not record["ledger_observed"] or "gateway_entries" not in outcome:
             record["gateway_recorded_calls"] = None
     return record
 

@@ -105,3 +105,20 @@ class LedgerTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class LedgerObservationTests(unittest.TestCase):
+    def test_snapshot_and_entries_reconcile(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as directory:
+            ledger = BudgetLedger(Path(directory) / "ledger.sqlite3", budget_usd="1")
+            ledger.bind_schedule("a"*64)
+            ledger.reserve("request-1", "0.1")
+            ledger.settle("request-1", "0.025")
+            ledger.reserve("request-2", "0.2")
+            ledger.mark_uncertain("request-2")
+            snapshot, entries = ledger.observation()
+            self.assertEqual(snapshot.settled, "0.025")
+            self.assertEqual(snapshot.reserved, "0.2")
+            self.assertEqual(snapshot.uncertain, 1)
+            self.assertEqual(snapshot.schedule_sha256, "a"*64)
+            self.assertEqual([e["state"] for e in entries], ["settled", "uncertain"])

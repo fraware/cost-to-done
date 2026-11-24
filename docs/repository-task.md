@@ -76,3 +76,23 @@ content binding, not authenticated proof that the supplied jobs executed
 those exact bytes. The separate experimental external gateway path is
 restricted to a CI-only fictional provider key and mock transport. A
 public CLI invocation rejects paid execution of prepared external tasks.
+
+## Matched fictional comparison
+
+The repository controls workflow rehearses two deliberately distinct scripted
+responses on the same prepared defective repository: an incorrect source edit
+and a correct source edit. Both have their own dedicated ledger and original
+Harbor outcome. The plan is frozen before either scripted episode. Missing or
+unsettled observations withhold every cost-per-completion ratio. The failed
+trial retains its fictional expenditure and its ratio is undefined.
+
+Download the workflow's redacted comparison artifact and regenerate its
+standalone report locally:
+
+```bash
+cost-to-done report-repo-rehearsal ./comparison --output comparison.html
+```
+
+The command recomputes the report from the plan and episode records; it
+ignores saved derived summaries. This is a protocol integration test with
+scripted responses, not a model comparison or a real-provider cost claim.

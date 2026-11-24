@@ -9,6 +9,9 @@ on:
       - 'scripts/check_repository_task_controls.py'
       - 'scripts/run_repository_rehearsal.py'
       - 'src/cost_to_done/repository_qualification.py'
+      - 'src/cost_to_done/repository_comparison.py'
+      - 'scripts/check_live_rehearsal.py'
+      - 'tests/test_repository_comparison.py'
       - 'src/cost_to_done/live.py'
       - 'tests/harbor/mock_repair.py'
   push:
@@ -21,7 +24,7 @@ permissions:
 jobs:
   controls:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
         with:
@@ -86,15 +89,17 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import os, re
-          path = Path(os.environ["RUNNER_TEMP"]) / "repository-rehearsal/.sessions/rehearsal-scripted/harbor.driver.log"
-          if path.is_file():
+          base = Path(os.environ["RUNNER_TEMP"]) / "repository-rehearsal"
+          for path in sorted(base.glob("*/.sessions/rehearsal-scripted/harbor.driver.log")):
               print(re.sub(r"[A-Za-z0-9_-]{32,}", "[redacted]", path.read_text(errors="replace")[-8000:]))
           PY
-      - name: Archive control summary only
+      - name: Archive control and fictional comparison evidence
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: repository-task-controls-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/repository-control-summary.json
             ${{ runner.temp }}/repository-qualification.json
+            ${{ runner.temp }}/repository-rehearsal/comparison/
           retention-days: 30

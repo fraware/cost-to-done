@@ -53,6 +53,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--starter-job", type=Path, required=True)
     p.add_argument("--reference-job", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
+    p = subs.add_parser("report-repo-rehearsal", help="Recompute an offline fictional repository comparison from recorded mock observations")
+    p.add_argument("directory", type=Path)
+    p.add_argument("--output", type=Path, required=True)
     p = subs.add_parser("plan-panel", help="Freeze the bundled matched native development panel; no inference")
     p.add_argument("--repo-root", type=Path, default=Path.cwd())
     p.add_argument("--repetitions", type=int, default=1)
@@ -162,6 +165,11 @@ def main(argv: list[str] | None = None) -> int:
             payload = json.dumps(result, sort_keys=True, indent=2, allow_nan=False) + "\n"
             publish_private_texts([(args.output, payload)])
             print(payload, end="")
+            return 0
+        if args.command == "report-repo-rehearsal":
+            from .repository_comparison import write_comparison
+            write_comparison(args.directory, args.output)
+            print(f"Fictional repository comparison: {args.output}")
             return 0
         if args.command == "plan-panel":
             panel = build_panel(args.repo_root, repetitions=args.repetitions, seed=args.seed,
