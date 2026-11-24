@@ -218,5 +218,39 @@ class GatewayTests(unittest.TestCase):
             PriceSchedule(MODEL, "2026-02-30", "https://example.com", "1", "1").validate()
 
 
+    def test_responses_only_model_tool_calls_fail_before_budget_and_network(self):
+        tools = [{"type": "function", "function": {
+            "name": "bash", "parameters": {"type": "object"}}}]
+        for model in ("gpt-6.1-terra", "gpt-6.2-sol", "gpt-6.2-astra",
+                      "gpt-6.1-terra-2026-11-01", "gpt-5.4-pro"):
+            with self.subTest(model=model):
+                self.gateway.price = PriceSchedule(
+                    model, "2026-11-23", "https://example.com/prices", "2", "10")
+                before = self.ledger.entries()
+                with self.assertRaisesRegex(ReceiptError, "Responses API"):
+                    self.gateway.handle(request(model=model, tools=tools), "unsupported")
+                self.assertEqual(before, self.ledger.entries())
+        self.assertEqual(self.seen, [])
+
+    def test_chat_function_tools_explicitly_disable_reasoning_on_gpt54(self):
+        model = "gpt-5.4-mini"
+        self.gateway.price = PriceSchedule(
+            model, "2026-11-23", "https://example.com/prices", "0.75", "4.5")
+        self.gateway.transport = lambda body, key: (
+            self.seen.append(json.loads(body)) or success(
+                prompt=100, completion=4, model=model))
+        body = request(model=model, tools=[{"type":"function","function":{
+            "name":"bash","parameters":{"type":"object"}}}])
+        status, _ = self.gateway.handle(body, "gpt54-tools")
+        self.assertEqual(status, 200)
+        self.assertEqual(self.seen[0]["reasoning_effort"], "none")
+        self.assertEqual(self.ledger.snapshot().uncertain, 0)
+        with self.assertRaisesRegex(ReceiptError, "reasoning_effort"):
+            self.gateway.handle(request(model=model, tools=[
+                {"type":"function","function":{"name":"bash",
+                 "parameters":{"type":"object"}}}],
+                reasoning_effort="medium"), "should-reject")
+        self.assertEqual(len(self.seen), 1)
+
 if __name__ == "__main__":
     unittest.main()

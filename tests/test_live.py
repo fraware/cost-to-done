@@ -54,6 +54,29 @@ class LiveContractTests(unittest.TestCase):
         self.assertIn("max_output_tokens=4096", args)
         self.assertEqual(args[args.index("--base-url")+1], "http://ctd_gateway:8866/v1")
 
+
+    def test_responses_only_gpt6_models_fail_closed_during_zero_spend_planning(self):
+        for model in ("gpt-6.1-terra", "gpt-6.2-sol", "gpt-6.2-astra", "gpt-5.4-pro"):
+            with self.subTest(model=model):
+                self.price.write_text(json.dumps(vars(PriceSchedule(
+                    model, "2026-11-23", "https://example.com/pricing", "2", "10"))))
+                alternate = LiveConfig(
+                    self.root, self.c.task, self.c.jobs_dir, model, self.price,
+                    self.key, "0.25")
+                with self.assertRaisesRegex(ReceiptError, "Responses API"):
+                    plan_live(alternate)
+                self.assertFalse(self.c.jobs_dir.exists())
+
+    def test_gpt54_mini_turns_off_reasoning_for_chat_function_tools(self):
+        self.price.write_text(json.dumps(vars(PriceSchedule(
+            "gpt-5.4-mini", "2026-11-23", "https://example.com/pricing",
+            "0.75", "4.5"))))
+        cfg = LiveConfig(self.root, self.c.task, self.c.jobs_dir,
+                         "gpt-5.4-mini", self.price, self.key, "0.25")
+        self.assertEqual(plan_live(cfg)["status"], "plan_only")
+        args = cfg.command(task_copy=Path("/task"), token="stub")
+        self.assertIn("reasoning_effort=off", args)
+
     def test_model_price_mismatch_fails_before_execution(self):
         bad = LiveConfig(self.root, self.c.task, self.c.jobs_dir, "other-model", self.price, self.key, "0.25")
         with self.assertRaisesRegex(ReceiptError, "model"):

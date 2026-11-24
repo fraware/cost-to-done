@@ -12,6 +12,8 @@ or metering failure. The uploaded redacted attestations document task
 checksums, observed outcomes, unresolved request counts, and rate schedule
 identities, omitting raw prompts and provider secrets.
 
+The root cause has since been identified: OpenAI rejected both GPT-6 requests with HTTP 400 and `provider_error_param=reasoning_effort`. OpenAI's deployment guidance specifies Responses for function tools with these models; the Chat Completions runner now refuses these models before allocating budget. See [model compatibility](model-compatibility.md).
+
 The controlled diagnostic in
 `.github/workflows/openai-protocol-diagnostic.yml` performs one small, real
 Chat Completions request per model through the same validated gateway
