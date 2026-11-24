@@ -19,12 +19,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    timeout-minutes: 10
+    outputs:
+      enabled: ${{ steps.pages.outputs.enabled }}
     steps:
       - uses: actions/checkout@v7
       - name: Check Pages activation
@@ -46,24 +45,35 @@ jobs:
         uses: actions/upload-pages-artifact@v5
         with:
           path: docs
-      - name: Wait for uploaded Pages artifact indexing
-        if: steps.pages.outputs.enabled == 'true'
+
+  deploy:
+    needs: build
+    if: needs.build.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Confirm uploaded artifact has propagated
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 20); do
+          for attempt in $(seq 1 30); do
             if gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts" \
                 --jq '[.artifacts[] | select(.name == "github-pages" and .expired == false)] | length' \
                 2>/dev/null | grep -Eq '^[1-9][0-9]*$'; then
+              # The deploy action uses a separate artifact discovery path.
+              # Give the GitHub artifact service time to propagate the upload.
+              sleep 15
               exit 0
             fi
             sleep 3
           done
-          echo "::error::Pages artifact was uploaded but is still unavailable after 60 seconds."
+          echo "::error::Pages artifact still unavailable after 90 seconds."
           exit 1
       - name: Deploy website
-        if: steps.pages.outputs.enabled == 'true'
         id: deployment
         uses: actions/deploy-pages@v5
