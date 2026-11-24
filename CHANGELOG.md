@@ -2,7 +2,12 @@
 
 ## Unreleased
 
-The project is currently an alpha development version. No published release is implied by this changelog.
+- Direct installation from the published alpha wheel.
+- Pinned external benchmark aggregate analysis.
+
+## v0.1.0 — 2026-11-24
+
+[First alpha release](https://github.com/fraware/cost-to-done/releases/tag/v0.1.0).
 
 - Offline JSONL receipt validation, failure-inclusive cost analysis and standalone reports.
 - Existing Harbor job inspection, matched comparison and pinned receipt import.
