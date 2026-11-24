@@ -1,0 +1,58 @@
+name: Installable package candidate
+on:
+  push:
+    paths:
+      - 'src/**'
+      - 'pyproject.toml'
+      - '.github/workflows/package-candidate.yml'
+      - 'README.md'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'pyproject.toml'
+      - '.github/workflows/package-candidate.yml'
+      - 'README.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Build distribution artifacts (no publication)
+        run: |
+          python -m pip install 'build==1.2.2.post1'
+          python -m build
+          sha256sum dist/* > package-sha256.txt
+      - name: Install wheel into a clean environment and run outside checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/ctd-package"
+          "$RUNNER_TEMP/ctd-package/bin/python" -m pip install --no-index --no-deps dist/*.whl
+          mkdir "$RUNNER_TEMP/ctd-user"
+          cd "$RUNNER_TEMP/ctd-user"
+          unset PYTHONPATH OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY || true
+          "$RUNNER_TEMP/ctd-package/bin/cost-to-done" --help
+          "$RUNNER_TEMP/ctd-package/bin/cost-to-done" demo --output demo.html
+          grep -qi synthetic demo.html
+          sha256sum demo.html > before.txt
+          if "$RUNNER_TEMP/ctd-package/bin/cost-to-done" demo --output demo.html; then
+            echo 'demo unexpectedly overwrote an existing report' >&2
+            exit 1
+          fi
+          sha256sum -c before.txt
+      - name: Archive candidate distributions
+        uses: actions/upload-artifact@v7
+        with:
+          name: package-candidate-${{ github.run_id }}
+          path: |
+            dist/*
+            package-sha256.txt
+          if-no-files-found: error
+          retention-days: 30
