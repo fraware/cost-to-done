@@ -4,7 +4,7 @@
 
 Measure the cost of a completed task, including every unsuccessful attempt. Compare agent configurations against the same acceptance criteria and inspect the evidence behind each result.
 
-[Project website](https://fraware.github.io/cost-to-done/) · [Interactive calculator](https://fraware.github.io/cost-to-done/calculator.html) · [Methodology](docs/methodology.md) · [Repository tasks](docs/repository-task.md)
+[Project website](https://fraware.github.io/cost-to-done/) · [Interactive calculator](https://fraware.github.io/cost-to-done/calculator.html) · [Documentation](docs/README.md) · [Methodology](docs/methodology.md) · [Repository tasks](docs/repository-task.md)
 
 ## Quick start
 
@@ -49,7 +49,7 @@ Both configurations completed every planned trial. Estimated cost per completion
 | GPT-6.1 Terra, low | Fail | Fail | $0.003234 |
 | GPT-6.2 Sol, low | Pass | Pass | $0.019944 |
 
-Both original verdicts agreed with a fresh verifier process. Terra's expenditure is retained even though the cost-per-completion ratio is undefined. [Evidence and replay details](docs/real-candidate-replay-observations.md) · [Original archive audit](https://github.com/fraware/cost-to-done/actions/runs/45334603335).
+Both original verdicts agreed with a fresh verifier process. Terra's expenditure is retained even though the cost-per-completion ratio is undefined. [Evidence and replay details](docs/real-candidate-replay-observations.md) · [Original archive audit](https://github.com/fraware/cost-to-done/actions/runs/45334799801).
 
 These are separate cohorts. Costs are local usage-based rate-card estimates, not reconciled invoices. The panel does not establish a general model ranking, a price-order reversal, or performance on unseen repositories.
 

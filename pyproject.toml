@@ -9,6 +9,21 @@ description = "Open, reproducible accounting for the real cost of verified AI wo
 requires-python = ">=3.11"
 license = "MIT"
 readme = "README.md"
+keywords = ["ai-agents", "benchmarking", "cost-accounting", "harbor", "evaluation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Testing",
+]
+
+[project.urls]
+Homepage = "https://fraware.github.io/cost-to-done/"
+Repository = "https://github.com/fraware/cost-to-done"
+Documentation = "https://github.com/fraware/cost-to-done/tree/main/docs"
+Issues = "https://github.com/fraware/cost-to-done/issues"
 
 [project.scripts]
 cost-to-done = "cost_to_done.cli:main"
