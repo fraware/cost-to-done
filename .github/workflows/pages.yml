@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -45,6 +46,26 @@ jobs:
         uses: actions/upload-pages-artifact@v5
         with:
           path: docs
+      - name: Wait for the uploaded Pages artifact to become queryable
+        if: steps.pages.outputs.enabled == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 20); do
+            if gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts" \
+              --jq '[.artifacts[] | select(.name == "github-pages" and .expired == false)] | length' \
+              2>/dev/null | grep -Eq '^[1-9][0-9]*
+        id: deployment
+        uses: actions/deploy-pages@v5
+; then
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::Pages artifact uploaded but still unavailable through the API."
+          exit 1
       - name: Deploy website
         if: steps.pages.outputs.enabled == 'true'
         id: deployment
