@@ -1,6 +1,27 @@
+## 2026-11-23 protocol correction
+
+The initial GPT-6.1 Terra / GPT-6.2 Sol Chat Completions tool runs did not
+establish coding quality or economic results: both accumulated unresolved
+requests after HTTP 400 responses on `reasoning_effort`. OpenAI requires
+Responses API for their tool calling.
+
+The subsequent dated GPT-5.4 and GPT-5.4-mini protocol checks
+[GitHub Actions #45309534216](https://github.com/fraware/cost-to-done/actions/runs/45309534216)
+each returned HTTP 200 with complete terminal usage and no uncertain
+reservations. Their fully settled rate-card estimates were $0.000615 and
+$0.0001845, respectively, for the diagnostic requests. These are **not
+software-repair results or provider invoices**.
+
+This workflow now runs the actual Harbor repair on those **exact dated
+GPT-5.4 snapshots** using identical task/verifier inputs, the Pi Chat
+Completions adapter at `reasoning_effort=off`, and the gateway's outgoing
+`reasoning_effort=none` for function tools. The GPT-6 evaluations remain
+blocked until native Responses tool support exists. The workflow uploads
+only redacted status evidence and does not claim independent cost billing.
+
 # First real-model Harbor smoke: scope and evidence
 
-The repository's dedicated paid-model workflow compares **no models yet**.
+The repository's dedicated paid-model workflow tests compatible Chat Completions models; a pair of individual smoke trials does **not** establish comparative model performance.
 It runs one qualified allocation-repair task against each of two named OpenAI
 model routes. Each run is an independent smoke observation. A single task is
 insufficient for a general model ranking.
@@ -10,11 +31,11 @@ checked against their provider model pages on 2026-11-23:
 
 | Model | Input USD / 1M | Output USD / 1M |
 | --- | ---: | ---: |
-| `gpt-6.1-terra` | 1 | 5 |
-| `gpt-6.2-sol` | 2 | 10 |
+| `gpt-5.4-2026-03-05` | 2.50 | 15.00 |
+| `gpt-5.4-mini-2026-03-17` | 0.75 | 4.50 |
 
-Sources: https://developers.openai.com/api/docs/models/gpt-6.1-terra
-and https://developers.openai.com/api/docs/models/gpt-6.2-sol
+Sources: https://developers.openai.com/api/docs/models/gpt-5.4
+and https://developers.openai.com/api/docs/models/gpt-5.4-mini
 
 **Explicit spend authorization**: this experiment uses the repository-scoped
 GitHub Actions `OPENAI_API_KEY` secret and incurs real inference charges.
