@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from cost_to_done.core import ReceiptError
-from cost_to_done.replay import captured_candidate, replay_candidate, IMAGE
+from cost_to_done.replay import captured_candidate, replay_candidate, IMAGE, TEST_FAILURE_EXIT, REPLAY_SCRIPT
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -51,6 +51,7 @@ class CandidateReplayTests(unittest.TestCase):
                 self.assertIn(IMAGE, command)
                 self.assertIn("none", command)
                 self.assertIn("--read-only", command)
+                self.assertEqual(command[command.index("--log-driver") + 1], "none")
                 self.assertIn("65534:65534", command)
                 self.assertIn("ALL", command)
                 self.assertEqual(command.count("--mount"), 2)
@@ -64,6 +65,21 @@ class CandidateReplayTests(unittest.TestCase):
         self.assertTrue(result["cleanup_confirmed"])
         self.assertFalse(result["adversarial_verifier_integrity_established"])
         self.assertEqual([x[1] for x in calls], ["run", "rm", "ps"])
+
+    def test_only_completed_test_verdicts_are_classified(self):
+        for code, verdict in ((0, "pass"), (TEST_FAILURE_EXIT, "fail"),
+                              (1, "unresolved"), (2, "unresolved"),
+                              (125, "unresolved"), (126, "unresolved"),
+                              (127, "unresolved"), (137, "unresolved")):
+            def fake_run(command, **kwargs):
+                return subprocess.CompletedProcess(
+                    command, code if command[1] == "run" else 0, stdout=b"")
+            with self.subTest(code=code), patch("cost_to_done.replay.subprocess.run", side_effect=fake_run):
+                result = replay_candidate(ROOT, "allocation-repair", self.candidate)
+                self.assertEqual(result["outcome"], verdict)
+                self.assertEqual(result["independent_process_reexecution"], verdict != "unresolved")
+                self.assertTrue(result["cleanup_confirmed"])
+        self.assertIn(f"else {TEST_FAILURE_EXIT}", REPLAY_SCRIPT)
 
     def test_timeout_and_cleanup_failure_are_unresolved(self):
         def fake_run(command, **kwargs):
