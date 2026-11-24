@@ -52,3 +52,17 @@ limitations alongside a reproducible CLI quickstart. Distinguish synthetic
 examples, development pilots, held-out estimates and billed amounts. Do not
 assert an economic reversal or announce a winning configuration unless the
 results justify it. Keep current evidence accessible on the landing page.
+
+## Development-panel expansion
+
+Three bundled fixtures passed separate local and Harbor negative/positive
+controls (45313687642). The native runner now stages only their declared
+single-module files and uses a fixed trusted Pi installation template with a
+module-specific COPY instruction. No arbitrary repository or task directories
+are supported. The original allocation fixture remains the default.
+
+The new expanded native mock workflow qualifies each additional task through
+Pi and the credential-isolated gateway, including low-effort opaque reasoning
+replay and the independent task verifier. Its scripted repairs and fictional
+usage are not model performance measurements. Paid matrix execution is a
+separate gate after both the frontier pilot and the expanded mock checks pass.

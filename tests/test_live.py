@@ -26,10 +26,14 @@ class LiveContractTests(unittest.TestCase):
         task = self.root / "tasks/allocation-repair"
         (task / "environment").mkdir(parents=True)
         (task / "tests").mkdir()
+        (task / "solution").mkdir()
         for rel in ["src/cost_to_done/live_gateway.py", "experiments/live/compose.yaml", "experiments/live/base-compose-ci.yaml", "experiments/live/Dockerfile.pi",
                     "tasks/allocation-repair/task.toml", "tasks/allocation-repair/environment/Dockerfile",
-                    "tasks/allocation-repair/tests/test.sh"]:
+                    "tasks/allocation-repair/tests/test.sh", "tasks/allocation-repair/tests/test_state.py",
+                    "tasks/allocation-repair/instruction.md", "tasks/allocation-repair/environment/allocate.py",
+                    "tasks/allocation-repair/solution/solve.sh"]:
             (self.root / rel).write_text("fixture\n")
+        (self.root / "experiments/live/Dockerfile.pi").write_text("FROM python:3.12\nCOPY allocate.py /app/allocate.py\n")
         self.price = self.root / "pricing.json"
         p = PriceSchedule("test-model-1", "2026-11-20", "https://example.com/pricing", "1.5", "4.5")
         self.price.write_text(json.dumps(vars(p)), encoding="utf-8")
@@ -95,6 +99,23 @@ class LiveContractTests(unittest.TestCase):
         bad = LiveConfig(self.root, self.c.task, self.c.jobs_dir, "other-model", self.price, self.key, "0.25")
         with self.assertRaisesRegex(ReceiptError, "model"):
             plan_live(bad)
+
+    def test_stage_each_qualified_module_without_incidental_files(self):
+        from dataclasses import replace
+        from cost_to_done.live import prepare_task, TRUSTED_TASK_MODULES
+        repo = Path(__file__).resolve().parents[1]
+        for task_name, module in TRUSTED_TASK_MODULES.items():
+            with self.subTest(task=task_name):
+                cfg = replace(self.c, repo_root=repo, task=repo / "tasks" / task_name)
+                cfg = cfg.validated()
+                destination = Path(self.temp.name) / task_name
+                prepare_task(cfg, destination)
+                self.assertEqual((destination / "environment" / module).read_bytes(),
+                                 (cfg.task / "environment" / module).read_bytes())
+                self.assertIn(f"COPY {module} /app/{module}",
+                              (destination / "environment/Dockerfile").read_text())
+                self.assertEqual(len(list((destination / "environment").iterdir())), 2)
+                self.assertEqual(len(list((destination / "tests").iterdir())), 2)
 
     def test_reject_unqualified_arbitrary_task(self):
         other = self.root / "tasks/arbitrary"

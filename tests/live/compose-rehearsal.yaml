@@ -31,6 +31,7 @@ services:
       CTD_MOCK_SCENARIO: scripted-repair
       CTD_GATEWAY_ROUTE: ${CTD_GATEWAY_ROUTE:-/v1/chat/completions}
       CTD_REHEARSAL_REASONING: ${CTD_REHEARSAL_REASONING:-off}
+      CTD_REHEARSAL_TASK: ${CTD_REHEARSAL_TASK:-allocation-repair}
       CTD_MOCK_PROVIDER_KEY: ctd-fake-upstream-key-for-tests-12345678
     volumes:
       - ${CTD_REPO_ROOT:?missing-root}/tests/network/mock_provider.py:/fixture/mock_provider.py:ro

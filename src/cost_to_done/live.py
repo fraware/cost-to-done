@@ -34,6 +34,11 @@ HARBOR_VERSION = "0.27.0"
 PI_VERSION = "0.85.1"
 _MODEL = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,120}\Z")
 _JOB = re.compile(r"[a-z][a-z0-9-]{1,60}\Z")
+TRUSTED_TASK_MODULES = {
+    "allocation-repair": "allocate.py",
+    "interval-union-repair": "intervals.py",
+    "dependency-order-repair": "dependency_order.py",
+}
 _ALLOWED_ENV = ("PATH", "HOME", "LANG", "LC_ALL", "USER", "TMPDIR",
                 "DOCKER_HOST", "DOCKER_CONTEXT", "XDG_RUNTIME_DIR", "VIRTUAL_ENV")
 
@@ -65,13 +70,20 @@ class LiveConfig:
         if any(not x.is_file() or x.is_symlink() for x in expected):
             raise ReceiptError("repository is missing a trusted gateway execution fixture")
         task = self.task.resolve(strict=True)
-        if not task.is_relative_to(root) or task != (root / "tasks/allocation-repair").resolve():
-            raise ReceiptError("this experimental gateway runner accepts only the qualified allocation-repair fixture")
+        if (task.name not in TRUSTED_TASK_MODULES or task != root / "tasks" / task.name
+                or (root / "tasks").is_symlink()):
+            raise ReceiptError("this experimental gateway runner accepts only bundled qualified tasks")
         if self.task.is_symlink() or not task.is_dir():
             raise ReceiptError("task must be a real directory")
         for path in task.rglob("*"):
             if path.is_symlink() or not path.resolve().is_relative_to(task):
                 raise ReceiptError("task contains a symlink or escaped artifact")
+        module = TRUSTED_TASK_MODULES[task.name]
+        required = ("instruction.md", "task.toml", "environment/Dockerfile",
+                    f"environment/{module}", "tests/test.sh", "tests/test_state.py",
+                    "solution/solve.sh")
+        if any(not (task / name).is_file() for name in required):
+            raise ReceiptError("qualified task fixture is incomplete")
         if not _MODEL.fullmatch(self.model):
             raise ReceiptError("model must be an exact OpenAI model ID")
         if self.api not in ("chat", "responses"):
@@ -131,6 +143,29 @@ class LiveConfig:
             "--job-name", self.job_name, "--jobs-dir", str(self.jobs_dir),
             "--n-concurrent", "1", "--n-attempts", "1",
         ]
+
+
+def prepare_task(config: LiveConfig, task_copy: Path) -> None:
+    """Stage only the declared fixture files, excluding incidental local artifacts.
+
+    The operator must trust the checkout, including the task and runner template.
+    This is not a general untrusted repository execution facility.
+    """
+    module = TRUSTED_TASK_MODULES[config.task.name]
+    template = (config.repo_root / "experiments/live/Dockerfile.pi").read_text(encoding="utf-8")
+    marker = "COPY allocate.py /app/allocate.py"
+    if template.count(marker) != 1:
+        raise ReceiptError("unexpected trusted Pi Dockerfile template")
+    files = ("instruction.md", "task.toml", f"environment/{module}",
+             "tests/test.sh", "tests/test_state.py", "solution/solve.sh")
+    task_copy.mkdir(mode=0o700)
+    for name in files:
+        source = config.task / name
+        destination = task_copy / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+    dockerfile = task_copy / "environment/Dockerfile"
+    dockerfile.write_text(template.replace(marker, f"COPY {module} /app/{module}"), encoding="utf-8")
 
 
 def plan_live(config: LiveConfig) -> dict[str, Any]:
@@ -231,8 +266,7 @@ def execute_live(config: LiveConfig, *, acknowledged: bool = False) -> dict[str,
         raise ReceiptError("session already exists")
     session_dir.mkdir(parents=True, mode=0o700)
     task_copy = session_dir / "task"
-    shutil.copytree(c.task, task_copy)
-    shutil.copy2(c.repo_root / "experiments/live/Dockerfile.pi", task_copy / "environment/Dockerfile")
+    prepare_task(c, task_copy)
     evidence = session_dir / "evidence"
     evidence.mkdir(mode=0o700)
     gateway_token = secrets.token_urlsafe(48)
@@ -255,6 +289,7 @@ def execute_live(config: LiveConfig, *, acknowledged: bool = False) -> dict[str,
         "schema_version": 1,
         "status": "started", "model": c.model,
         "api": c.api, "reasoning_effort": c.reasoning_effort if c.api == "responses" else None,
+        "task_fixture": c.task.name,
         "job_name": c.job_name, "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "price_schedule_sha256": PriceSchedule.load(c.price_schedule).digest,
         "operator_budget_usd": c.budget_usd, "provider_invoice_reconciled": False,
