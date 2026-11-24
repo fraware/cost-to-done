@@ -1,3 +1,5 @@
+# First real-model Harbor smoke: scope and evidence
+
 ## 2026-11-23 protocol correction
 
 The initial GPT-6.1 Terra / GPT-6.2 Sol Chat Completions tool runs did not
@@ -19,7 +21,7 @@ Completions adapter at `reasoning_effort=off`, and the gateway's outgoing
 blocked until native Responses tool support exists. The workflow uploads
 only redacted status evidence and does not claim independent cost billing.
 
-# First real-model Harbor smoke: scope and evidence
+## Experimental scope
 
 The repository's dedicated paid-model workflow tests compatible Chat Completions models; a pair of individual smoke trials does **not** establish comparative model performance.
 It runs one qualified allocation-repair task against each of two named OpenAI
@@ -60,8 +62,10 @@ to support a public benchmark result. The observed estimate treats all input
 tokens at the declared uncached rate and excludes independently billed services,
 special caching/write charges, refunds, and other provider adjustments.
 
-A successful Docker run and a provider request count above zero establish
-a genuine OpenAI-backed tool execution. They do not establish a controlled
+A completed trial with gateway request receipts confirms upstream inference
+attempts. A **successful coding tool execution** additionally needs the
+agent's tool transcript and an independent verifier pass. The redacted
+attestation by itself does not establish these stronger claims, nor a
 five-configuration comparison or invoice-level cost reconciliation.
 
 See `docs/live-gateway.md` and `docs/ledger-reconciliation.md` for the
