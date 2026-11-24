@@ -1,14 +1,14 @@
 # First real-model trial through the isolated gateway
 
-**Status:** Experimental execution route. The Harbor/Pi/gateway/verifier pipeline has been exercised against a deterministic mock. **No commercial model result, actual charge, or provider invoice has been verified for this new route.** The compose file is derived from the passing isolated mock topology, yet real-provider behavior and financial reconciliation remain separate acceptance gates.
+**Status (24 November 2026):** Experimental execution route. Deterministic mock controls and bounded paid Chat Completions and native Responses trials have completed. See [first paid observations](first-real-observations.md), [native pilot](frontier-observations.md), [development panel](development-panel-observations.md) and [separate replay cohort](real-candidate-replay-observations.md). All costs are local estimates; provider invoices and general sandbox security have not been independently verified.
 
-The purpose of `run-harbor-gateway` is to obtain **one privately inspected, verifiable software-repair trial** while limiting the upstream API credential to a gateway container. The command supports the qualified `tasks/allocation-repair` task only. The agent executes inside Docker's internal-only network and receives a disposable gateway token; the upstream credential is a Docker Compose file secret exposed only to the gateway service.
+The purpose of `run-harbor-gateway` is to obtain **one privately inspected, verifiable software-repair trial** while limiting the upstream API credential to a gateway container. The public paid command supports the three bundled qualified tasks (`allocation-repair`, `dependency-order-repair`, `interval-union-repair`). See [repository task scope](repository-task.md) for the separate external rehearsal and fixed pilot. The agent executes inside Docker's internal-only network and receives a disposable gateway token; the upstream credential is a Docker Compose file secret exposed only to the gateway service.
 
 ## Preconditions
 
 - Linux containers under a trusted, current Docker Engine and Docker Compose v2, on a host that you administer. Do not attach privileged containers, a Docker socket, or arbitrary Compose overrides.
 - Python 3.12+, `harbor==0.27.0`, and Cost to Done installed from a pinned repository revision. The task image installs Pi 0.85.1 at build time. npm transitive dependencies are not hermetically pinned.
-- One supported **OpenAI Chat Completions** model ID and an official, dated pricing schedule with the matching model identifier. **Known GPT-6.1 Terra and GPT-6.2 Sol/Astra tool-calling routes are rejected at preflight**: these models require the Responses API for tool calls. The current implementation does not supply that route. GPT-5.4 and GPT-5.4 mini use explicit `reasoning_effort=none` for Chat Completions function tools; see [model compatibility](model-compatibility.md). Check current pricing and endpoint compatibility independently. The gateway declines unknown fields, unsupported modalities, and missing terminal token usage.
+- One supported exact OpenAI model ID and a dated pricing schedule with the matching identifier. The CLI accepts `--api chat` (default) or `--api responses`. GPT-6.1 Terra and GPT-6.2 Sol/Astra tool-calling routes require native Responses; the incompatible Chat Completions route is rejected at preflight. Terra and Sol have been exercised at `--api responses --reasoning-effort low`; Astra has not been qualified by these paid trials. GPT-5.4 and GPT-5.4 mini use explicit `reasoning_effort=none` for Chat Completions function tools; see [model compatibility](model-compatibility.md). Check current pricing and endpoint compatibility independently. The gateway declines unknown fields, unsupported modalities, and missing terminal token usage.
 - A **dedicated provider project with a separately enforced financial limit**, configured and inspected by the operator. For OpenAI API projects, open **Project → Limits**, set the monthly spend limit, and explicitly enable **Enforce a hard limit**. A budget alert alone does not block traffic. Enforcement is not instantaneous and recorded spending can slightly exceed the threshold ([official instructions](https://help.openai.com/en/articles/9186755-managing-projects-in-the-api-platform)). Gateway reservations are **estimates** and the CLI cannot inspect or create provider limits.
 - A private credential file outside this repository and outside the run directory, mode 0600. Place the upstream key in the file as its only line. Never copy its contents into shell arguments, source control, a GitHub Actions secret used by public PRs, or task input.
 
@@ -36,7 +36,7 @@ From the repository root:
 
 ```bash
 python -m pip install -e .
-python -m pip install 'harbor==0.26.0'
+python -m pip install 'harbor==0.27.0'
 
 cost-to-done run-harbor-gateway \
   --model YOUR_EXACT_CHAT_COMPLETIONS_MODEL_ID \
@@ -86,7 +86,7 @@ A canonical local receipt is generated separately with `cost-to-done reconcile-h
 
 ## Verified scope and outstanding work
 
-This new live route has static topology checks, exact-price validation, credential-scope tests, simulated process tests, and unit tests for authorization failures. It has **not** executed a paid model in CI and does not claim container-sandbox security beyond the separately verified mock configuration. The next empirical gate is a manually authorized, provider-capped real-model trial with independent usage reconciliation and audited task outcome. A multi-model public comparison follows only with a fixed task panel, matching retry policy and independently auditable costs.
+The live route has static topology checks, price-schedule validation, credential-scope tests, simulated process tests and tests for authorization failures. Paid CI trials and a three-task matched development panel have completed; the separate candidate-replay cohort tested agreement in fresh offline verifier processes. Neither these trials nor the mock network probes establish adversarial sandbox integrity, a provider-enforced billing cap, invoice reconciliation or performance on unseen repositories. The next empirical gate is an independently cost-reconciled external task comparison.
 
 ## Offline acceptance test
 

@@ -2,7 +2,7 @@
 
 **The cheapest AI model might be the most expensive way to finish your work.**
 
-Measure the cost of a completed task, including every unsuccessful attempt. Compare agent configurations against the same acceptance criteria and inspect the evidence behind each result.
+Measure expenditure per successful task from recorded attempts, including recorded failures. Compare agent configurations against the same acceptance criteria and inspect the evidence behind each result.
 
 [v0.1.0 release](https://github.com/fraware/cost-to-done/releases/tag/v0.1.0) · [38-second product walkthrough](https://github.com/fraware/cost-to-done/releases/download/v0.1.0/cost-to-done-v0.1.0-demo.mp4) · [Project website](https://fraware.github.io/cost-to-done/) · [Interactive calculator](https://fraware.github.io/cost-to-done/calculator.html) · [Documentation](docs/README.md) · [Methodology](docs/methodology.md) · [Repository tasks](docs/repository-task.md)
 
@@ -31,13 +31,13 @@ The comparison checks matching task checksums and shows verifier outcomes, elaps
 
 ## External benchmark analysis
 
-[Terminal-Bench 4.1: reported inference cost per accepted trial](https://fraware.github.io/cost-to-done/terminal-bench.html). Recomputed from all 32 explicitly targeted 4.1 submission records at a pinned upstream commit, covering 10,560 recorded trials. Sol/Codex and Astra/Codex recorded 203 and 205 accepted trials respectively, with reported inference cost per accepted trial of $1.72 and $6.87. The aggregate ratios are third-party estimates with unverified trial-cost completeness; they are not our own executions, invoices, or a model ranking. See [source and method](docs/terminal-bench-4-1.md).
+[Terminal-Bench 4.1: reported inference cost per accepted trial](https://fraware.github.io/cost-to-done/terminal-bench.html). Recomputed from all 32 explicitly targeted 4.1 submission records at a pinned upstream commit, covering 10,560 recorded trials. Sol/Codex and Astra/Codex recorded 203 and 205 accepted trials respectively, with reported inference cost per accepted trial of $1.72 and $6.87. The ratios use third-party reported aggregates with unverified cost coverage and retry history; they are not our own executions, invoices, or a model ranking. See [source and method](docs/terminal-bench-4-1.md).
 
 ## What our real experiments have shown
 
 ### 18 paid trials, three public repair tasks
 
-| OpenAI configuration | Verified completions | Total estimated inference cost | Estimated cost / completion |
+| OpenAI configuration | Harbor-reported passes | Total estimated inference cost | Estimated cost / completion |
 | --- | ---: | ---: | ---: |
 | GPT-6.1 Terra, low | 9/9 | $0.045686 | $0.005076 |
 | GPT-6.2 Sol, low | 9/9 | $0.177268 | $0.019696 |
@@ -53,7 +53,7 @@ Both configurations completed every planned trial. Estimated cost per completion
 
 Both original verdicts agreed with a fresh verifier process. Terra's expenditure is retained even though the cost-per-completion ratio is undefined. [Evidence and replay details](docs/real-candidate-replay-observations.md) · [Original archive audit](https://github.com/fraware/cost-to-done/actions/runs/45334799801).
 
-These are separate cohorts. Costs are local usage-based rate-card estimates, not reconciled invoices. The panel does not establish a general model ranking, a price-order reversal, or performance on unseen repositories.
+These are separate cohorts. Costs are local estimates pricing all reported input tokens at the declared undiscounted input rate and output tokens at the declared output rate. Cache discounts, cache-write charges, other pricing adjustments, infrastructure, and human labor are excluded. The estimates are not reconciled invoices or guaranteed upper bounds. The panel does not establish a general model ranking, a price-order reversal, or performance on unseen repositories.
 
 ## Bring your own repository task
 

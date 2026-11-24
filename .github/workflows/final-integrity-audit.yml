@@ -1,0 +1,145 @@
+name: Final read-only integrity audit
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/final-integrity-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: 80075dc0a9e6e8c2a1fd33a24b1a177b6f1c9011
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Verify existing release assets and source identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/audit-assets"
+          gh release download v0.1.0 --repo fraware/cost-to-done --dir "$RUNNER_TEMP/audit-assets"
+          cd "$RUNNER_TEMP/audit-assets"
+          cat <<'EOF' | sha256sum -c
+          464b811dc207853b3df733330f9b7ca8dc6ffd25627397b6cd1b37efb8ba4738  cost_to_done-0.1.0-py3-none-any.whl
+          09e427398ab1a25ad712156f75000e49b7615b366362f63eebe3bcf74078a61a  cost_to_done-0.1.0.tar.gz
+          787b53a9e274410af12f521f5018e04c4e77fc4cbd424e8b1b1f3c272b9f9249  SHA256SUMS
+          e628535d3a0c94971b75b3da419d333d89cf97cb9a8d081fc990ebc7807dab4d  cost-to-done-v0.1.0-demo.mp4
+          850084fa0934007fb1404222493673e7803d410a8afc4cae44a202af99fa2dfa  demo-SHA256SUMS
+          dd7cbe5b556b299d36b62f6bef591612145f0459305c8618047869252b82d98e  cost-to-done-launch-media.zip
+          EOF
+          sha256sum -c SHA256SUMS
+          sha256sum -c demo-SHA256SUMS
+          python - <<'PY'
+          import os, tarfile, zipfile, struct, hashlib
+          from pathlib import Path
+          root = Path(os.environ["GITHUB_WORKSPACE"])
+          files = {p.relative_to(root / "src").as_posix(): p.read_bytes()
+                   for p in (root / "src/cost_to_done").glob("*.py")}
+          with zipfile.ZipFile("cost_to_done-0.1.0-py3-none-any.whl") as wheel:
+              assert wheel.testzip() is None
+              assert {n for n in wheel.namelist() if n.startswith("cost_to_done/") and n.endswith(".py")} == files.keys()
+              for name, raw in files.items():
+                  assert wheel.read(name) == raw, name
+          with tarfile.open("cost_to_done-0.1.0.tar.gz", "r:gz") as archive:
+              for name, raw in files.items():
+                  assert archive.extractfile("cost_to_done-0.1.0/src/" + name).read() == raw, name
+          with zipfile.ZipFile("cost-to-done-launch-media.zip") as media:
+              assert media.testzip() is None
+              names = {Path(n).name: n for n in media.namelist() if not n.endswith("/")}
+              assert set(names) == {"01-home.png","02-evidence.png","03-calculator.png","04-report.png","logo.png","media-SHA256SUMS"}
+              checks = dict((name, digest) for digest, name in (line.split() for line in media.read(names["media-SHA256SUMS"]).decode().splitlines()))
+              for name, digest in checks.items():
+                  raw = media.read(names[name])
+                  assert hashlib.sha256(raw).hexdigest() == digest
+                  assert raw[:8] == b"\x89PNG\r\n\x1a\n"
+                  assert struct.unpack(">II",raw[16:24]) == ((240,240) if name=="logo.png" else (1270,760))
+              assert set(checks) == set(names) - {"media-SHA256SUMS"}
+          print("Verified all six public assets and all", len(files), "package source modules against the release checkout.")
+          PY
+      - name: Install exact wheel and exercise local report from outside source tree
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/audit-env"
+          "$RUNNER_TEMP/audit-env/bin/python" -m pip install --no-index --no-deps "$RUNNER_TEMP/audit-assets/cost_to_done-0.1.0-py3-none-any.whl"
+          mkdir "$RUNNER_TEMP/audit-user"
+          cd "$RUNNER_TEMP/audit-user"
+          unset PYTHONPATH OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY || true
+          "$RUNNER_TEMP/audit-env/bin/cost-to-done" demo --output demo.html
+          grep -qi synthetic demo.html
+          sha256sum demo.html > before.sha256
+          if "$RUNNER_TEMP/audit-env/bin/cost-to-done" demo --output demo.html; then exit 1; fi
+          sha256sum -c before.sha256
+  original-observations:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Retrieve original four pilot attestations, without executing models
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/pilots"
+          for id in 14882701942 14882922033 14884359711 14885640391; do
+            gh api "repos/fraware/cost-to-done/actions/artifacts/$id/zip" > "$RUNNER_TEMP/pilots/$id.zip"
+          done
+          python - <<'PY'
+          import os, json, hashlib, zipfile
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])/"pilots"
+          manifest=json.loads(Path("evidence/2026-11-24-first-openai-harbor/manifest.json").read_text())
+          for entry in manifest["artifacts"]:
+              p=root/(str(entry["workflow_artifact_id"])+".zip")
+              assert hashlib.sha256(p.read_bytes()).hexdigest()==entry["workflow_artifact_zip_sha256"]
+              with zipfile.ZipFile(p) as z:
+                  assert z.namelist()==["attestation.json"]
+                  data=z.read("attestation.json")
+              reference=Path("evidence/2026-11-24-first-openai-harbor")/entry["path"]
+              assert json.loads(data)==json.loads(reference.read_bytes())
+          for id,digest,model,cost,calls in [
+              (14884359711,"8119b94a0ed4ca0ea00da91a85742bad9a1434d0165fe5df4f54494ad3b7e3f4","gpt-6.1-terra","0.004906",2),
+              (14885640391,"d2145c2c089a8864fa68d7d65da3902581ecc32b13dad1c34233edac5440e40b","gpt-6.2-sol","0.019918",4),
+          ]:
+              p=root/(str(id)+".zip")
+              assert hashlib.sha256(p.read_bytes()).hexdigest()==digest
+              with zipfile.ZipFile(p) as z:
+                  assert z.namelist()==["attestation.json"]
+                  row=json.loads(z.read("attestation.json"))
+              assert row["model"]==model and row["gateway_rate_card_estimate_usd"]==cost
+              assert row["gateway_recorded_calls"]==calls and row["harbor_trial_outcome"]=="pass"
+              assert row["provider_invoice_reconciled"] is False
+              assert row["gateway_pending"]==row["gateway_uncertain"]==0 and row["gateway_breached"] is False
+              print("Original archive verified:",model,cost,calls)
+          print("Four original pilot ZIPs verified against the stated observations.")
+          PY
+  deployed-pages:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: 3cbaf3c2ad6d03b88f786ad037a87a47776db977
+          persist-credentials: false
+      - name: Compare public HTTP responses with prior successful deployment
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/live"
+          for file in index.html calculator.html report.html terminal-bench.html site.css data/terminal-bench-4-1.json; do
+            mkdir -p "$RUNNER_TEMP/live/$(dirname "$file")"
+            curl --fail --silent --show-error --location --max-time 25 --retry 2 "https://fraware.github.io/cost-to-done/$file" --output "$RUNNER_TEMP/live/$file"
+            cmp "docs/$file" "$RUNNER_TEMP/live/$file"
+            echo "Public bytes match deployment: $file"
+          done

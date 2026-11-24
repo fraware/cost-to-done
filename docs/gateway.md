@@ -1,8 +1,8 @@
 # Inference admission gateway — experimental
 
-**Status (November 20, 2026): mocked HTTP and container tests; no paid calls have been completed through this gateway.**
+**Status (24 November 2026):** mock tests and bounded paid trials completed for supported routes. See [paid observations](first-real-observations.md) and [native Responses evidence](frontier-observations.md). Billing reconciliation remains outstanding.
 
-The first release exposes a *narrow* OpenAI Chat Completions HTTP endpoint, with fully buffered streaming support. The objective is to ensure that each supported request has an atomic ledger reservation **before** being forwarded, while preserving indeterminate liabilities on failures. It does **not** establish an absolute provider spending cap.
+The standalone gateway exposes a restricted OpenAI Chat Completions HTTP endpoint with fully buffered streaming support. The isolated runner also supports a separate [native Responses route](native-responses.md). The objective is to ensure that each supported request has an atomic ledger reservation **before** being forwarded, while preserving indeterminate liabilities on failures. It does **not** establish an absolute provider spending cap.
 
 ## Supported protocol
 
@@ -61,8 +61,8 @@ The gateway buffers both non-streaming responses and the *entire* SSE stream bef
 
 1. Local forward-path mock tests, authentication, duplicate request protection, admission rejection, concurrency and uncertainty retention. **Implemented and tested locally.**
 2. Mock-only Docker Compose topology with direct-bypass probes. **Integration test implemented; review its CI result and limitations in [network-isolation.md](network-isolation.md). An isolated Harbor mock fixture has passed CI for its explicitly configured Docker networks.**
-3. Pinned Pi mock-only HTTP compatibility test and stream accounting. **Docker network isolation and mock-backed Harbor Pi orchestration have passed CI independently. Isolation beyond the tested Docker configuration, multi-turn tool execution, and real-provider invoice reconciliation remain outstanding.**
+3. Pinned Pi mock-only HTTP compatibility test and stream accounting. **Docker network isolation and mock-backed Harbor Pi orchestration have passed CI independently. Multi-turn tool execution has been exercised in controlled paid trials. Isolation beyond the tested Docker configuration and real-provider invoice reconciliation remain outstanding.**
 4. Provider usage compared with published dated rates, tool fees and eventual billing records. **Outstanding.**
-5. Public release of audited trial evidence with independent verification and no secret exposure. **Outstanding.**
+5. Public release of audited redacted trial evidence. **Archive audits and a separate fresh-process replay cohort completed; external reproduction, adversarial integrity, and comprehensive secret-exposure review remain outstanding.**
 
 No success on the first gate implies any of the later gates have passed.
