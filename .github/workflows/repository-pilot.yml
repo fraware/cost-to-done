@@ -1,0 +1,67 @@
+name: Fixed public repository paid pilot
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/repository-pilot.yml'
+      - 'src/cost_to_done/repository_pilot.py'
+      - 'src/cost_to_done/live.py'
+      - 'scripts/prepare_repository_pilot.py'
+      - 'scripts/run_repository_pilot.py'
+      - 'tests/test_repository_pilot.py'
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type RUN-FIXED-PUBLIC-PILOT to authorize two $1 estimated allowances'
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: |
+          python -m pip install 'harbor==0.27.0'
+          python -m pip install -e .
+      - name: Prepare exact public repository and run actual controls
+        run: |
+          set -euo pipefail
+          python -m scripts.prepare_repository_pilot "$RUNNER_TEMP"
+          harbor run --path "$RUNNER_TEMP/pilot-starter" --agent nop --job-name starter --jobs-dir "$RUNNER_TEMP/pilot-controls" --n-concurrent 1 --n-attempts 1
+          harbor run --path "$RUNNER_TEMP/pilot-reference" --agent nop --job-name reference --jobs-dir "$RUNNER_TEMP/pilot-controls" --n-concurrent 1 --n-attempts 1
+          cost-to-done qualify-repo-task --starter "$RUNNER_TEMP/pilot-starter" --reference "$RUNNER_TEMP/pilot-reference" --starter-job "$RUNNER_TEMP/pilot-controls/starter" --reference-job "$RUNNER_TEMP/pilot-controls/reference" --output "$RUNNER_TEMP/pilot-qualification.json"
+      - name: Rehearse both mock scenarios on this exact starter
+        env:
+          CTD_REHEARSAL_ONLY: '1'
+        run: |
+          umask 077
+          printf '%s\n' 'ctd-fake-upstream-key-for-tests-12345678' > "$RUNNER_TEMP/pilot-fake-key"
+          python -m scripts.run_repository_rehearsal "$GITHUB_WORKSPACE" "$RUNNER_TEMP/pilot-starter" "$RUNNER_TEMP/pilot-qualification.json" "$RUNNER_TEMP/pilot-mock" "$RUNNER_TEMP/pilot-fake-key"
+      - name: Run bounded real comparison only after explicit manual dispatch
+        if: github.event_name == 'workflow_dispatch' && github.repository == 'fraware/cost-to-done' && github.ref == 'refs/heads/main' && github.run_attempt == '1' && inputs.confirm == 'RUN-FIXED-PUBLIC-PILOT'
+        env:
+          CTD_REPOSITORY_PILOT_AUTHORIZED: '1'
+          CTD_OPENAI_SECRET: ${{ secrets.OPENAI_API_KEY }}
+        run: >-
+          python -m scripts.run_repository_pilot "$GITHUB_WORKSPACE"
+          "$RUNNER_TEMP/pilot-starter" "$RUNNER_TEMP/pilot-qualification.json"
+          "$RUNNER_TEMP/pilot-paid"
+      - name: Archive redacted plans and observations only
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fixed-repository-pilot-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/pilot-qualification.json
+            ${{ runner.temp }}/pilot-mock/comparison/
+            ${{ runner.temp }}/pilot-paid/*.json
+          if-no-files-found: warn
+          retention-days: 30
