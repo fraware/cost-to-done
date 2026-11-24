@@ -18,6 +18,9 @@ def check(root: Path) -> dict:
     if summary.get("status") != "completed_with_unverified_rate_card_estimate":
         raise AssertionError("live runner did not finish cleanly")
     expected_api = os.environ.get("CTD_REHEARSAL_API", "chat")
+    effort = os.environ.get("CTD_REHEARSAL_REASONING", "off")
+    if expected_api == "responses" and summary.get("reasoning_effort") != effort:
+        raise AssertionError("rehearsal used wrong reasoning setting")
     if summary.get("api", "chat") != expected_api:
         raise AssertionError("rehearsal used wrong API protocol")
     if summary.get("provider_invoice_reconciled") is not False or summary.get("provider_side_hard_cap_verified") is not False:
@@ -49,6 +52,8 @@ def check(root: Path) -> dict:
     return {
         "status": "isolated-live-runner-mock-verified",
         "mock_only": True, "billing_verified": False, "api": expected_api,
+        "reasoning_effort": effort,
+        "opaque_reasoning_replay_checked": expected_api == "responses" and effort == "low",
         "verifier_outcome": "pass", "gateway_calls": 2,
         "fictional_rate_card_usd": snapshot.settled,
         "harbor_trial_sha256": trial["raw_result_sha256"],

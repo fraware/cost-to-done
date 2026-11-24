@@ -294,6 +294,16 @@ def execute_live(config: LiveConfig, *, acknowledged: bool = False) -> dict[str,
     except (ReceiptError, OSError, ValueError, UnicodeError) as exc:
         outcome["status"] = "incomplete_or_uncertain"
         outcome["error"] = str(exc)
+        # Preserve any readable ledger even if Harbor fails before inspection.
+        # Missing/corrupt ledger does not establish zero expenditure.
+        try:
+            ledger_path = evidence / "ledger.sqlite3"
+            if ledger_path.is_file():
+                ledger = BudgetLedger(ledger_path)
+                outcome["gateway_snapshot"] = ledger.snapshot().to_dict()
+                outcome["gateway_entries"] = ledger.entries()
+        except (ReceiptError, OSError, ValueError):
+            pass
     result_path = session_dir / "run-summary.json"
     with result_path.open("x", encoding="utf-8") as output:
         json.dump(outcome, output, indent=2, sort_keys=True)

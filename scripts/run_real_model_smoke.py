@@ -33,7 +33,7 @@ def attestation(outcome: dict, model: str) -> dict:
         "no_metered_requests", "completed_with_unverified_rate_card_estimate",
     ):
         status = "unknown"
-    return {
+    record = {
         "schema_version": 1,
         "evidence_kind": "single_real_provider_smoke_local_observation",
         "model": model,
@@ -42,7 +42,7 @@ def attestation(outcome: dict, model: str) -> dict:
         "harbor_task_checksum": trial.get("task_checksum"),
         "harbor_raw_result_sha256": trial.get("raw_result_sha256"),
         "harbor_reported_elapsed_seconds": trial.get("elapsed_seconds"),
-        "gateway_recorded_calls": len(entries),
+        "gateway_recorded_calls": len(entries) if "gateway_entries" in outcome else 0,
         "gateway_rate_card_estimate_usd": ledger.get("settled"),
         "gateway_pending": ledger.get("pending"),
         "gateway_uncertain": ledger.get("uncertain"),
@@ -53,6 +53,14 @@ def attestation(outcome: dict, model: str) -> dict:
         "verifier_independently_reexecuted": False,
         "publication_scope": "redacted_status_and_hashes_only",
     }
+    # Keep historical schema intact for chat; native trials bind the protocol.
+    if outcome.get("api") == "responses":
+        record.update(schema_version=2, api="responses",
+                      reasoning_effort=outcome.get("reasoning_effort"),
+                      ledger_observed="gateway_snapshot" in outcome)
+        if not record["ledger_observed"]:
+            record["gateway_recorded_calls"] = None
+    return record
 
 
 def main() -> int:
@@ -64,6 +72,8 @@ def main() -> int:
     parser.add_argument("--attestation-dir", required=True, type=Path)
     parser.add_argument("--budget-usd", default="1")
     parser.add_argument("--max-wall-seconds", type=int, default=900)
+    parser.add_argument("--api", choices=("chat", "responses"), default="chat")
+    parser.add_argument("--reasoning-effort", choices=("off", "low"), default="low")
     args = parser.parse_args()
 
     output = args.attestation_dir / "attestation.json"
@@ -73,6 +83,9 @@ def main() -> int:
         "model": args.model, "trial_status": "credential_unavailable",
         "provider_invoice_reconciled": False, "provider_spend_limit_verified": False,
     }
+    if args.api == "responses":
+        base.update(schema_version=2, api="responses", reasoning_effort=args.reasoning_effort,
+                    ledger_observed=False, gateway_recorded_calls=None)
     # The credential is injected exclusively into this trusted workflow step.
     # Child Harbor/Compose processes receive a separately constructed allowlist.
     credential = os.environ.pop("CTD_OPENAI_SECRET", "")
@@ -98,6 +111,7 @@ def main() -> int:
             job_name=args.job_name,
             max_turns=5,
             max_wall_seconds=args.max_wall_seconds,
+            api=args.api, reasoning_effort=args.reasoning_effort,
         )
         # Explicit operator authorization for one real trial was supplied.
         # This acknowledgement is NOT evidence of a provider-side hard limit.

@@ -28,13 +28,16 @@ def run(root: Path, outputs: Path, key_file: Path) -> dict:
     api = os.environ.get("CTD_REHEARSAL_API", "chat")
     if api not in ("chat", "responses"):
         raise RuntimeError("invalid rehearsal API")
+    effort = os.environ.get("CTD_REHEARSAL_REASONING", "off")
+    if effort not in ("off", "low") or (api == "chat" and effort != "off"):
+        raise RuntimeError("invalid rehearsal reasoning setting")
     config = LiveConfig(
         repo_root=root, task=root / "tasks/allocation-repair",
         jobs_dir=outputs, model="test-model-1",
         price_schedule=root / "tests/fixtures/mock-price-schedule.json",
         key_file=key_file, budget_usd="5",
         job_name="rehearsal-scripted", max_turns=3, max_wall_seconds=900,
-        api=api, reasoning_effort="off",
+        api=api, reasoning_effort=effort,
     )
     production_command = LiveConfig.command
 
@@ -42,7 +45,10 @@ def run(root: Path, outputs: Path, key_file: Path) -> dict:
         command = production_command(self, task_copy=task_copy, token=token)
         return [*command, "--extra-docker-compose", str(overlay)]
 
-    with patch.object(LiveConfig, "command", with_mock_overlay):
+    # Pass only the synthetic fixture setting to the Compose interpolation environment.
+    from cost_to_done import live
+    with patch.object(live, "_ALLOWED_ENV", (*live._ALLOWED_ENV, "CTD_REHEARSAL_REASONING")), \
+            patch.object(LiveConfig, "command", with_mock_overlay):
         result = execute_live(config, acknowledged=True)
     if result["status"] != "completed_with_unverified_rate_card_estimate":
         raise RuntimeError("mock execution incomplete: " + result["status"])
@@ -50,6 +56,7 @@ def run(root: Path, outputs: Path, key_file: Path) -> dict:
         "status": "mock-live-rehearsal-complete",
         "mock_only": True,
         "api": api,
+        "reasoning_effort": effort,
         "verifier_outcome": result["trial"]["outcome"],
         "fictional_estimate_usd": result["gateway_snapshot"]["settled"],
         "provider_invoice_reconciled": result["provider_invoice_reconciled"],

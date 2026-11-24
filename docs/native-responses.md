@@ -2,8 +2,8 @@
 
 The opt-in Gateway(route="/v1/responses") selects a fixed native OpenAI
 endpoint and separate request/usage validation. The default Chat Completions
-route is unchanged. This is a buffered HTTP prototype, not a Pi/Harbor
-integration or evidence of GPT-6 model performance.
+route is unchanged. This buffered HTTP implementation has passed a Pi/Harbor mock rehearsal;
+this is not evidence of GPT-6 model performance.
 
 The request subset supports stateless text messages, local JSON function
 declarations, function-call and function-output items, and replay of encrypted
@@ -21,8 +21,8 @@ Usage is priced at the existing undiscounted rate card, not actual billing.
 
 Offline tests exercise the request contract, continuation, HTTP dispatch,
 accounting and rejection cases. No credentials or paid calls are used.
-The next milestone is pinned Pi wire conformance,
-credential-isolated Harbor rehearsal, and a separately authorized paid test.
+The non-reasoning Pi wire and credential-isolated Harbor mock gates passed.
+The next milestone is a reasoning-enabled mock and controlled paid test.
 
 Provider references:
 - https://developers.openai.com/api/reference/resources/responses/methods/create
@@ -66,3 +66,19 @@ verifier, and demonstrate the previously tested network checks. Reasoning is
 explicitly off for this protocol fixture; a thinking-enabled native replay and
 real-model paid trials require their own evidence. CI status is the source of
 truth for qualification; committing these fixtures does not establish success.
+
+## Confirmed non-reasoning execution and planned frontier pilot
+
+The exact-head workflow 45313450820 passed both Chat and Responses jobs on
+a71cff1, each with two fictional calls, $0.0236 estimated settlement, verified
+repair and all four network probes. PR 29 merged as b01a6f9.
+
+The new frontier workflow adds a low-effort Responses rehearsal. Its scripted
+provider returns a synthetic encrypted reasoning item and rejects the next
+request unless that same item is returned with the matched function output.
+This establishes protocol replay only, not real encrypted reasoning validity.
+The paid job is restricted to trusted main, depends on the same workflow's
+successful mock gate, and runs one trial each of GPT-6.1 Terra and GPT-6.2 Sol.
+Each uses the same task, low effort, five turns, 4096 output token cap and USD 1
+estimated admission allowance. No provider hard cap is verified. No paid
+results are claimed until archived attestations are inspected.
