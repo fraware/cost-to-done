@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "evidence_kind": "first_real_openai_harbor_single_task_smoke",
+  "source_commit": "f06e3709a51f0221ccaf2e07cc846ab8d9a52e79",
+  "source_run": "https://github.com/fraware/cost-to-done/actions/runs/45309990728",
+  "artifacts": [
+    {
+      "path": "gpt-5.4-2026-03-05.json",
+      "sha256": "ed2f18b6b7960aacab78145002c50c5cdb470106e71fdf7002e13e56e91e23f5",
+      "workflow_artifact_id": 14882701942,
+      "workflow_artifact_zip_sha256": "64bbd0a9f6a703c65bcb4ea42ed66fc557258dad1f7a10c10313e907db5e99d0"
+    },
+    {
+      "path": "gpt-5.4-mini-2026-03-17.json",
+      "sha256": "bce64a877ac996c33005fa2e1c0ffa838c505bc584bd7f6d223440e9c556936e",
+      "workflow_artifact_id": 14882922033,
+      "workflow_artifact_zip_sha256": "0b8b49b0f88993e149e22285b31fd808cde934965ed1a606ccea7d579791b4d9"
+    }
+  ],
+  "provenance_disclosure": "Attestations are redacted local observations from GitHub Actions; no provider invoices or independent verifier reexecution."
+}
