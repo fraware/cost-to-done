@@ -19,7 +19,7 @@ def mock_transport(payload: bytes, key: str) -> UpstreamResponse:
     client = http.client.HTTPConnection("ctd_mock_provider", 8770, timeout=30)
     try:
         client.request(
-            "POST", "/v1/chat/completions", body=payload,
+            "POST", os.environ.get("CTD_GATEWAY_ROUTE", "/v1/chat/completions"), body=payload,
             headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
         )
         response = client.getresponse()
@@ -42,6 +42,7 @@ def main() -> None:
         ledger_file=Path("/evidence/ledger.sqlite3"),
         budget_usd=os.environ["CTD_BUDGET_USD"],
         gateway_token=os.environ["CTD_GATEWAY_TOKEN"],
+        route=os.environ.get("CTD_GATEWAY_ROUTE", "/v1/chat/completions"),
     )
     gateway.transport = mock_transport
     with _LocalServer(("0.0.0.0", 8866), gateway) as server:

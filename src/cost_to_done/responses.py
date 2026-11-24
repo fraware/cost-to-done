@@ -1,6 +1,6 @@
 """Restricted, stateless OpenAI Responses request and usage contract.
 
-This is a non-streaming protocol subset for local function tools. It does
+This is a buffered HTTP protocol subset for local function tools. It does
 not authenticate provider billing or validate the task's acceptance tests.
 """
 from __future__ import annotations
@@ -13,7 +13,7 @@ from .core import ReceiptError
 ROUTE = "/v1/responses"
 _ALLOWED = frozenset({
     "model", "input", "instructions", "max_output_tokens", "store", "stream",
-    "tools", "tool_choice", "parallel_tool_calls", "reasoning", "include",
+    "tools", "tool_choice", "parallel_tool_calls", "reasoning", "include", "prompt_cache_key",
 })
 
 
@@ -116,7 +116,7 @@ def bounded_request(data: bytes, *, model: str, max_output_cap: int,
              "unsupported Responses request fields")
     _require(obj.get("model") == model, "model must exactly match priced route")
     _require(obj.get("store", False) is False, "Responses store must be false")
-    _require(obj.get("stream", False) is False, "Responses streaming not supported")
+    _require(type(obj.get("stream", False)) is bool, "stream must be a JSON boolean")
     cap = obj.get("max_output_tokens")
     _require(type(cap) is int and 1 <= cap <= max_output_cap,
              "explicit bounded max_output_tokens is required")
@@ -144,17 +144,25 @@ def bounded_request(data: bytes, *, model: str, max_output_cap: int,
                  "only local JSON function tools supported")
         _require(tool["name"] not in names, "duplicate function name")
         names.add(tool["name"])
+        # Pi schemas have optional fields. Preserve non-strict semantics.
+        tool.setdefault("strict", False)
     _require(obj.get("tool_choice", "auto") in ("auto", "none", "required"),
              "unsupported Responses tool_choice")
     _require(type(obj.get("parallel_tool_calls", False)) is bool,
              "parallel_tool_calls must be boolean")
     if "reasoning" in obj:
         reason = obj["reasoning"]
-        _require(_fields(reason, {"effort"}) and reason.get("effort") in
+        _require(_fields(reason, {"effort", "summary"}) and reason.get("summary", "auto") in
+                 ("auto", "concise", "detailed") and reason.get("effort") in
                  ("none", "minimal", "low", "medium", "high", "xhigh"),
                  "unsupported reasoning settings")
     _require(obj.get("include", []) in ([], ["reasoning.encrypted_content"]),
              "unsupported Responses include fields")
+    # Drop Pi session cache-routing identifiers; use undiscounted input rates.
+    if "prompt_cache_key" in obj:
+        key = obj.pop("prompt_cache_key")
+        _require(isinstance(key, str) and 0 < len(key) <= 128,
+                 "invalid prompt_cache_key")
     # Explicitly disable stored conversation state and request replayable reasoning.
     obj["store"] = False
     obj["include"] = ["reasoning.encrypted_content"]
@@ -182,3 +190,102 @@ def token_usage(payload: bytes, model: str) -> tuple[int, int]:
              and inputs + outputs == total,
              "invalid Responses usage; charge uncertain")
     return inputs, outputs
+
+
+# The HTTP Responses stream uses typed JSON SSE events, not Chat Completions'
+# [DONE] sentinel. Restrict lifecycle events to one response identity.
+_TERMINAL = {"response.completed": "completed", "response.incomplete": "incomplete"}
+_LIFECYCLE = {"response.created", "response.in_progress", *_TERMINAL}
+_ALLOWED_EVENTS = _LIFECYCLE | {
+    "response.output_item.added", "response.output_item.done",
+    "response.content_part.added", "response.content_part.done",
+    "response.output_text.delta", "response.output_text.done",
+    "response.refusal.delta", "response.refusal.done",
+    "response.function_call_arguments.delta", "response.function_call_arguments.done",
+    "response.reasoning_summary_part.added", "response.reasoning_summary_part.done",
+    "response.reasoning_summary_text.delta", "response.reasoning_summary_text.done",
+    "response.reasoning_text.delta", "response.reasoning_text.done",
+}
+
+
+def _sse_frames(payload: bytes):
+    """Yield named data frames; reject unsupported or unterminated framing."""
+    try:
+        source = payload.decode("utf-8")
+    except UnicodeError as exc:
+        raise ReceiptError("Responses SSE is not UTF-8") from exc
+    source = source.replace("\r\n", "\n")
+    _require("\r" not in source and source.endswith("\n\n"),
+             "truncated or unsupported Responses SSE framing")
+    name: str | None = None
+    data: list[str] = []
+    for line in source.split("\n"):
+        if line == "":
+            if name is not None or data:
+                _require(bool(data), "SSE event missing data")
+                yield name, "\n".join(data)
+                name, data = None, []
+        elif line.startswith(":"):
+            continue
+        else:
+            field, sep, value = line.partition(":")
+            _require(bool(sep), "unsupported Responses SSE field")
+            if value.startswith(" "):
+                value = value[1:]
+            if field == "event":
+                _require(name is None and bool(value), "invalid SSE event name")
+                name = value
+            elif field == "data":
+                data.append(value)
+            else:
+                raise ReceiptError("unsupported Responses SSE field")
+
+
+def stream_token_usage(payload: bytes, model: str) -> tuple[int, int]:
+    """Require one complete, ordered response with terminal metered usage.
+
+    This parser validates the accounting boundary, not the semantic content
+    of every tool argument or token delta. It fails closed on unrecognized
+    event types, failed responses, truncated streams and inconsistent usage.
+    """
+    identity: str | None = None
+    last_sequence: int | None = None
+    terminal: tuple[int, int] | None = None
+    for name, data in _sse_frames(payload):
+        _require(terminal is None, "event after terminal Responses result")
+        event = _decode(data.encode("utf-8"))
+        _require(isinstance(event, dict), "invalid Responses SSE event")
+        kind = event.get("type")
+        _require(isinstance(kind, str) and kind in _ALLOWED_EVENTS,
+                 "unsupported or failed Responses SSE event")
+        _require(name is None or name == kind, "SSE name/type mismatch")
+        seq = event.get("sequence_number")
+        _require(type(seq) is int and seq >= 0
+                 and (last_sequence is None or seq == last_sequence + 1),
+                 "noncontiguous Responses SSE sequence")
+        last_sequence = seq
+        if identity is None:
+            _require(kind == "response.created", "missing initial response.created")
+        else:
+            _require(kind != "response.created", "duplicate response.created")
+        if kind in _LIFECYCLE:
+            raw = event.get("response")
+            _require(isinstance(raw, dict) and raw.get("object") == "response"
+                     and raw.get("model") == model
+                     and isinstance(raw.get("id"), str) and bool(raw["id"]),
+                     "invalid Responses lifecycle identity")
+            if identity is None:
+                identity = raw["id"]
+            _require(raw["id"] == identity, "Responses lifecycle identity changed")
+            if kind in _TERMINAL:
+                _require(raw.get("status") == _TERMINAL[kind],
+                         "Responses terminal status mismatch")
+                terminal = token_usage(json.dumps(raw).encode("utf-8"), model)
+            else:
+                _require(raw.get("status") in ("queued", "in_progress")
+                         and raw.get("usage") is None,
+                         "invalid nonterminal Responses lifecycle")
+        if "response_id" in event:
+            _require(event["response_id"] == identity, "Responses event identity mismatch")
+    _require(terminal is not None, "missing terminal Responses usage")
+    return terminal

@@ -77,3 +77,31 @@ def scripted_reply(request: dict) -> tuple[dict, str]:
             "function": {"name": name, "arguments": json.dumps(args, separators=(",", ":"))},
         }]
     }, "tool_calls"
+
+
+def native_scripted_reply(request: dict) -> bytes:
+    """Script the same independent-verifier repair over native Responses SSE."""
+    from native_responses_mock import events
+
+    items = request.get("input")
+    if not isinstance(items, list) or not items or request.get("stream") is not True:
+        raise ValueError("native rehearsal expects streamed item history")
+    if request.get("store") is not False or "prompt_cache_key" in request:
+        raise ValueError("native metering normalization missing")
+    outputs = [i for i in items if isinstance(i, dict) and i.get("type") == "function_call_output"]
+    if outputs:
+        if len(outputs) != 1 or outputs[0].get("call_id") != CALL_ID:
+            raise ValueError("missing matched native tool result")
+        item = {"type": "message", "id": "msg_ctd_repair", "role": "assistant",
+                "status": "completed", "content": [
+                    {"type": "output_text", "text": "The requested source change has been applied.",
+                     "annotations": [], "logprobs": []}]}
+        return events("resp_ctd_repair_2", item, tool=False, input_tokens=200, output_tokens=40)
+    declared = {t.get("name") for t in request.get("tools", [])
+                if isinstance(t, dict) and t.get("type") == "function"}
+    if "write" not in declared:
+        raise ValueError("native rehearsal needs Pi write tool")
+    item = {"type": "function_call", "id": "fc_ctd_repair", "call_id": CALL_ID,
+            "name": "write", "arguments": json.dumps({"path": "/app/allocate.py", "content": REPAIR_SOURCE}),
+            "status": "completed"}
+    return events("resp_ctd_repair_1", item, tool=True, input_tokens=100, output_tokens=400)

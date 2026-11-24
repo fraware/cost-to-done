@@ -1,7 +1,7 @@
 """Conservative, narrowly scoped inference-admission gateway.
 
-This module supports a constrained OpenAI Chat Completions route, including
-fully buffered streaming responses with verifiable terminal usage. It
+This module supports constrained OpenAI Chat Completions and Responses routes,
+including fully buffered streaming responses with terminal usage validation. It
 checks a pessimistic *estimate* before forwarding and retains reservations on
 ambiguous failures. It is NOT a hard cap on provider invoices: model tokenizer,
 provider-specific charges, cancelled requests, and upstream noncompliance are
@@ -377,9 +377,14 @@ class Gateway:
                 return 502, _canonical({"error": "upstream request failed; charge uncertain", "request_id": request_id})
             mime = response.content_type.split(";", 1)[0].strip().lower()
             if self.route == responses.ROUTE:
-                if mime != "application/json":
-                    raise ReceiptError("Responses content type mismatch; charge uncertain")
-                prompt, completion = responses.token_usage(response.body, self.price.model)
+                if obj.get("stream", False):
+                    if mime != "text/event-stream":
+                        raise ReceiptError("Responses stream content type mismatch; charge uncertain")
+                    prompt, completion = responses.stream_token_usage(response.body, self.price.model)
+                else:
+                    if mime != "application/json":
+                        raise ReceiptError("Responses content type mismatch; charge uncertain")
+                    prompt, completion = responses.token_usage(response.body, self.price.model)
             elif obj.get("stream", False):
                 if mime != "text/event-stream":
                     raise ReceiptError("streaming response content type mismatch; charge uncertain")
@@ -477,7 +482,12 @@ class _Handler(BaseHTTPRequestHandler):
             content = _canonical({"error": message, "request_id": request_id})
         except Exception:
             status, content = 502, _canonical({"error": "provider outcome uncertain", "request_id": request_id})
-        content_type = "text/event-stream" if status == 200 and content.startswith(b"data: ") else "application/json"
+        # The response was already validated and settled against the request.
+        # Select the downstream MIME from that request, not an SSE byte prefix.
+        streaming = False
+        if status == 200:
+            streaming = json.loads(data).get("stream", False) is True
+        content_type = "text/event-stream" if streaming else "application/json"
         self._reply(status, content, content_type=content_type)
 
     def do_GET(self) -> None:

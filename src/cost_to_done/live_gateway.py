@@ -33,7 +33,8 @@ def read_key(path: Path) -> str:
 
 
 def build_gateway(*, key_file: Path, price_file: Path, ledger_file: Path,
-                  budget_usd: str, gateway_token: str) -> Gateway:
+                  budget_usd: str, gateway_token: str,
+                  route: str = "/v1/chat/completions") -> Gateway:
     """Validate configuration before constructing a network listener."""
     _units(budget_usd, allow_zero=False)
     if not isinstance(gateway_token, str) or len(gateway_token) < 32:
@@ -42,7 +43,7 @@ def build_gateway(*, key_file: Path, price_file: Path, ledger_file: Path,
     key = read_key(key_file)
     ledger = BudgetLedger(ledger_file, budget_usd=budget_usd)
     return Gateway(ledger, price, client_token=gateway_token, provider_key=key,
-                   max_output_cap=4096)
+                   max_output_cap=4096, route=route)
 
 
 def main() -> None:
@@ -53,6 +54,7 @@ def main() -> None:
         ledger_file=Path(os.environ.get("CTD_LEDGER_PATH", "/evidence/ledger.sqlite3")),
         budget_usd=os.environ.get("CTD_BUDGET_USD", ""),
         gateway_token=os.environ.get("CTD_GATEWAY_TOKEN", ""),
+        route=os.environ.get("CTD_GATEWAY_ROUTE", "/v1/chat/completions"),
     )
     with _LocalServer(("0.0.0.0", _PORT), gw) as server:
         print(f"Metered inference gateway ready; model={gw.price.model}; schedule_sha256={gw.price.digest}", flush=True)

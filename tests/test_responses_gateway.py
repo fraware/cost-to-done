@@ -59,6 +59,15 @@ class ResponsesGatewayTests(unittest.TestCase):
         self.assertIs(self.seen[0]["store"], False)
         self.assertEqual(self.seen[0]["include"], ["reasoning.encrypted_content"])
 
+    def test_pi_cache_key_and_optional_schema_normalization(self):
+        tools = [{"type": "function", "name": "write", "parameters": {"type": "object"}}]
+        self.gateway.handle(request(prompt_cache_key="session-test", tools=tools,
+                                    reasoning={"effort": "low", "summary": "auto"}), "pi")
+        self.assertNotIn("prompt_cache_key", self.seen[0])
+        self.assertIs(self.seen[0]["tools"][0]["strict"], False)
+        with self.assertRaises(ReceiptError):
+            self.gateway.handle(request(prompt_cache_key={"bad": True}), "bad-cache")
+
     def test_stateless_tool_continuation(self):
         items = [
             {"role": "user", "content": "Repair task"},
@@ -73,7 +82,7 @@ class ResponsesGatewayTests(unittest.TestCase):
 
     def test_disallowed_requests_never_reserve_or_forward(self):
         for extra in (
-            {"store": True}, {"stream": True}, {"background": True},
+            {"store": True}, {"stream": "true"}, {"background": True},
             {"previous_response_id": "resp_1"}, {"conversation": "conv_1"},
             {"tools": [{"type": "web_search"}]}, {"max_output_tokens": True},
             {"max_output_tokens": 4097}, {"model": "other"},
@@ -127,3 +136,73 @@ class ResponsesGatewayTests(unittest.TestCase):
                 server.shutdown()
                 thread.join(timeout=3)
         self.assertEqual(len(self.seen), 1)
+
+
+def stream(*, status="completed", model=MODEL, terminal=True):
+    start = {"object": "response", "id": "resp_test", "model": model,
+             "status": "in_progress", "usage": None}
+    end = json.loads(result(status=status, model=model))
+    end["id"] = "resp_test"
+    events = [
+        {"type": "response.created", "sequence_number": 0, "response": start},
+        {"type": "response.output_item.added", "sequence_number": 1,
+         "item": {"type": "function_call", "id": "fc_1", "name": "run",
+                  "call_id": "call_1", "arguments": "", "status": "in_progress"}},
+        {"type": "response.function_call_arguments.delta", "sequence_number": 2,
+         "item_id": "fc_1", "delta": "{}"},
+    ]
+    if terminal:
+        events.append({"type": "response." + status, "sequence_number": 3, "response": end})
+    return b"".join(b"event: " + e["type"].encode() + b"\ndata: "
+                    + json.dumps(e).encode() + b"\n\n" for e in events)
+
+
+class ResponsesStreamingTests(unittest.TestCase):
+    setUp = ResponsesGatewayTests.setUp
+    def test_stream_preserves_raw_bytes(self):
+        for i, status in enumerate(("completed", "incomplete")):
+            raw = stream(status=status)
+            self.reply = UpstreamResponse(200, raw, "text/event-stream; charset=utf-8")
+            self.assertEqual(self.gateway.handle(request(stream=True), f"ok-{i}"), (200, raw))
+        self.assertEqual(self.ledger.snapshot().settled, "0.0072")
+        self.assertEqual(self.ledger.snapshot().uncertain, 0)
+
+    def test_bad_stream_reservations_are_retained(self):
+        raw = stream()
+        cases = [
+            stream(terminal=False), stream(model="wrong"), stream(status="failed"),
+            raw[:-1], raw + raw,
+            raw.replace(b'"sequence_number": 2', b'"sequence_number": 9'),
+            raw.replace(b'event: response.completed', b'event: response.incomplete'),
+            raw.replace(b'"total_tokens": 140', b'"total_tokens": 139'),
+            raw.replace(b'"status": "completed"', b'"status": "incomplete"'),
+            raw.replace(b'"output_tokens": 40', b'"output_tokens": 400'),
+        ]
+        for i, body in enumerate(cases):
+            self.reply = UpstreamResponse(200, body, "text/event-stream")
+            with self.subTest(i=i), self.assertRaises(ReceiptError):
+                self.gateway.handle(request(stream=True), f"bad-stream-{i}")
+        self.assertEqual(self.ledger.snapshot().uncertain, len(cases))
+        self.assertEqual(self.ledger.snapshot().settled, "0")
+
+    def test_http_named_events_use_sse_content_type(self):
+        raw = stream()
+        self.reply = UpstreamResponse(200, raw, "text/event-stream")
+        with _LocalServer(("127.0.0.1", 0), self.gateway) as server:
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                conn = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=3)
+                try:
+                    conn.request("POST", ROUTE, request(stream=True),
+                                 {"Authorization": "Bearer " + TOKEN})
+                    response = conn.getresponse()
+                    self.assertEqual(response.status, 200)
+                    self.assertEqual(response.getheader("Content-Type"), "text/event-stream")
+                    self.assertEqual(response.read(), raw)
+                finally:
+                    conn.close()
+            finally:
+                server.shutdown()
+                thread.join(timeout=3)
+        self.assertEqual(self.ledger.snapshot().settled, "0.0036")

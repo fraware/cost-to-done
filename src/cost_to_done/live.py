@@ -24,6 +24,7 @@ from typing import Any
 
 from .core import ReceiptError
 from .gateway import PriceSchedule
+from .responses import ROUTE as RESPONSES_ROUTE
 from .harbor import inspect_harbor_job
 from .ledger import BudgetLedger, _units
 from .network_audit import audit_live_compose
@@ -51,6 +52,8 @@ class LiveConfig:
     job_name: str = "gateway-smoke-01"
     max_turns: int = 3
     max_wall_seconds: int = 900
+    api: str = "chat"
+    reasoning_effort: str = "low"
 
     def validated(self, *, check_key: bool = False) -> "LiveConfig":
         """Check immutable inputs without creating anything or reading secrets."""
@@ -70,8 +73,13 @@ class LiveConfig:
             if path.is_symlink() or not path.resolve().is_relative_to(task):
                 raise ReceiptError("task contains a symlink or escaped artifact")
         if not _MODEL.fullmatch(self.model):
-            raise ReceiptError("model must be an exact OpenAI Chat Completions model ID")
-        validate_chat_tool_route(self.model)
+            raise ReceiptError("model must be an exact OpenAI model ID")
+        if self.api not in ("chat", "responses"):
+            raise ReceiptError("unsupported live API protocol")
+        if self.reasoning_effort not in ("off", "minimal", "low", "medium", "high", "xhigh"):
+            raise ReceiptError("unsupported reasoning effort")
+        if self.api == "chat":
+            validate_chat_tool_route(self.model)
         if not _JOB.fullmatch(self.job_name):
             raise ReceiptError("job_name must be lowercase hyphenated text, length 2–61")
         if type(self.max_turns) is not int or not 1 <= self.max_turns <= 10:
@@ -101,20 +109,22 @@ class LiveConfig:
                 raise ReceiptError("provider credential file must be outside repository and run outputs")
         return LiveConfig(root, task, jobs, self.model, self.price_schedule.resolve(),
                           self.key_file.resolve(strict=check_key), self.budget_usd,
-                          self.job_name, self.max_turns, self.max_wall_seconds)
+                          self.job_name, self.max_turns, self.max_wall_seconds, self.api, self.reasoning_effort)
 
     def command(self, *, task_copy: Path, token: str) -> list[str]:
         """Prepare shell-free Harbor invocation without any provider credential."""
+        native = self.api == "responses"
         return [
             "harbor", "run", "--path", str(task_copy),
             "--agent", "pi", "--model", f"openai/{self.model}",
             "--base-url", "http://ctd_gateway:8866/v1",
             "--api-key-name", "CTD_GATEWAY_TOKEN",
-            "--api-format", "openai_chat_completions",
+            "--api-format", "openai_responses" if native else "openai_chat_completions",
             "--ak", f"version={PI_VERSION}", "--ak", "skip_install=true",
-            "--ak", "model_api=openai-completions",
+            "--ak", "model_api=openai-responses" if native else "model_api=openai-completions",
             "--ak", f"max_turns={self.max_turns}",
-            *(["--ak", "reasoning_effort=off"] if chat_tools_need_no_reasoning(self.model) else []),
+            *(["--ak", f"reasoning_effort={self.reasoning_effort}"] if native else
+              (["--ak", "reasoning_effort=off"] if chat_tools_need_no_reasoning(self.model) else [])),
             "--ak", "max_output_tokens=4096",
             "--agent-env", f"CTD_GATEWAY_TOKEN={token}",
             "--extra-docker-compose", str(self.repo_root / "experiments/live/compose.yaml"),
@@ -128,6 +138,7 @@ def plan_live(config: LiveConfig) -> dict[str, Any]:
     c = config.validated()
     return {
         "status": "plan_only", "model": c.model,
+        "api": c.api, "reasoning_effort": c.reasoning_effort if c.api == "responses" else None,
         "agent": "pi", "agent_version": PI_VERSION,
         "harbor_version": HARBOR_VERSION, "task": str(c.task),
         "price_schedule_sha256": PriceSchedule.load(c.price_schedule).digest,
@@ -233,6 +244,7 @@ def execute_live(config: LiveConfig, *, acknowledged: bool = False) -> dict[str,
         "CTD_PROVIDER_KEY_FILE": str(c.key_file),
         "CTD_BUDGET_USD": c.budget_usd,
         "CTD_GATEWAY_TOKEN": gateway_token,
+        "CTD_GATEWAY_ROUTE": RESPONSES_ROUTE if c.api == "responses" else "/v1/chat/completions",
         # Run the gateway as the same non-root owner as the private evidence and
         # chmod-0600 provider secret files mounted from the operator host.
         "CTD_RUN_UID": str(os.getuid()),
@@ -242,6 +254,7 @@ def execute_live(config: LiveConfig, *, acknowledged: bool = False) -> dict[str,
     outcome: dict[str, Any] = {
         "schema_version": 1,
         "status": "started", "model": c.model,
+        "api": c.api, "reasoning_effort": c.reasoning_effort if c.api == "responses" else None,
         "job_name": c.job_name, "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "price_schedule_sha256": PriceSchedule.load(c.price_schedule).digest,
         "operator_budget_usd": c.budget_usd, "provider_invoice_reconciled": False,
