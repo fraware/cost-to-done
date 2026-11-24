@@ -7,6 +7,10 @@ on:
       - 'src/cost_to_done/cli.py'
       - 'tests/test_repository_task.py'
       - 'scripts/check_repository_task_controls.py'
+      - 'scripts/run_repository_rehearsal.py'
+      - 'src/cost_to_done/repository_qualification.py'
+      - 'src/cost_to_done/live.py'
+      - 'tests/harbor/mock_repair.py'
   push:
     branches: [main]
     paths:
@@ -17,7 +21,7 @@ permissions:
 jobs:
   controls:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
@@ -61,9 +65,36 @@ jobs:
           harbor run --path "$RUNNER_TEMP/positive" --agent nop --job-name positive --jobs-dir "$RUNNER_TEMP/controls" --n-concurrent 1 --n-attempts 1
           python -m scripts.check_repository_task_controls "$RUNNER_TEMP" > "$RUNNER_TEMP/repository-control-summary.json"
           cat "$RUNNER_TEMP/repository-control-summary.json"
+      - name: Bind actual control observations to the prepared task
+        run: >-
+          cost-to-done qualify-repo-task
+          --starter "$RUNNER_TEMP/negative" --reference "$RUNNER_TEMP/positive"
+          --starter-job "$RUNNER_TEMP/controls/negative"
+          --reference-job "$RUNNER_TEMP/controls/positive"
+          --output "$RUNNER_TEMP/repository-qualification.json"
+      - name: Rehearse qualified external task through actual mock gateway
+        env:
+          CTD_REHEARSAL_ONLY: '1'
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s\n' 'ctd-fake-upstream-key-for-tests-12345678' > "$RUNNER_TEMP/ctd-fake-key"
+          python -m scripts.run_repository_rehearsal "$GITHUB_WORKSPACE" "$RUNNER_TEMP/negative" "$RUNNER_TEMP/repository-qualification.json" "$RUNNER_TEMP/repository-rehearsal" "$RUNNER_TEMP/ctd-fake-key"
+      - name: Print scrubbed mock-only failure diagnostic
+        if: failure()
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import os, re
+          path = Path(os.environ["RUNNER_TEMP"]) / "repository-rehearsal/.sessions/rehearsal-scripted/harbor.driver.log"
+          if path.is_file():
+              print(re.sub(r"[A-Za-z0-9_-]{32,}", "[redacted]", path.read_text(errors="replace")[-8000:]))
+          PY
       - name: Archive control summary only
         uses: actions/upload-artifact@v7
         with:
           name: repository-task-controls-${{ github.run_id }}
-          path: ${{ runner.temp }}/repository-control-summary.json
+          path: |
+            ${{ runner.temp }}/repository-control-summary.json
+            ${{ runner.temp }}/repository-qualification.json
           retention-days: 30
