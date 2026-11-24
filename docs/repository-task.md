@@ -96,3 +96,15 @@ cost-to-done report-repo-rehearsal ./comparison --output comparison.html
 The command recomputes the report from the plan and episode records; it
 ignores saved derived summaries. This is a protocol integration test with
 scripted responses, not a model comparison or a real-provider cost claim.
+
+## Fixed public real-provider pilot (experimental)
+
+A separate manual workflow is restricted to the canonical repository's first
+main-branch dispatch with explicit authorization. It constructs a fixed public
+synthetic repository, qualifies both commits, rehearses both scripted outcomes,
+and only then admits one native low-effort trial per declared OpenAI model.
+The aggregate estimated admission allowance is $2; this is not a hard provider
+billing cap. The byte-exact fixture check prevents this route from accepting
+arbitrary user repositories. No public CLI flag enables paid external execution.
+Results are descriptive, with no invoice reconciliation, independent candidate
+replay or claims of general model quality.

@@ -63,6 +63,7 @@ class LiveConfig:
     capture_candidate: bool = False
     repository_task_sha256: str | None = None
     repository_qualification: Path | None = None
+    repository_pilot: bool = False
 
     def validated(self, *, check_key: bool = False) -> "LiveConfig":
         """Check immutable inputs without creating anything or reading secrets."""
@@ -77,6 +78,8 @@ class LiveConfig:
         if self.task.is_symlink() or not task.is_dir():
             raise ReceiptError("task must be a real directory")
         external = self.repository_task_sha256 is not None or self.repository_qualification is not None
+        if type(self.repository_pilot) is not bool or (self.repository_pilot and not external):
+            raise ReceiptError("invalid external pilot mode")
         if external:
             from .repository_qualification import check_qualification
             if self.repository_task_sha256 is None or self.repository_qualification is None:
@@ -86,14 +89,25 @@ class LiveConfig:
             if task.is_relative_to(root):
                 raise ReceiptError("prepared external task must be outside the trusted runner checkout")
             check_qualification(task, self.repository_qualification, self.repository_task_sha256)
-            overlay = root / "tests/live/compose-rehearsal.yaml"
-            if not overlay.is_file() or overlay.is_symlink():
-                raise ReceiptError("missing trusted repository rehearsal overlay")
-            if check_key and (os.environ.get("GITHUB_ACTIONS") != "true"
-                              or os.environ.get("CTD_REHEARSAL_ONLY") != "1"
-                              or self.model != "test-model-1" or self.api != "responses"
-                              or self.reasoning_effort != "low"):
-                raise ReceiptError("external task execution is mock-only; paid execution is disabled")
+            if self.repository_pilot:
+                from .repository_pilot import MODELS, trusted_dispatch, validate_fixed_starter
+                validate_fixed_starter(task)
+                if (self.model not in MODELS or self.price_schedule.resolve() != root / MODELS[self.model]
+                        or self.api != "responses" or self.reasoning_effort != "low"
+                        or self.max_turns != 5 or self.max_wall_seconds != 900
+                        or self.budget_usd != "1"):
+                    raise ReceiptError("fixed external pilot configuration mismatch")
+                if check_key and not trusted_dispatch():
+                    raise ReceiptError("trusted manual external pilot authorization missing")
+            else:
+                overlay = root / "tests/live/compose-rehearsal.yaml"
+                if not overlay.is_file() or overlay.is_symlink():
+                    raise ReceiptError("missing trusted repository rehearsal overlay")
+                if check_key and (os.environ.get("GITHUB_ACTIONS") != "true"
+                                  or os.environ.get("CTD_REHEARSAL_ONLY") != "1"
+                                  or self.model != "test-model-1" or self.api != "responses"
+                                  or self.reasoning_effort != "low"):
+                    raise ReceiptError("external task execution is mock-only; paid execution is disabled")
         else:
             if (task.name not in TRUSTED_TASK_MODULES or task != root / "tasks" / task.name
                     or (root / "tasks").is_symlink()):
@@ -144,12 +158,13 @@ class LiveConfig:
             resolved = key.resolve(strict=True)
             if resolved.is_relative_to(root) or resolved.is_relative_to(jobs) or resolved.is_relative_to(task):
                 raise ReceiptError("provider credential file must be outside repository and run outputs")
-            if external and (key.read_bytes().strip() != b"ctd-fake-upstream-key-for-tests-12345678"):
+            if external and not self.repository_pilot and (key.read_bytes().strip() != b"ctd-fake-upstream-key-for-tests-12345678"):
                 raise ReceiptError("external rehearsal requires the exact fictional key")
         return LiveConfig(root, task, jobs, self.model, self.price_schedule.resolve(),
                           self.key_file.resolve(strict=check_key), self.budget_usd,
                           self.job_name, self.max_turns, self.max_wall_seconds, self.api, self.reasoning_effort, self.capture_candidate,
-                          self.repository_task_sha256, self.repository_qualification.resolve() if external else None)
+                          self.repository_task_sha256, self.repository_qualification.resolve() if external else None,
+                          self.repository_pilot)
 
     def command(self, *, task_copy: Path, token: str) -> list[str]:
         """Prepare shell-free Harbor invocation without any provider credential."""
@@ -171,7 +186,7 @@ class LiveConfig:
             "--job-name", self.job_name, "--jobs-dir", str(self.jobs_dir),
             "--n-concurrent", "1", "--n-attempts", "1",
         ] + (["--extra-docker-compose", str(self.repo_root / "tests/live/compose-rehearsal.yaml")]
-             if self.repository_task_sha256 is not None else [])
+             if self.repository_task_sha256 is not None and not self.repository_pilot else [])
 
 
 def staged_task_inputs(root: Path, task: Path) -> tuple[tuple[str, ...], bytes]:
@@ -209,6 +224,9 @@ def prepare_task(config: LiveConfig, task_copy: Path) -> None:
         # the Dockerfile, and never include the manifest or incidental files in
         # the image context. The trusted runner supplies the Pi setup.
         manifest = _manifest(config.task)
+        if config.repository_pilot:
+            from .repository_pilot import validate_fixed_starter
+            validate_fixed_starter(config.task)
         if manifest["task_input_sha256"] != config.repository_task_sha256:
             raise ReceiptError("repository manifest changed before staging")
         task_copy.mkdir(mode=0o700)
@@ -219,6 +237,8 @@ def prepare_task(config: LiveConfig, task_copy: Path) -> None:
         copied = validate_repository_task(task_copy)
         if copied["task_input_sha256"] != config.repository_task_sha256:
             raise ReceiptError("staged repository task digest mismatch")
+        if config.repository_pilot:
+            validate_fixed_starter(task_copy)
         (task_copy / "ctd-task-manifest.json").unlink()
         template = (config.repo_root / "experiments/live/Dockerfile.pi").read_text(encoding="utf-8")
         marker = "COPY allocate.py /app/allocate.py"
@@ -248,7 +268,8 @@ def plan_live(config: LiveConfig) -> dict[str, Any]:
     return {
         "status": "plan_only", "model": c.model,
         "repository_task_sha256": c.repository_task_sha256,
-        "repository_execution_scope": "mock_only" if c.repository_task_sha256 else "bundled",
+        "repository_execution_scope": ("fixed_public_paid_pilot" if c.repository_pilot else
+                                       "mock_only" if c.repository_task_sha256 else "bundled"),
         "candidate_capture_requested": c.capture_candidate,
         "api": c.api, "reasoning_effort": c.reasoning_effort if c.api == "responses" else None,
         "agent": "pi", "agent_version": PI_VERSION,
@@ -361,7 +382,7 @@ def execute_live(config: LiveConfig, *, acknowledged: bool = False) -> dict[str,
         "CTD_RUN_UID": str(os.getuid()),
         "CTD_RUN_GID": str(os.getgid()),
     })
-    if c.repository_task_sha256 is not None:
+    if c.repository_task_sha256 is not None and not c.repository_pilot:
         # Only the fixed synthetic repository fixture reaches this mock route.
         scenario = os.environ.get("CTD_REPOSITORY_MOCK_SCENARIO", "repository-addition-repair")
         if scenario not in ("repository-addition-repair", "repository-addition-incorrect"):
@@ -374,7 +395,8 @@ def execute_live(config: LiveConfig, *, acknowledged: bool = False) -> dict[str,
         "api": c.api, "reasoning_effort": c.reasoning_effort if c.api == "responses" else None,
         "task_fixture": c.task.name,
         "repository_task_sha256": c.repository_task_sha256,
-        "repository_execution_scope": "mock_only" if c.repository_task_sha256 else "bundled",
+        "repository_execution_scope": ("fixed_public_paid_pilot" if c.repository_pilot else
+                                       "mock_only" if c.repository_task_sha256 else "bundled"),
         "candidate_capture_requested": c.capture_candidate,
         "job_name": c.job_name, "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "price_schedule_sha256": PriceSchedule.load(c.price_schedule).digest,
