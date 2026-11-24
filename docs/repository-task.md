@@ -50,8 +50,8 @@ as matched model runs.
 
 This command packages trusted local Python files only. It does not prove
 that tests are secret, resistant to an adversarial candidate, or executed
-under the qualified credential-isolated live-runner topology. The live
-metered gateway currently accepts bundled tasks exclusively. Do not pass
+under the qualified credential-isolated live-runner topology. General-purpose paid metered execution is restricted to bundled tasks.
+The separate fixed public pilot and fictional external rehearsal are described below. Do not pass
 arbitrary downloaded repositories or unreviewed task code to a privileged
 runner. Paid arbitrary-repository execution remains a separate milestone.
 
@@ -73,9 +73,10 @@ wrapper and source path support, two distinct commits, and complete Harbor
 nop outcomes of fail and pass respectively. It records the two original
 result hashes and task checksums. The receipt is a local operator-supplied
 content binding, not authenticated proof that the supplied jobs executed
-those exact bytes. The separate experimental external gateway path is
-restricted to a CI-only fictional provider key and mock transport. A
-public CLI invocation rejects paid execution of prepared external tasks.
+those exact bytes. The external gateway rehearsal uses a CI-only fictional provider key and
+mock transport. The fixed public synthetic pilot has a separate manual
+authorization gate. A public CLI invocation rejects paid execution of
+prepared external tasks.
 
 ## Matched fictional comparison
 
@@ -108,3 +109,9 @@ billing cap. The byte-exact fixture check prevents this route from accepting
 arbitrary user repositories. No public CLI flag enables paid external execution.
 Results are descriptive, with no invoice reconciliation, independent candidate
 replay or claims of general model quality.
+
+### Maintainer dispatch
+
+Open [Fixed public repository paid pilot](https://github.com/fraware/cost-to-done/actions/workflows/repository-pilot.yml), choose **Run workflow**, select `main`, and enter `RUN-FIXED-PUBLIC-PILOT` in the confirmation field. Only run this when a new experiment is intended; a new dispatch is a new paid experiment. Re-running a prior attempt does not authorize paid inference.
+
+The workflow publishes a redacted plan, intent records, observed trial attestations and summary. A successful workflow is not a claim that both models repaired the task. Inspect each recorded verifier outcome and the accounting status. Do not pool these observations with the earlier public development panel or replay cohort.

@@ -1,30 +1,33 @@
-# Security
+# Security policy
 
-This repository validates and renders local receipt data, includes an opt-in Harbor runner, and includes an experimental local inference-admission gateway. Treat JSONL receipts, Harbor results, manifests, and HTTP requests as untrusted inputs. The gateway does not provide independently verified agent network isolation or an absolute billing ceiling.
+Cost to Done includes offline parsers and reports, a local metering gateway, and experimental containerized execution. These components have different trust boundaries. No production sandbox or verified provider billing ceiling is claimed.
 
-Do not run future real-agent evaluations in the same execution environment that holds repository secrets, long-lived production credentials, or private acceptance tests. Always scope provider keys and outbound network access. The executable verifier and acceptance tests must be inaccessible for agent modification or inspection during task execution.
+## Report a vulnerability
 
-Report a security issue privately through a GitHub security advisory if the repository supports private vulnerability reporting. Otherwise, contact the maintainer directly through the GitHub profile. Do not publish executable exploits, keys, or private logs in public issues.
+Use the repository's [Security page](https://github.com/fraware/cost-to-done/security) to report privately if private vulnerability reporting is enabled. Otherwise contact the maintainer through their GitHub profile. Avoid public exploit details, keys, proprietary source or raw logs.
 
-## Experimental inference gateway
+## Offline tools
 
-The standalone gateway binds to IPv4 loopback and authenticates with a gateway-specific
-session token. The separate, containerized live gateway listens on an internal
-Docker network and publishes no host port. Keep `OPENAI_API_KEY` exclusively
-in the trusted gateway process; never expose it to an evaluated agent.
-The supported Chat Completions surface includes bounded, text/function-tool
-requests with either JSON replies or **fully buffered** streaming replies.
-Streaming must terminate with reported usage before its reservation is settled;
-this gateway does not forward streaming chunks incrementally. Unsupported models,
-modalities, routes and request fields are rejected. Direct provider egress from
-an evaluated agent must be blocked and independently checked. A price authorization
-based on a heuristic token estimate is **not a hard provider invoice limit**.
-See [docs/gateway.md](docs/gateway.md).
+Treat JSONL receipts, manifests and Harbor results as untrusted input. Offline reporting does not execute evaluated source. Reports are self-contained; private output files refuse overwrite. A valid receipt establishes consistency, not authentic provenance or billing.
 
-## Operator-only real-provider gateway
+## Experimental gateway
 
-`run-harbor-gateway` is experimental. It copies the fixed, qualified task into a private run directory and attaches the upstream credential only to a gateway container through a Compose secret mount. The agent receives a short-lived gateway token, not the provider key. Do not mount a Docker socket, use arbitrary task Compose overrides, publish the gateway port, or upload raw logs without reviewing sensitive content. Rate-card preauthorization is not a hard provider spending limit. A dedicated provider-side financial control and independent invoice reconciliation are prerequisites for monetary claims. See [private trial procedure](docs/live-gateway.md).
+The standalone gateway binds IPv4 loopback; the containerized gateway publishes no host port. Keep the upstream provider credential exclusively in the trusted gateway. Agents receive separate session tokens. Supported constrained Chat Completions and native Responses paths use validated terminal usage for accounting. See [gateway](docs/gateway.md) and [native Responses](docs/native-responses.md).
 
-## Verified live-runner scope
+The gateway reserves estimated cost before forwarding requests. This is not an absolute provider invoice limit. Use independently enforced provider-side financial controls, scoped credentials and invoice reconciliation for paid experiments. Incomplete or uncertain liability must not be treated as zero.
 
-The CI-only [live rehearsal](docs/live-rehearsal.md) uses Harbor 0.27.0 and a fictional upstream endpoint. Its credential loader, private evidence directory and gateway run as the invoking host UID/GID, avoiding world-writable accounting files. The Docker test is an observed configuration, not an unrestricted sandbox guarantee. Use dedicated low-privilege provider credentials and an independently **enforced** provider spend limit for any commercial trial; monitor and reconcile actual charges after execution. Treat raw Harbor logs and gateway tokens as sensitive until the run terminates and artifacts are reviewed.
+## Execution trust boundary
+
+The experimental live runner uses a trusted checkout, pinned bundled tasks, and a private credential file outside the repository and job outputs. The provider key is mounted into the gateway service. An evaluated agent has only the gateway token and the internal network.
+
+The tested mock topology blocks the direct egress paths exercised by the CI probes. It is not a general container-escape or network-isolation guarantee. Do not mount a Docker socket, add arbitrary Compose overrides, expose gateway ports, or run unreviewed source/tests in a privileged environment.
+
+External repository packaging does not execute source. The CI-only external rehearsal uses a fictional provider; a separately authorized paid pilot accepts only the fixed public synthetic starter. Arbitrary paid external repository execution is disabled.
+
+Independent candidate replay executes fresh pristine acceptance tests in an offline non-root container. Candidate and verifier share Python process state; adversarial verifier integrity is not established. No claim is made that historical generated sources are externally replayable from redacted records alone.
+
+See [live runner](docs/live-gateway.md), [network isolation](docs/network-isolation.md), [repository task scope](docs/repository-task.md), and [candidate replay](docs/candidate-replay.md).
+
+## Sensitive artifacts
+
+Keep raw prompts, generated sources, Harbor logs, private receipt files, SQLite ledgers and credentials private unless explicitly reviewed for publication. Use dedicated low-privilege credentials for authorized trials and rotate credentials if exposure is suspected.

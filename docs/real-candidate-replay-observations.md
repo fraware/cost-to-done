@@ -24,7 +24,7 @@ succeeded because they checked agreement, including agreement on failure.
 [Sol job](https://github.com/fraware/cost-to-done/actions/runs/45320220501/job/138197656129).
 The complete redacted log attestations and original ZIP identities are
 preserved in [the evidence directory](../evidence/2026-11-24-real-candidate-replay/).
-A separate zero-inference audit compares those records against the original
+A [completed zero-inference audit](https://github.com/fraware/cost-to-done/actions/runs/45334799801) compares those records against the original
 ZIP archives and the pinned starter and verifier identities.
 
 The financial estimates are not invoices. The independent process replay
