@@ -96,3 +96,13 @@ attestations are archived; raw private workspaces and logs are excluded.
 Cost-per-completion ratios are withheld if task support, checksum identity,
 verifier outcomes or financial settlement are incomplete. This is public-task
 development evidence only; independent verifier replay remains outstanding.
+
+Recompute the accounting from downloaded evidence, even after an interrupted
+run whose derived summary is absent:
+
+```bash
+cost-to-done summarize-panel path/to/extracted-panel --output audited-summary.json
+```
+
+This checks declared identities and matching support, not authenticity of the
+execution or the provider invoice. It refuses duplicate raw trial hashes.

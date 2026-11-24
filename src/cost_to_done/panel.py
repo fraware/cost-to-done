@@ -82,7 +82,10 @@ def build_panel(root: Path, *, repetitions: int = 1, seed: int = 20261124,
         raise ReceiptError("panel runner sources are missing")
     source.extend(root / p for p in ("experiments/live/compose.yaml",
                                     "experiments/live/base-compose-ci.yaml",
-                                    "experiments/live/Dockerfile.pi"))
+                                    "experiments/live/Dockerfile.pi",
+                                    "scripts/run_development_panel.py",
+                                    "scripts/run_real_model_smoke.py",
+                                    ".github/workflows/development-panel.yml"))
     harness = {p.relative_to(root).as_posix(): _file_record(root, p) for p in source}
     blocks = [(task, rep) for task in tasks for rep in range(1, repetitions + 1)]
     rng = random.Random(seed)

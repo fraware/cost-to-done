@@ -51,9 +51,12 @@ def execute_panel(root: Path, output: Path, key: Path, plan: dict) -> dict:
         except (ReceiptError, OSError, ValueError):
             # An unexpected runner failure is not evidence of zero expense.
             result = {"status": "incomplete_or_uncertain"}
-        result.update(api=config["api"], reasoning_effort=config["reasoning_effort"],
-                      task_fixture=trial["task"])
-        record = attestation(result, config["model"])
+        # Preserve reported identities; defaults describe intended settings only
+        # when no execution record exists. The summary rejects mismatches.
+        result.setdefault("api", config["api"])
+        result.setdefault("reasoning_effort", config["reasoning_effort"])
+        result.setdefault("task_fixture", trial["task"])
+        record = attestation(result, result.get("model", config["model"]))
         record.update(trial_id=tid, plan_sha256=plan["plan_sha256"])
         # Price identity is the declared schedule; do not invent ledger evidence.
         if record["price_schedule_sha256"] is None:

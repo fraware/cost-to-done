@@ -17,7 +17,7 @@ class PanelResultTests(unittest.TestCase):
     def setUp(self):
         self.plan = build_panel(ROOT)
         self.records = []
-        for t in self.plan["trials"]:
+        for index, t in enumerate(self.plan["trials"]):
             config = self.plan["configurations"][t["configuration"]]
             self.records.append({
                 "trial_id": t["trial_id"], "plan_sha256": self.plan["plan_sha256"],
@@ -27,7 +27,7 @@ class PanelResultTests(unittest.TestCase):
                 "provider_invoice_reconciled": False, "provider_spend_limit_verified": False,
                 "verifier_independently_reexecuted": False, "trial_status": COMPLETE,
                 "harbor_trial_outcome": "pass", "harbor_task_checksum": "a"*64,
-                "harbor_raw_result_sha256": "b"*64, "ledger_observed": True,
+                "harbor_raw_result_sha256": f"{index:064x}", "ledger_observed": True,
                 "gateway_rate_card_estimate_usd": "0.02", "gateway_pending": 0,
                 "gateway_uncertain": 0, "gateway_breached": False,
                 "gateway_recorded_calls": 2,
@@ -55,6 +55,10 @@ class PanelResultTests(unittest.TestCase):
             summarize_panel(self.plan, self.records + self.records[:1])
         altered = copy.deepcopy(self.records)
         altered[0]["plan_sha256"] = "c"*64
+        with self.assertRaises(ReceiptError):
+            summarize_panel(self.plan, altered)
+        altered = copy.deepcopy(self.records)
+        altered[0]["harbor_raw_result_sha256"] = altered[1]["harbor_raw_result_sha256"]
         with self.assertRaises(ReceiptError):
             summarize_panel(self.plan, altered)
         altered = copy.deepcopy(self.records)

@@ -30,6 +30,7 @@ def summarize_panel(plan: dict, records: list[dict]) -> dict:
     if len(expected) != len(trials) or len(trials) != plan["planned_trial_count"]:
         raise ReceiptError("invalid panel trial support")
     seen = {}
+    raw_hashes = set()
     for record in records:
         tid = record.get("trial_id")
         if not isinstance(tid, str) or tid not in expected or tid in seen:
@@ -46,6 +47,11 @@ def summarize_panel(plan: dict, records: list[dict]) -> dict:
                 or record.get("provider_spend_limit_verified") is not False
                 or record.get("verifier_independently_reexecuted") is not False):
             raise ReceiptError("panel observation identity or disclosure mismatch")
+        raw_hash = record.get("harbor_raw_result_sha256")
+        if raw_hash is not None:
+            if not _digest(raw_hash) or raw_hash in raw_hashes:
+                raise ReceiptError("invalid or repeated raw Harbor result identity")
+            raw_hashes.add(raw_hash)
         seen[tid] = record
 
     rows = {name: {"configuration": name, "planned": 0, "observed": 0,
@@ -109,3 +115,31 @@ def summarize_panel(plan: dict, records: list[dict]) -> dict:
             "complete_matched_accounting": complete, "eligible_for_ranking": False,
             "task_checksums_consistent": matched, "provider_invoice_reconciled": False,
             "verifier_independently_reexecuted": False, "rows": result, "trials": details}
+
+def read_panel_directory(directory: Path) -> tuple[dict, list[dict]]:
+    """Read bounded JSON evidence files; ignore only the derived summary."""
+    import json
+
+    if directory.is_symlink() or not directory.is_dir():
+        raise ReceiptError("panel directory must be a real directory")
+    root = directory.resolve(strict=True)
+
+    def read(path: Path) -> dict:
+        if (path.is_symlink() or not path.is_file() or path.resolve() != path
+                or path.stat().st_size > 2_000_000):
+            raise ReceiptError("unsafe or oversized panel evidence")
+        obj = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(obj, dict):
+            raise ReceiptError("panel evidence must be a JSON object")
+        return obj
+
+    plan = read(root / "plan.json")
+    observations = []
+    for path in sorted(root.glob("*.json")):
+        if path.name in ("plan.json", "summary.json"):
+            continue
+        record = read(path)
+        if record.get("trial_id") != path.stem:
+            raise ReceiptError("panel observation filename identity mismatch")
+        observations.append(record)
+    return plan, observations
