@@ -30,7 +30,7 @@ The [18 individual log observations](../evidence/2026-11-24-development-panel/lo
 are transcribed from the completed job. Their exact decimal sums were
 recomputed and matched the printed summary. The archive audit workflow
 checks the original ZIP, historical plan, per-trial attestations and summary;
-its successful execution is a separate evidence gate.
+the [completed audit](https://github.com/fraware/cost-to-done/actions/runs/45320390734) verified the original ZIP SHA-256, reproduced the historical plan, matched all 18 log observations, and recomputed the archived summary.
 
 Frozen plan SHA-256:
 `d14f761a4a2858d1cee40b7c7ca84d4de026408e486cebca3e3738c91a072e56`.

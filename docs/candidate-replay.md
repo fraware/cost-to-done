@@ -22,11 +22,7 @@ is after the shared Harbor verifier; replay independently checks the captured
 post-verification state, not necessarily a pre-verification snapshot.
 This distinction matters for candidates with side effects.
 
-This is a qualification fixture only. A future separately identified paid
-cohort must explicitly enable artifact capture, archive candidate bytes
-under a reviewed publication policy, and bind the replay results to trial
-identities and the frozen plan. Do not retrofit these claims onto previous
-redacted observations.
+The mock qualification establishes the replay mechanism. The [separate real-candidate cohort](real-candidate-replay-observations.md) subsequently recorded both a pass and a failure, with agreement in fresh verifier processes. The actual generated source bytes were not published. Do not retrofit these claims onto previous redacted observations.
 
 ## Local replay command
 
