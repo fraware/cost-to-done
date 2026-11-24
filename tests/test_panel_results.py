@@ -75,3 +75,34 @@ class PanelResultTests(unittest.TestCase):
             self.assertEqual(sum(r["missing"] for r in result["rows"]), 5)
             self.assertEqual(sum(r["unresolved"] for r in result["rows"]), 1)
             self.assertTrue((output / "summary.json").is_file())
+
+    def test_rehashed_unmatched_plan_is_rejected(self):
+        from cost_to_done.panel import _canonical, _sha
+        altered = copy.deepcopy(self.plan)
+        altered["trials"].pop()
+        altered["planned_trial_count"] -= 1
+        altered["estimated_admission_total_usd"] = "5"
+        altered.pop("plan_sha256")
+        altered["plan_sha256"] = _sha(_canonical(altered))
+        with self.assertRaises(ReceiptError):
+            summarize_panel(altered, [])
+
+    def test_html_report_includes_missing_and_recomputes_summary(self):
+        import json
+        from cost_to_done.panel_report import render_panel, write_panel_report
+        report = render_panel(self.plan, self.records[:-1])
+        self.assertIn("Incomplete accounting", report)
+        self.assertIn("Missing trials are not zero-cost trials", report)
+        self.assertIn("Not established", report)
+        self.assertIn("No model ranking", report)
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            (directory / "plan.json").write_text(json.dumps(self.plan))
+            (directory / "summary.json").write_text('{"complete_matched_accounting":true}')
+            for record in self.records[:-1]:
+                (directory / (record["trial_id"] + ".json")).write_text(json.dumps(record))
+            output = directory / "report.html"
+            write_panel_report(directory, output)
+            self.assertEqual(output.read_text(), report)
+            with self.assertRaises(ReceiptError):
+                write_panel_report(directory, output)

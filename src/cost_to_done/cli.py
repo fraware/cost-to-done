@@ -47,6 +47,9 @@ def main(argv: list[str] | None = None) -> int:
     p = subs.add_parser("summarize-panel", help="Recompute accounting from a frozen panel and redacted observations")
     p.add_argument("directory", type=Path, help="Directory containing plan.json and individual trial JSON records")
     p.add_argument("--output", type=Path, help="Optional new private summary JSON file")
+    p = subs.add_parser("report-panel", help="Render an offline, unranked report from planned episodes and raw attestations")
+    p.add_argument("directory", type=Path)
+    p.add_argument("--output", type=Path, default=Path("panel-report.html"))
     p = subs.add_parser("replay-candidate", help="Run pristine bundled tests against a source file in a fresh offline Docker container")
     p.add_argument("--repo-root", type=Path, default=Path.cwd())
     p.add_argument("--task", choices=tuple(TRUSTED_TASK_MODULES), required=True)
@@ -139,6 +142,11 @@ def main(argv: list[str] | None = None) -> int:
             if args.output is not None:
                 publish_private_texts([(args.output, payload)])
             print(payload, end="")
+            return 0
+        if args.command == "report-panel":
+            from .panel_report import write_panel_report
+            write_panel_report(args.directory, args.output)
+            print(f"Offline development-panel report: {args.output}")
             return 0
         if args.command == "replay-candidate":
             from .replay import captured_candidate, replay_candidate
