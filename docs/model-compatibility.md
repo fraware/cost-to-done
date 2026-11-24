@@ -32,3 +32,5 @@ Sources:
 - https://developers.openai.com/api/docs/guides/migrate-to-responses
 - https://developers.openai.com/api/docs/models/gpt-5.4
 - https://developers.openai.com/api/docs/models/gpt-5.4-mini
+
+The one-request paid protocol check uses the dated GPT-5.4 snapshots (`gpt-5.4-2026-03-05` and `gpt-5.4-mini-2026-03-17`) to bind reported model identifiers. This check establishes provider protocol access, not a verified coding repair or billed cost.

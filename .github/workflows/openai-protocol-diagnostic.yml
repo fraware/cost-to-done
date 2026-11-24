@@ -23,12 +23,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - model: gpt-6.1-terra
-            prices: experiments/live/prices-gpt-6.1-terra-2026-11-23.json
-            label: terra
-          - model: gpt-6.2-sol
-            prices: experiments/live/prices-gpt-6.2-sol-2026-11-23.json
-            label: sol
+          - model: gpt-5.4-2026-03-05
+            prices: experiments/live/prices-gpt-5.4-2026-03-05.json
+            label: gpt54
+          - model: gpt-5.4-mini-2026-03-17
+            prices: experiments/live/prices-gpt-5.4-mini-2026-03-17.json
+            label: gpt54-mini
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
