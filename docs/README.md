@@ -23,6 +23,7 @@ These cohorts are distinct. All monetary observations are local rate-card estima
 | Matched development panel | [18 paid trials](development-panel-observations.md) |
 | Independent process replay | [Two separate paid trials](real-candidate-replay-observations.md) |
 | External repository mock controls | [Preparation and matched rehearsal](repository-task.md) |
+| External public benchmark | [Terminal-Bench 4.1 aggregate analysis](terminal-bench-4-1.md) |
 
 ## Execution and reproducibility
 

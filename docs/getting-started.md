@@ -2,9 +2,22 @@
 
 Start with the local reporting tools. They do not execute repository source, require an API key, or install Harbor.
 
-## Install
+## Install the alpha release
 
 Python 3.11–3.13 is covered by the current Linux CI matrix. Use a virtual environment.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install https://github.com/fraware/cost-to-done/releases/download/v0.1.0/cost_to_done-0.1.0-py3-none-any.whl
+cost-to-done --help
+```
+
+For Windows PowerShell, activate with `.\.venv\Scripts\Activate.ps1`. Windows installation and filesystem behavior are not currently qualified by CI.
+
+The [v0.1.0 alpha release](https://github.com/fraware/cost-to-done/releases/tag/v0.1.0) includes the wheel, source archive and SHA-256 manifest. To verify downloaded distributions, place them and `SHA256SUMS` in the same directory and run `sha256sum -c SHA256SUMS` on Linux. Both distributions passed installation tests outside the checkout. The project is not published on PyPI.
+
+For development or to run the checkout-only experiment scripts:
 
 ```bash
 git clone https://github.com/fraware/cost-to-done.git
@@ -12,12 +25,7 @@ cd cost-to-done
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e .
-cost-to-done --help
 ```
-
-For Windows PowerShell, activate with `.\.venv\Scripts\Activate.ps1`. Windows installation and filesystem behavior are not currently qualified by CI.
-
-The project is not currently published on PyPI. The [package candidate workflow](https://github.com/fraware/cost-to-done/actions/workflows/package-candidate.yml) builds a wheel and source distribution and tests wheel installation outside the checkout. Use a trusted build of a pinned commit.
 
 ## Generate your first report
 

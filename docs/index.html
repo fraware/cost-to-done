@@ -34,18 +34,17 @@
 <section class="section" id="use" aria-labelledby="use-title">
 <div class="section-header"><h2 id="use-title">Start with your existing work.</h2><p>Python 3.11+. Offline inspection needs no provider credentials or Docker.</p></div>
 <div class="quick-grid">
-<div class="code-panel"><div class="code-head"><span>Install and explore</span><span>Synthetic demo</span></div><pre><code>git clone https://github.com/fraware/cost-to-done.git
-cd cost-to-done
-python -m venv .venv
+<div class="code-panel"><div class="code-head"><span>Install and explore</span><span>Synthetic demo</span></div><pre><code>python -m venv .venv
 source .venv/bin/activate
-python -m pip install -e .
+python -m pip install \
+  https://github.com/fraware/cost-to-done/releases/download/v0.1.0/cost_to_done-0.1.0-py3-none-any.whl
 cost-to-done demo --output demo.html</code></pre><p class="code-foot">Open demo.html in your browser. On Windows use .venv\Scripts\activate. Choose a fresh output filename.</p></div>
 <div class="code-panel"><div class="code-head"><span>Compare two Harbor jobs</span><span>Existing results</span></div><pre><code>cost-to-done compare-harbor \
   fast=./jobs/fast \
   careful=./jobs/careful \
   --output comparison.html</code></pre><p class="code-foot">Matched task checksums, verifier outcomes, elapsed time and available agent-reported estimates.</p></div>
 </div>
-<div class="section-links"><a href="report.html">View synthetic sample report</a><a href="https://github.com/fraware/cost-to-done/blob/main/docs/compare-harbor.md">Harbor comparison guide</a><a href="https://github.com/fraware/cost-to-done#readme">Installation instructions</a></div>
+<div class="section-links"><a href="report.html">View synthetic sample report</a><a href="https://github.com/fraware/cost-to-done/blob/main/docs/compare-harbor.md">Harbor comparison guide</a><a href="https://github.com/fraware/cost-to-done#readme">Installation instructions</a><a href="https://github.com/fraware/cost-to-done/releases/tag/v0.1.0">v0.1.0 release</a></div>
 </section>
 
 <section class="section" id="pilot" aria-labelledby="pilot-title">

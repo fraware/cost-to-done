@@ -4,22 +4,20 @@
 
 Measure the cost of a completed task, including every unsuccessful attempt. Compare agent configurations against the same acceptance criteria and inspect the evidence behind each result.
 
-[Project website](https://fraware.github.io/cost-to-done/) · [Interactive calculator](https://fraware.github.io/cost-to-done/calculator.html) · [Documentation](docs/README.md) · [Methodology](docs/methodology.md) · [Repository tasks](docs/repository-task.md)
+[v0.1.0 release](https://github.com/fraware/cost-to-done/releases/tag/v0.1.0) · [Project website](https://fraware.github.io/cost-to-done/) · [Interactive calculator](https://fraware.github.io/cost-to-done/calculator.html) · [Documentation](docs/README.md) · [Methodology](docs/methodology.md) · [Repository tasks](docs/repository-task.md)
 
 ## Quick start
 
 Python 3.11+ for the local reporting tools. No API key, Docker or paid service needed for this example.
 
 ```bash
-git clone https://github.com/fraware/cost-to-done.git
-cd cost-to-done
 python -m venv .venv
 source .venv/bin/activate
-python -m pip install -e .
+python -m pip install https://github.com/fraware/cost-to-done/releases/download/v0.1.0/cost_to_done-0.1.0-py3-none-any.whl
 cost-to-done demo --output demo.html
 ```
 
-On Windows, activate the environment with `.venv\Scripts\activate`. Open `demo.html` in your browser. The demo uses synthetic receipts and illustrates failure-inclusive accounting. The report is self-contained and private by default. Choose a fresh output filename for each run.
+On Windows, activate the environment with `.venv\Scripts\activate`. [Source installation, distribution checksums and troubleshooting](docs/getting-started.md). Open `demo.html` in your browser. The demo uses synthetic receipts and illustrates failure-inclusive accounting. The report is self-contained and private by default. Choose a fresh output filename for each run.
 
 Already have Harbor results? Compare them immediately, with no new inference:
 
@@ -106,7 +104,7 @@ cost-to-done validate ./trials.jsonl
 cost-to-done report ./trials.jsonl --output report.html
 ```
 
-Each JSONL record describes a trial, potentially containing multiple charged attempts. Generate example receipts with `python examples/generate_synthetic.py`; see the [methodology](docs/methodology.md) for the receipt format. Billed charges and rate-card estimates are distinct cost sources. Receipt consistency does not authenticate execution or billing. Reports are offline, escape dynamic values, and refuse to overwrite existing destinations.
+Each JSONL record describes a trial, potentially containing multiple charged attempts. From a source checkout, generate example receipts with `python examples/generate_synthetic.py`; see the [methodology](docs/methodology.md) for the receipt format. Billed charges and rate-card estimates are distinct cost sources. Receipt consistency does not authenticate execution or billing. Reports are offline, escape dynamic values, and refuse to overwrite existing destinations.
 
 ## Evidence and implementation
 

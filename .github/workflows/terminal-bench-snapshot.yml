@@ -1,0 +1,47 @@
+name: Pinned external Terminal-Bench aggregate analysis
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/terminal-bench-snapshot.yml'
+      - 'scripts/analyze_terminal_bench.py'
+      - 'tests/test_terminal_bench_snapshot.py'
+      - 'docs/terminal-bench-4-1.md'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/terminal-bench-snapshot.yml'
+      - 'scripts/analyze_terminal_bench.py'
+      - 'tests/test_terminal_bench_snapshot.py'
+      - 'docs/terminal-bench-4-1.md'
+permissions:
+  contents: read
+jobs:
+  aggregate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v7
+        with:
+          repository: harbor-framework/terminal-bench
+          ref: ad4c7aae7b6f1fd80e514dc85768e46d02661bef
+          path: upstream
+          persist-credentials: false
+          sparse-checkout: |
+            leaderboard/submissions
+            leaderboard/src/leaderboard/core/metrics.py
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Recompute public aggregate ratios without model inference
+        run: |
+          python -m unittest discover -s tests -p test_terminal_bench_snapshot.py -v
+          python -m scripts.analyze_terminal_bench --upstream-checkout upstream --output "$RUNNER_TEMP/terminal-bench-4-1.json"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: terminal-bench-4-1-aggregate-${{ github.run_id }}
+          path: ${{ runner.temp }}/terminal-bench-4-1.json
+          if-no-files-found: error
+          retention-days: 30
