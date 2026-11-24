@@ -10,18 +10,21 @@ from cost_to_done.harbor import inspect_harbor_job
 from cost_to_done.ledger import BudgetLedger
 
 
-def check(root: Path) -> dict:
+def check(root: Path, *, expected_outcome: str = "pass", expected_task: str | None = None,
+          expected_api: str | None = None, expected_effort: str | None = None) -> dict:
     """Cross-check Harbor result, model turns, fake calls, and network probe."""
     session = root / ".sessions/rehearsal-scripted"
     evidence = session / "evidence"
     summary = json.loads((session / "run-summary.json").read_text(encoding="utf-8"))
     if summary.get("status") != "completed_with_unverified_rate_card_estimate":
         raise AssertionError("live runner did not finish cleanly")
-    task_name = os.environ.get("CTD_REHEARSAL_TASK", "allocation-repair")
+    if expected_outcome not in ("pass", "fail"):
+        raise AssertionError("invalid expected mock outcome")
+    task_name = expected_task if expected_task is not None else os.environ.get("CTD_REHEARSAL_TASK", "allocation-repair")
     if summary.get("task_fixture") != task_name:
         raise AssertionError("rehearsal used wrong task fixture")
-    expected_api = os.environ.get("CTD_REHEARSAL_API", "chat")
-    effort = os.environ.get("CTD_REHEARSAL_REASONING", "off")
+    expected_api = expected_api if expected_api is not None else os.environ.get("CTD_REHEARSAL_API", "chat")
+    effort = expected_effort if expected_effort is not None else os.environ.get("CTD_REHEARSAL_REASONING", "off")
     if expected_api == "responses" and summary.get("reasoning_effort") != effort:
         raise AssertionError("rehearsal used wrong reasoning setting")
     if summary.get("api", "chat") != expected_api:
@@ -32,7 +35,7 @@ def check(root: Path) -> dict:
     if inspected.get("complete") is not True or inspected.get("observed_trials") != 1:
         raise AssertionError("exactly one graded Harbor trial is necessary")
     trial = inspected["trials"][0]
-    if (trial["agent"], trial["provider"], trial["model"], trial["outcome"]) != ("pi", "openai", "test-model-1", "pass"):
+    if (trial["agent"], trial["provider"], trial["model"], trial["outcome"]) != ("pi", "openai", "test-model-1", expected_outcome):
         raise AssertionError("expected scripted repair was not verified")
     transcripts = list((root / "rehearsal-scripted").glob("*/agent/pi.txt"))
     if len(transcripts) != 1:
@@ -58,9 +61,10 @@ def check(root: Path) -> dict:
         "reasoning_effort": effort,
         "task_fixture": task_name,
         "opaque_reasoning_replay_checked": expected_api == "responses" and effort == "low",
-        "verifier_outcome": "pass", "gateway_calls": 2,
+        "verifier_outcome": expected_outcome, "gateway_calls": 2,
         "fictional_rate_card_usd": snapshot.settled,
         "harbor_trial_sha256": trial["raw_result_sha256"],
+        "harbor_task_checksum": trial["task_checksum"],
         "network_checks": list(checks),
     }
 

@@ -362,7 +362,10 @@ def execute_live(config: LiveConfig, *, acknowledged: bool = False) -> dict[str,
     })
     if c.repository_task_sha256 is not None:
         # Only the fixed synthetic repository fixture reaches this mock route.
-        environment.update(CTD_REHEARSAL_TASK="repository-addition-repair", CTD_REHEARSAL_REASONING="low")
+        scenario = os.environ.get("CTD_REPOSITORY_MOCK_SCENARIO", "repository-addition-repair")
+        if scenario not in ("repository-addition-repair", "repository-addition-incorrect"):
+            raise ReceiptError("unsupported fictional repository scenario")
+        environment.update(CTD_REHEARSAL_TASK=scenario, CTD_REHEARSAL_REASONING="low")
     command = c.command(task_copy=task_copy, token=gateway_token)
     outcome: dict[str, Any] = {
         "schema_version": 1,
