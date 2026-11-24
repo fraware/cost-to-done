@@ -8,9 +8,7 @@ produced eight uncertain gateway requests with provider HTTP 400 responses.
 The isolated diagnostic (45308445075) identified the rejected parameter as
 `reasoning_effort` for both models.
 
-The current gateway and the Pi adapter are explicitly configured for
-`openai-completions`, not `openai-responses`. A known Responses-only function
-tool model is now rejected in the CLI's zero-spend planning step, and requests
+The initial gateway and Pi adapter used Chat Completions. A separate native Responses route has since been implemented. A known Responses-only function tool model is rejected when the CLI plans the incompatible Chat Completions route, and requests
 using function tools on those routes are rejected **before ledger admission**.
 This avoids treating unsupported API configurations as poor model quality.
 
@@ -21,11 +19,7 @@ present, and Pi is configured with `reasoning_effort=off`. This is an
 explicit compatibility choice, not a quality- or capability-equivalent
 comparison against the GPT-6 Responses configuration.
 
-**Next interface milestone:** add a native Responses route with independent
-request validation, ledger admission, tool-call item exchange, usage accounting,
-and mock/real-provider conformance. The present Chat Completions gateway
-continues to support deterministic mock models and the GPT-5.4 compatibility
-trials. No public comparison across incompatible interfaces is justified.
+**Current interface status (24 November 2026):** [native Responses](native-responses.md) supports restricted request validation, ledger admission, tool-call item exchange and terminal usage accounting. The [bounded native paid trials](frontier-observations.md) completed for Terra and Sol. The Chat Completions gateway continues to support deterministic mock models and the GPT-5.4 compatibility trials. No public comparison across incompatible interfaces is justified.
 
 Sources:
 - https://developers.openai.com/api/docs/guides/deployment-checklist

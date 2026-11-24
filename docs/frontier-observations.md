@@ -29,3 +29,7 @@ reported settled local rate-card estimates, not invoice amounts. Independent
 verifier replay, actual billed costs and generalization beyond this public
 development task remain unverified. Do not interpret this table as a ranking
 or evidence of a general economic reversal.
+
+## Cost basis clarification
+
+The historical local meter prices all reported input tokens at the declared undiscounted input rate and reported output tokens at the declared output rate. It does not apply cache discounts, cache-write charges, long-context or service-tier adjustments, or invoice reconciliation. These estimates are not guaranteed upper bounds. Original observations and price schedules are unchanged.

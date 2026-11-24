@@ -19,7 +19,7 @@
 <div>
 <p class="eyebrow">Open-source accounting for AI work</p>
 <h1 id="hero-title">What does completed AI work actually cost?</h1>
-<p class="lead">Compare agent configurations by total expenditure per verified completion, including every failed attempt. Use your existing Harbor runs or inspect our recorded experiments.</p>
+<p class="lead">Compare agent configurations by total expenditure per verified completion, including recorded failed attempts. Use your existing Harbor runs or inspect our recorded experiments.</p>
 <div class="actions"><a class="button primary" href="#use">Get started</a><a class="button" href="calculator.html">Cost calculator</a></div>
 <p class="micro">Local reports. No API key for offline analysis. MIT licensed.</p>
 </div>
@@ -27,7 +27,7 @@
 <div class="panel-top"><strong>Estimated cost per completion</strong><span>18 paid trials</span></div>
 <div class="chart-row"><div class="chart-label"><span>GPT-6.1 Terra · 9/9</span><strong>$0.005076</strong></div><div class="chart-track" aria-hidden="true"><span class="chart-bar" style="width:25.77%"></span></div></div>
 <div class="chart-row"><div class="chart-label"><span>GPT-6.2 Sol · 9/9</span><strong>$0.019696</strong></div><div class="chart-track" aria-hidden="true"><span class="chart-bar" style="width:100%"></span></div></div>
-<div class="panel-bottom"><strong>3.88×</strong><p>Difference on three public repair tasks. Both configurations used low reasoning effort. Rate-card estimates, not invoices or a general ranking.</p><a href="#pilot">View the experiment and evidence</a></div>
+<div class="panel-bottom"><strong>3.88×</strong><p>Difference on three public repair tasks. Both configurations used low reasoning effort. Undiscounted token-rate estimates, not invoices or a general ranking.</p><a href="#pilot">View the experiment and evidence</a></div>
 </aside>
 </section>
 
@@ -47,7 +47,7 @@ cost-to-done demo --output demo.html</code></pre><p class="code-foot">Open demo.
 <div class="section-links"><a href="report.html">View synthetic sample report</a><a href="https://github.com/fraware/cost-to-done/blob/main/docs/compare-harbor.md">Harbor comparison guide</a><a href="https://github.com/fraware/cost-to-done#readme">Installation instructions</a><a href="https://github.com/fraware/cost-to-done/releases/tag/v0.1.0">v0.1.0 release</a></div>
 </section>
 
-<section class="section" aria-labelledby="external-title"><div class="section-header"><h2 id="external-title">Terminal-Bench 4.1 economics</h2><p>32 external submission records and 10,560 recorded trials, analyzed from pinned aggregate metadata.</p></div><p>GPT-6.2 Sol and Astra with Codex recorded 203 and 205 accepted trials, with reported inference costs per accepted trial of $1.72 and $6.87. Cost completeness and paired task support have not been independently verified.</p><div class="section-links"><a href="terminal-bench.html">Explore all 32 records</a><a href="data/terminal-bench-4-1.json">Download derived data</a></div></section>
+<section class="section" aria-labelledby="external-title"><div class="section-header"><h2 id="external-title">Terminal-Bench 4.1 economics</h2><p>32 external submission records and 10,560 recorded trials, analyzed from pinned aggregate metadata.</p></div><p>GPT-6.2 Sol and Astra with Codex recorded 203 and 205 accepted trials, with reported inference costs per accepted trial of $1.72 and $6.87. Cost completeness, retry expenditure and paired task support have not been independently verified.</p><div class="section-links"><a href="terminal-bench.html">Explore all 32 records</a><a href="data/terminal-bench-4-1.json">Download derived data</a></div></section>
 
 <section class="section" id="pilot" aria-labelledby="pilot-title">
 <div class="section-header"><h2 id="pilot-title">Experimental evidence</h2><p>Two separate real-provider cohorts recorded 24 November 2026 UTC. Each has its own experimental scope.</p></div>
@@ -57,11 +57,11 @@ cost-to-done demo --output demo.html</code></pre><p class="code-foot">Open demo.
 <tr><th scope="row">GPT-6.1 Terra</th><td class="num">9 / 9</td><td class="num">$0.045686</td><td class="num">$0.005076</td></tr>
 <tr><th scope="row">GPT-6.2 Sol</th><td class="num">9 / 9</td><td class="num">$0.177268</td><td class="num">$0.019696</td></tr>
 </tbody></table></div>
-<p class="note">All scheduled trials completed. The archive audit reconstructed the frozen plan and accounting from original evidence. No invoice reconciliation, independent replay of these candidates, or held-out generalization.</p>
+<p class="note">All scheduled trials completed. The archive audit reconstructed the frozen plan and accounting from original evidence. The estimates price reported input at undiscounted rates; provider-specific pricing adjustments are excluded. No invoice reconciliation, independent replay of these candidates, or held-out generalization.</p>
 <div class="section-links"><a href="https://github.com/fraware/cost-to-done/blob/main/docs/development-panel-observations.md">Experiment details</a><a href="https://github.com/fraware/cost-to-done/actions/runs/45317198614">Original execution</a><a href="https://github.com/fraware/cost-to-done/actions/runs/45320390734">Archive audit</a></div>
 </div>
 <div class="evidence-block" id="replay">
-<div class="evidence-title"><h3>Independent candidate replay</h3><span>One allocation repair per configuration</span></div>
+<div class="evidence-title"><h3>Fresh offline candidate replay</h3><span>One allocation repair per configuration</span></div>
 <div class="table-scroll" tabindex="0" role="region" aria-label="Separate real candidate replay results"><table class="evidence-table"><thead><tr><th scope="col">Configuration</th><th scope="col">Original</th><th scope="col">Fresh replay</th><th scope="col" class="num">Total estimate</th><th scope="col" class="num">Cost / completion</th></tr></thead><tbody>
 <tr><th scope="row">GPT-6.1 Terra</th><td>Fail</td><td>Fail</td><td class="num">$0.003234</td><td class="num">Undefined</td></tr>
 <tr><th scope="row">GPT-6.2 Sol</th><td>Pass</td><td>Pass</td><td class="num">$0.019944</td><td class="num">$0.019944</td></tr>

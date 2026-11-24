@@ -46,7 +46,7 @@ It attributes the **sum of all settled model requests** to one task attempt and 
 - The current gateway ledger lacks cryptographically signed request-to-trial attribution. Joining its entries to a Harbor trial depends on **dedicated-ledger isolation asserted by the operator**. Reuse of a gateway ledger across trials invalidates this attribution.
 - A nominally settled ledger reflects **rate-card estimates**, not actual provider bills. Real invoice reconciliation must separately match request-level usage and all billable categories.
 - Synthetic fixtures remain synthetic evidence even if a real agent client and executable verifier processed them. The importer does not attempt to infer whether the model endpoint was a mock or a commercial provider.
-- The two output files are each written using a replace operation; there is no atomic two-file transaction. Consumers must require both and independently verify their hashes and identities before publishing claims.
+- Each output is published exclusively using a hard link to a complete staged file; existing destinations are never overwritten. Multi-file publication has best-effort rollback, not a global filesystem transaction. Consumers must require both and independently verify their hashes and identities before publishing claims.
 
 The eventual public model leaderboard must apply stronger evidence rules before treating any result as independently reproduced.
 

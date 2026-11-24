@@ -35,3 +35,7 @@ Python process state; adversarial verifier integrity is not established.
 One trial per configuration supports neither a general ranking nor an
 estimate of success probability. Do not pool the cohorts after observing
 their outcomes.
+
+## Cost basis clarification
+
+The historical local meter prices all reported input tokens at the declared undiscounted input rate and reported output tokens at the declared output rate. It does not apply cache discounts, cache-write charges, long-context or service-tier adjustments, or invoice reconciliation. These estimates are not guaranteed upper bounds. Original observations and price schedules are unchanged.

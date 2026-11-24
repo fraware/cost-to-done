@@ -22,7 +22,7 @@ Usage is priced at the existing undiscounted rate card, not actual billing.
 Offline tests exercise the request contract, continuation, HTTP dispatch,
 accounting and rejection cases. No credentials or paid calls are used.
 The non-reasoning Pi wire and credential-isolated Harbor mock gates passed.
-The next milestone is a reasoning-enabled mock and controlled paid test.
+Subsequent reasoning-enabled mock and bounded paid tests completed; see [frontier observations](frontier-observations.md), [matched panel](development-panel-observations.md) and [separate replay](real-candidate-replay-observations.md).
 
 Provider references:
 - https://developers.openai.com/api/reference/resources/responses/methods/create
@@ -50,10 +50,7 @@ stream=true, store=false, max_output_tokens and function declarations. The
 second request contains function_call and function_call_output items. The
 metered route drops the client cache-routing key and defaults omitted tool
 strictness to false to preserve optional fields in Pi schemas. All input tokens
-continue to be priced at the undiscounted rate. Native reasoning and actual
-Harbor isolation need separate qualification. The internal LiveConfig selects
-the matching Harbor API format and gateway endpoint explicitly; the public CLI
-and paid smoke workflow have not been enabled for this new route.
+continue to be priced at the undiscounted rate. Native reasoning and actual Harbor isolation were qualified separately in subsequent controlled rehearsals. LiveConfig selects the matching Harbor API format and gateway endpoint explicitly; the public CLI exposes `--api responses` for qualified bundled tasks.
 
 ## Isolated native rehearsal gate
 
@@ -67,7 +64,7 @@ explicitly off for this protocol fixture; a thinking-enabled native replay and
 real-model paid trials require their own evidence. CI status is the source of
 truth for qualification; committing these fixtures does not establish success.
 
-## Confirmed non-reasoning execution and planned frontier pilot
+## Confirmed non-reasoning execution and frontier pilot
 
 The exact-head workflow 45313450820 passed both Chat and Responses jobs on
 a71cff1, each with two fictional calls, $0.0236 estimated settlement, verified
@@ -80,5 +77,4 @@ This establishes protocol replay only, not real encrypted reasoning validity.
 The paid job is restricted to trusted main, depends on the same workflow's
 successful mock gate, and runs one trial each of GPT-6.1 Terra and GPT-6.2 Sol.
 Each uses the same task, low effort, five turns, 4096 output token cap and USD 1
-estimated admission allowance. No provider hard cap is verified. No paid
-results are claimed until archived attestations are inspected.
+estimated admission allowance. No provider hard cap is verified. The completed paid pilot and its limitations are documented in [frontier observations](frontier-observations.md).

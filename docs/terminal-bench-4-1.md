@@ -34,7 +34,7 @@ executes upstream task source. The [CI workflow](https://github.com/fraware/cost
 
 ## Interpret carefully
 
-The upstream [metric implementation](https://github.com/harbor-framework/terminal-bench/blob/ad4c7aae7b6f1fd80e514dc85768e46d02661bef/leaderboard/src/leaderboard/core/metrics.py)
+The upstream [source selection](https://github.com/harbor-framework/terminal-bench/blob/ad4c7aae7b6f1fd80e514dc85768e46d02661bef/leaderboard/src/leaderboard/core/hub.py) uses latest-attempt rows. Earlier retry costs are not established by these aggregates. The upstream [metric implementation](https://github.com/harbor-framework/terminal-bench/blob/ad4c7aae7b6f1fd80e514dc85768e46d02661bef/leaderboard/src/leaderboard/core/metrics.py)
 sums trial cost fields and rounds to cents; absent cost fields contribute zero.
 Thus the derived ratio is **reported inference dollars per accepted trial**,
 not an audited cost-per-completion result. We have not established whether any
