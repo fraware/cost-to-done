@@ -1,58 +1,95 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#f3f0e9">
-<meta name="description" content="Cost to Done is an open-source effort to measure the real cost of verified AI work. Count retries, tool calls, failures and successful outcomes.">
-<title>Cost to Done — Price the result, not the token.</title>
-<style>
-:root{--paper:#f3f0e9;--ink:#191915;--muted:#666258;--line:#c6c0b6;--accent:#bd3b2d;--panel:#eae5dc}
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
-a{color:inherit}a:focus-visible{outline:3px solid var(--accent);outline-offset:4px}.wrap{width:min(1240px,calc(100% - 64px));margin:auto}
-nav{height:78px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:20px}
-.brand{display:flex;align-items:center;gap:11px;font-weight:800;letter-spacing:-.04em;text-decoration:none;font-size:18px}.brand i{font-size:21px;background:var(--accent);font-style:normal;color:#fff;width:34px;height:34px;display:grid;place-items:center}
-.links{display:flex;gap:28px;align-items:center}.links a{font-size:12px;font-weight:bold;letter-spacing:.02em;text-decoration:none}.links a:hover{text-decoration:underline}
-.hero{display:grid;grid-template-columns:1.25fr .75fr;border-bottom:1px solid var(--line);min-height:610px}
-.intro{padding:93px 80px 94px 0}.eyebrow{font:700 12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.08em;color:var(--accent);text-transform:uppercase}
-h1,h2,h3,p{margin-top:0}h1{font-family:Georgia,'Times New Roman',serif;font-size:clamp(64px,7.3vw,113px);line-height:.98;letter-spacing:-.065em;font-weight:400;margin:36px 0 32px}
-h1 em{font-style:normal;color:var(--accent)}.lead{max-width:530px;font-size:18px;line-height:1.55;color:#4c4942;margin-bottom:34px}
-.actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.action{padding:15px 21px;border:1px solid var(--ink);font-size:13px;font-weight:bold;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;min-height:48px}.action.primary{background:var(--ink);color:var(--paper)}.action:hover{background:var(--accent);border-color:var(--accent);color:white}
-.sheet{border-left:1px solid var(--line);padding:92px 0 60px 50px;display:flex;flex-direction:column;justify-content:space-between}
-.sheet header{border-top:3px solid var(--accent);padding-top:18px}.sheet small{font:700 11px/1.5 ui-monospace,Consolas,monospace;letter-spacing:.08em;color:var(--muted)}.sheet h2{font:400 38px/1.08 Georgia,serif;letter-spacing:-.04em;margin:20px 0}.sheet p{font-size:14px;line-height:1.6;color:var(--muted)}
-.stamp{background:var(--panel);padding:22px 24px;align-self:stretch}.stamp strong{display:block;font:700 32px/1.1 Georgia,serif;margin-top:9px}.stamp span{font:11px/1.4 ui-monospace,Consolas,monospace;letter-spacing:.05em;color:var(--muted)}
-.pilot-table{width:100%;border-collapse:collapse;font-size:14px;line-height:1.5;text-align:left}.pilot-table th,.pilot-table td{border-bottom:1px solid var(--line);padding:16px 12px;vertical-align:top}.pilot-table th:first-child,.pilot-table td:first-child{padding-left:0}.pilot-table th{font-size:12px;color:var(--muted)}.pilot-table td:last-child{font-family:ui-monospace,Consolas,monospace;white-space:nowrap}.pilot-scroll{overflow-x:auto}.pilot-note{font-size:14px;line-height:1.65;color:var(--muted);max-width:800px;margin:22px 0}.metrics{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--line)}.metric{padding:29px 20px 28px 0}.metric+.metric{padding-left:24px;border-left:1px solid var(--line)}.metric span{font:700 11px/1.4 ui-monospace,Consolas,monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}.metric strong{display:block;font:400 30px/1.15 Georgia,serif;letter-spacing:-.03em;margin-top:12px}
-.section{padding:100px 0;border-bottom:1px solid var(--line)}.section-top{display:flex;align-items:flex-start;justify-content:space-between;gap:48px}.section-top h2{font:400 clamp(40px,4.5vw,63px)/1.08 Georgia,serif;letter-spacing:-.055em;max-width:690px;margin:12px 0 42px}.section-top>p{max-width:330px;color:var(--muted);font-size:15px;line-height:1.65;margin-top:24px}
-.triptych{display:grid;grid-template-columns:repeat(3,1fr);border-top:2px solid var(--ink)}.tile{padding:35px 30px 30px 0}.tile+.tile{padding-left:29px;border-left:1px solid var(--line)}.count{font:12px ui-monospace,Consolas,monospace;color:var(--accent)}.tile h3{font:400 27px Georgia,serif;margin:23px 0 15px}.tile p{font-size:14px;line-height:1.65;color:var(--muted)}
-.example{display:grid;grid-template-columns:1fr 1fr;border-top:2px solid var(--ink)}.code{background:var(--ink);color:var(--paper);padding:37px 34px;overflow:auto}.code span{color:#e2a38d}.code pre{font:14px/1.85 ui-monospace,Consolas,monospace;white-space:pre-wrap;margin:0}.panel{background:var(--panel);padding:38px 40px}.panel .rule{display:flex;justify-content:space-between;gap:18px;border-bottom:1px solid var(--line);padding:18px 0;font-size:14px}.panel .rule strong{font-family:ui-monospace,Consolas,monospace}.panel p{margin:24px 0 0;line-height:1.6;font-size:13px;color:var(--muted)}
-.roadmap{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:2px solid var(--ink)}.phase{padding:23px 24px 8px 0}.phase+.phase{padding-left:20px;border-left:1px solid var(--line)}.phase small{font:700 11px ui-monospace,Consolas,monospace;color:var(--accent)}.phase h3{font:400 25px Georgia,serif;margin:20px 0 10px}.phase p{font-size:14px;line-height:1.6;color:var(--muted)}
-footer{padding:35px 0 60px;display:flex;align-items:center;justify-content:space-between;gap:20px;font-size:12px;color:var(--muted)}footer a{text-decoration:none;font-weight:bold;color:var(--ink)}
-@media(max-width:850px){.wrap{width:min(100% - 38px,1240px)}nav{height:68px}.links{gap:14px}.links a{font-size:11px}.hero{grid-template-columns:1fr}.intro{padding:70px 0}.sheet{border-left:0;border-top:1px solid var(--line);padding:35px 0;gap:26px}.metrics{grid-template-columns:1fr 1fr 1fr}.metric strong{font-size:24px}.section{padding:75px 0}.section-top{display:block}.section-top>p{margin:0 0 30px}.triptych,.roadmap{grid-template-columns:1fr 1fr}.tile:nth-child(3){border-left:0;padding-left:0;border-top:1px solid var(--line)}.example{grid-template-columns:1fr}}
-@media(max-width:510px){.links a:first-child{display:none}.brand{font-size:15px}.metric strong{font-size:20px}.metrics{grid-template-columns:1fr}.metric+.metric{border-left:0;border-top:1px solid var(--line);padding-left:0}.triptych,.roadmap{grid-template-columns:1fr}.tile,.tile+.tile,.phase,.phase+.phase{border-left:0;padding-left:0;border-top:1px solid var(--line)}.section-top h2{font-size:43px}.panel{padding:22px}.code{padding:26px}}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-</style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<meta name="description" content="Compare the cost of completed AI work. Open-source trial accounting, local reports and reproducible coding-agent experiments.">
+<title>Cost to Done — Measure the cost of completed AI work</title>
+<link rel="stylesheet" href="site.css">
 </head>
 <body>
-<div class="wrap">
-<nav><a class="brand" href="./"><i>✓</i> cost to done</a><div class="links"><a href="#use">Compare runs</a><a href="calculator.html">Cost calculator</a><a href="https://github.com/fraware/cost-to-done">GitHub ↗</a></div></nav>
-<main>
-<section class="hero"><div class="intro"><div class="eyebrow">Open-source accounting for AI work</div><h1>Price the<br><em>result.</em><br>Not the token.</h1><p class="lead">The cheapest model on a pricing page isn't necessarily the cheapest way to get something done. Measure the work that passes verification, including every failed attempt along the way.</p><div class="actions"><a class="action primary" href="#use">Compare existing Harbor runs ↗</a><a class="action" href="#pilot">See the 18-trial experiment</a></div></div><aside class="sheet"><header><small>THE QUESTION</small><h2>What did completion actually cost?</h2><p>A task, its acceptance tests, the complete execution history, and the invoice basis belong in the same evidence record.</p></header><div class="stamp"><span>CURRENT RELEASE STATUS</span><strong>18 paid trials</strong><p>Two native frontier configurations passed all nine scheduled trials each. Public development tasks; local rate-card estimates, not invoices.</p></div></aside></section>
-<div class="metrics"><div class="metric"><span>Headline unit</span><strong>USD / verified result</strong></div><div class="metric"><span>Accounting boundary</span><strong>Failures included</strong></div><div class="metric"><span>Verification policy</span><strong>Executable evidence</strong></div></div>
-<section class="section" id="pilot"><div class="section-top"><div><div class="eyebrow">Recorded 24 November 2026 (UTC)</div><h2>Same work. Different cost.</h2></div><p>18 real-provider trials. Three public repair tasks, three repetitions, two native Responses configurations with low reasoning effort.</p></div><div class="pilot-scroll" role="region" aria-label="Matched development-panel observations" tabindex="0"><table class="pilot-table"><thead><tr><th scope="col">Configuration</th><th scope="col">Harbor passes</th><th scope="col">Total estimate</th><th scope="col">Estimate / completion</th></tr></thead><tbody><tr><th scope="row">gpt-6.1-terra</th><td>9 / 9</td><td>$0.045686</td><td>$0.005076</td></tr><tr><th scope="row">gpt-6.2-sol</th><td>9 / 9</td><td>$0.177268</td><td>$0.019696</td></tr></tbody></table></div><p class="pilot-note">3.88× estimated cost per completion for Sol relative to Terra on these three development fixtures. All scheduled trials completed. Local rate-card estimates, not invoices. No independent replay of these candidates, held-out generalization or model ranking. The individual log observations and exact accounting are linked below.</p><div class="actions"><a class="action primary" href="https://github.com/fraware/cost-to-done/blob/main/docs/development-panel-observations.md">Inspect the experiment</a><a class="action" href="https://github.com/fraware/cost-to-done/actions/runs/45317198614">Original execution workflow</a><a class="action" href="https://github.com/fraware/cost-to-done/actions/runs/45320390734">Independent archive audit</a><a class="action" href="https://github.com/fraware/cost-to-done/blob/main/docs/real-candidate-replay-observations.md">Separate replay cohort</a></div></section>
-<section class="section" id="replay"><div class="section-top"><div><div class="eyebrow">Separate candidate-replay cohort</div><h2>Failure has a cost.</h2></div><p>One allocation repair per configuration with final source capture and fresh offline verification.</p></div><div class="pilot-scroll" role="region" aria-label="Real candidate replay observations" tabindex="0"><table class="pilot-table"><thead><tr><th scope="col">Configuration</th><th scope="col">Original verdict</th><th scope="col">Fresh replay</th><th scope="col">Local estimate</th><th scope="col">Cost / completion</th></tr></thead><tbody><tr><th scope="row">gpt-6.1-terra</th><td>Fail</td><td>Fail</td><td>$0.003234</td><td>Undefined</td></tr><tr><th scope="row">gpt-6.2-sol</th><td>Pass</td><td>Pass</td><td>$0.019944</td><td>$0.019944</td></tr></tbody></table></div><p class="pilot-note">The failed trial's expenditure is retained. Both recorded verdicts agreed in fresh verifier processes. These two episodes are separate from the earlier 18-trial experiment. Generated source bytes were not published; estimates are not invoices. No ranking is established.</p><div class="actions"><a class="action primary" href="https://github.com/fraware/cost-to-done/blob/main/docs/real-candidate-replay-observations.md">Inspect replay evidence</a><a class="action" href="https://github.com/fraware/cost-to-done/actions/runs/45320220501">Execution workflow</a></div></section><section class="section" id="method"><div class="section-top"><div><div class="eyebrow">Methodology before marketing</div><h2>Count everything.<br>Prove what finished.</h2></div><p>Cost to Done makes the trial the unit of accounting. The verifier defines success, and all measured expenditure contributes to cost per successful task.</p></div><div class="triptych"><div class="tile"><span class="count">01 / PIN</span><h3>Same task. Same tests.</h3><p>Keep input tasks, scoring definitions, trial counts, and execution settings pinned for each comparison.</p></div><div class="tile"><span class="count">02 / OBSERVE</span><h3>Failures cost money.</h3><p>Retain attempts, tokens, retries, tool use, elapsed time, infrastructure incidents, and reported charges.</p></div><div class="tile"><span class="count">03 / VERIFY</span><h3>Earn the pass.</h3><p>Grade real artifacts against a verifier the agent did not control. Attach complete receipts and uncertainty, with the trust boundary stated.</p></div></div></section>
-<section class="section" id="use"><div class="section-top"><div><div class="eyebrow">Usable today</div><h2>Two Harbor runs.<br>One local comparison.</h2></div><p>Bring two completed Harbor jobs. Compare task outcomes, elapsed time and available agent-reported costs side by side. No credentials or new inference requests.</p></div><div class="example"><div class="code"><pre><span># Python 3.11+ · offline inspection</span>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header"><nav class="container site-nav" aria-label="Main navigation">
+<a class="brand" href="./" aria-current="page">Cost to Done</a>
+<div class="nav-links"><a href="#use">Quick start</a><a href="#pilot">Evidence</a><a href="calculator.html">Calculator</a><a class="github" href="https://github.com/fraware/cost-to-done">GitHub</a></div>
+</nav></header>
+<main class="container" id="main">
+<section class="hero" aria-labelledby="hero-title">
+<div>
+<p class="eyebrow">Open-source accounting for AI work</p>
+<h1 id="hero-title">What does completed AI work actually cost?</h1>
+<p class="lead">Compare agent configurations by total expenditure per verified completion, including every failed attempt. Use your existing Harbor runs or inspect our recorded experiments.</p>
+<div class="actions"><a class="button primary" href="#use">Get started</a><a class="button" href="calculator.html">Cost calculator</a></div>
+<p class="micro">Local reports. No API key for offline analysis. MIT licensed.</p>
+</div>
+<aside class="evidence-panel" aria-label="Observed estimated cost per completion in the development panel">
+<div class="panel-top"><strong>Estimated cost per completion</strong><span>18 paid trials</span></div>
+<div class="chart-row"><div class="chart-label"><span>GPT-6.1 Terra · 9/9</span><strong>$0.005076</strong></div><div class="chart-track" aria-hidden="true"><span class="chart-bar" style="width:25.77%"></span></div></div>
+<div class="chart-row"><div class="chart-label"><span>GPT-6.2 Sol · 9/9</span><strong>$0.019696</strong></div><div class="chart-track" aria-hidden="true"><span class="chart-bar" style="width:100%"></span></div></div>
+<div class="panel-bottom"><strong>3.88×</strong><p>Difference on three public repair tasks. Both configurations used low reasoning effort. Rate-card estimates, not invoices or a general ranking.</p><a href="#pilot">View the experiment and evidence</a></div>
+</aside>
+</section>
+
+<section class="section" id="use" aria-labelledby="use-title">
+<div class="section-header"><h2 id="use-title">Start with your existing work.</h2><p>Python 3.11+. Offline inspection needs no provider credentials or Docker.</p></div>
+<div class="quick-grid">
+<div class="code-panel"><div class="code-head"><span>Install and explore</span><span>Synthetic demo</span></div><pre><code>git clone https://github.com/fraware/cost-to-done.git
+cd cost-to-done
+python -m venv .venv
+source .venv/bin/activate
 python -m pip install -e .
+cost-to-done demo --output demo.html</code></pre><p class="code-foot">Open demo.html in your browser. On Windows use .venv\Scripts\activate. Choose a fresh output filename.</p></div>
+<div class="code-panel"><div class="code-head"><span>Compare two Harbor jobs</span><span>Existing results</span></div><pre><code>cost-to-done compare-harbor \
+  fast=./jobs/fast \
+  careful=./jobs/careful \
+  --output comparison.html</code></pre><p class="code-foot">Matched task checksums, verifier outcomes, elapsed time and available agent-reported estimates.</p></div>
+</div>
+<div class="section-links"><a href="report.html">View synthetic sample report</a><a href="https://github.com/fraware/cost-to-done/blob/main/docs/compare-harbor.md">Harbor comparison guide</a><a href="https://github.com/fraware/cost-to-done#readme">Installation instructions</a></div>
+</section>
 
-<span># Compare existing Harbor jobs</span>
-cost-to-done compare-harbor \
-  fast=/path/to/harbor-job-a \
-  careful=/path/to/harbor-job-b \
-  --output comparison.html
+<section class="section" id="pilot" aria-labelledby="pilot-title">
+<div class="section-header"><h2 id="pilot-title">Experimental evidence</h2><p>Two separate real-provider cohorts recorded 24 November 2026 UTC. Each has its own experimental scope.</p></div>
+<div class="evidence-block">
+<div class="evidence-title"><h3>Matched development panel</h3><span>3 tasks · 3 repetitions · 2 configurations</span></div>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Matched development panel results"><table class="evidence-table"><thead><tr><th scope="col">Configuration</th><th scope="col" class="num">Passes</th><th scope="col" class="num">Total estimate</th><th scope="col" class="num">Cost / completion</th></tr></thead><tbody>
+<tr><th scope="row">GPT-6.1 Terra</th><td class="num">9 / 9</td><td class="num">$0.045686</td><td class="num">$0.005076</td></tr>
+<tr><th scope="row">GPT-6.2 Sol</th><td class="num">9 / 9</td><td class="num">$0.177268</td><td class="num">$0.019696</td></tr>
+</tbody></table></div>
+<p class="note">All scheduled trials completed. The archive audit reconstructed the frozen plan and accounting from original evidence. No invoice reconciliation, independent replay of these candidates, or held-out generalization.</p>
+<div class="section-links"><a href="https://github.com/fraware/cost-to-done/blob/main/docs/development-panel-observations.md">Experiment details</a><a href="https://github.com/fraware/cost-to-done/actions/runs/45317198614">Original execution</a><a href="https://github.com/fraware/cost-to-done/actions/runs/45320390734">Archive audit</a></div>
+</div>
+<div class="evidence-block" id="replay">
+<div class="evidence-title"><h3>Independent candidate replay</h3><span>One allocation repair per configuration</span></div>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Separate real candidate replay results"><table class="evidence-table"><thead><tr><th scope="col">Configuration</th><th scope="col">Original</th><th scope="col">Fresh replay</th><th scope="col" class="num">Total estimate</th><th scope="col" class="num">Cost / completion</th></tr></thead><tbody>
+<tr><th scope="row">GPT-6.1 Terra</th><td>Fail</td><td>Fail</td><td class="num">$0.003234</td><td class="num">Undefined</td></tr>
+<tr><th scope="row">GPT-6.2 Sol</th><td>Pass</td><td>Pass</td><td class="num">$0.019944</td><td class="num">$0.019944</td></tr>
+</tbody></table></div>
+<p class="note">Both verdicts agreed in fresh offline verifier processes. Terra's expenditure is retained despite zero completions. Generated source bytes were not published. These trials are separate from the 18-trial panel and establish no general ranking.</p>
+<div class="section-links"><a href="https://github.com/fraware/cost-to-done/blob/main/docs/real-candidate-replay-observations.md">Replay evidence</a><a href="https://github.com/fraware/cost-to-done/actions/runs/45320220501">Original execution</a></div>
+</div>
+</section>
 
-<span># Or inspect one job</span>
-cost-to-done report-harbor /path/to/job \
-  --output evidence.html
-</pre></div><div class="panel"><div class="eyebrow">Evidence safeguards</div><div class="rule"><span>Task IDs and checksums</span><strong>Matched</strong></div><div class="rule"><span>Missing costs</span><strong>Unavailable</strong></div><div class="rule"><span>Unverified rankings</span><strong>Withheld</strong></div><p>Harbor outcomes are recorded observations. Available costs are agent-reported estimates, not provider invoices. Incomplete jobs and mismatched tasks are rejected.</p><p><a href="https://github.com/fraware/cost-to-done/blob/main/docs/compare-harbor.md">Read the comparison guide →</a></p></div></div></section>
-<section class="section"><div class="section-top"><div><div class="eyebrow">Long-term direction</div><h2>Every agent. Every real task.<br>One honest receipt.</h2></div><p>Starting with repository repair, expanding into research and operational workflows. The goal is a portable, falsifiable standard for the economics of autonomous work.</p></div><div class="roadmap"><div class="phase"><small>00 / AVAILABLE</small><h3>Evidence core</h3><p>Schema validation, matched Harbor run inspection, offline HTML reports, and interactive cost analysis.</p></div><div class="phase"><small>01 / IN PROGRESS</small><h3>Real execution</h3><p>Matched 18-trial development panel completed. Real-candidate replay recorded agreement on both a pass and a failure in a separate cohort. Invoice reconciliation remains outstanding.</p></div><div class="phase"><small>02 / PLANNED</small><h3>Your repository</h3><p>Bring a task and tests; compare configurations under a strict local budget.</p></div><div class="phase"><small>03 / VISION</small><h3>Open cost standard</h3><p>Auditable benchmarks, portable receipts, cost projections, and independent replication.</p></div></div></section>
-<section class="section" style="padding-bottom:80px"><div class="eyebrow">Explore</div><h2 style="font:400 clamp(42px,5vw,70px)/1.1 Georgia,serif;letter-spacing:-.05em;max-width:850px;margin:20px 0 32px">Your benchmark is a purchase decision. Make it evidence-based.</h2><div class="actions"><a class="action primary" href="https://github.com/fraware/cost-to-done">View the repository ↗</a><a class="action" href="calculator.html">Try the cost calculator ↗</a></div></section>
-</main><footer><span>© 2026 Cost to Done · MIT License · No analytics or tracking</span><span><a href="https://github.com/fraware/cost-to-done">Source on GitHub ↗</a></span></footer></div>
-</body></html>
+<section class="section" id="method" aria-labelledby="method-title">
+<div class="section-header"><h2 id="method-title">How the accounting works</h2><p>Compare complete trials against a fixed task and retry policy.</p></div>
+<div class="method-grid"><div class="formula"><h3>Cost per verified completion</h3><div class="fraction" role="img" aria-label="Total expenditure across all completed trials divided by verified successful trials"><span>Total expenditure across all completed trials</span><span>Verified successful trials</span></div><p class="note">Zero successes: undefined. Failed attempts and failed trials count toward expenditure.</p></div>
+<dl class="rule-list"><div><dt>Match the task and acceptance criteria</dt><dd>Pin task identity, verifier, replication and execution settings.</dd></div><div><dt>Account for failed work</dt><dd>Retain all measured attempts. Separate estimated prices from billed charges.</dd></div><div><dt>Expose unresolved observations</dt><dd>Never impute missing cost as zero. Planned comparisons withhold ratios when support is incomplete.</dd></div></dl></div>
+<div class="section-links"><a href="https://github.com/fraware/cost-to-done/blob/main/docs/methodology.md">Methodology and receipt format</a><a href="https://github.com/fraware/cost-to-done/blob/main/docs/comparative-protocol.md">Comparative protocol</a></div>
+</section>
+
+<section class="section" id="repository" aria-labelledby="repo-title">
+<div class="section-header"><h2 id="repo-title">Bring your own repository task</h2><p>Package selected committed Python source and acceptance tests for Harbor.</p></div>
+<div class="repo-grid">
+<div class="code-panel"><div class="code-head"><span>Prepare a task</span><span>No inference</span></div><pre><code>cost-to-done prepare-repo-task \
+  --repository ./my-repo --name repair-addition \
+  --source app/calc.py --test acceptance/test_calc.py \
+  --instruction repair.md --output ./repair-task
+
+cost-to-done validate-repo-task ./repair-task</code></pre></div>
+<div class="repo-status"><h3>Current execution scope</h3><p>Committed-file packaging, starter/reference qualification and matched external-task gateway rehearsal are implemented.</p><p>External gateway tests use a fictional provider. The fixed public paid pilot has a separate maintainer authorization. Arbitrary paid repository execution is disabled.</p><div class="section-links"><a href="https://github.com/fraware/cost-to-done/blob/main/docs/repository-task.md">Repository task guide</a></div></div>
+</div>
+</section>
+</main>
+<footer class="container site-footer"><span>Cost to Done · MIT license · No analytics or tracking</span><span><a href="https://github.com/fraware/cost-to-done">Source</a> · <a href="https://github.com/fraware/cost-to-done/blob/main/CONTRIBUTING.md">Contribute</a></span></footer>
+</body>
+</html>

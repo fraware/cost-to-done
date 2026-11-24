@@ -1,0 +1,51 @@
+name: Public website browser checks
+on:
+  pull_request:
+    paths:
+      - 'docs/*.html'
+      - 'docs/*.css'
+      - 'scripts/check_website.cjs'
+      - '.github/workflows/website-checks.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/*.html'
+      - 'docs/*.css'
+      - 'scripts/check_website.cjs'
+      - '.github/workflows/website-checks.yml'
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Install pinned browser test dependency
+        run: |
+          npm install --no-save --package-lock=false playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Test static pages at four viewport sizes
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory docs > /tmp/ctd-http.log 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:8765/index.html >/dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/check_website.cjs
+      - name: Archive desktop and mobile screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: website-screenshots-${{ github.run_id }}
+          path: website-screenshots/
+          if-no-files-found: warn
+          retention-days: 14
