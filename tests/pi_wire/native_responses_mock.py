@@ -25,7 +25,11 @@ def shape(value):
     return type(value).__name__
 
 
-def events(response_id, item, *, tool, input_tokens=100, output_tokens=40):
+REASONING_ID = "rs_ctd_mock_reasoning"
+OPAQUE_REASONING = "mock-opaque-reasoning-item-for-replay"
+
+
+def events(response_id, item, *, tool, input_tokens=100, output_tokens=40, reasoning=False):
     model = {"id": response_id, "object": "response", "created_at": 0,
              "model": MODEL, "status": "in_progress", "output": [], "usage": None}
     initial = dict(item)
@@ -67,6 +71,33 @@ def events(response_id, item, *, tool, input_tokens=100, output_tokens=40):
                       "input_tokens_details": {"cached_tokens": 0},
                       "output_tokens_details": {"reasoning_tokens": 0}}}},
     ]
+    if reasoning:
+        if not tool:
+            raise ValueError("reasoning fixture precedes the tool call")
+        part = {"type": "summary_text", "text": "Scripted reasoning summary."}
+        initial_reason = {"id": REASONING_ID, "type": "reasoning", "summary": []}
+        final_reason = {**initial_reason, "summary": [part],
+                        "encrypted_content": OPAQUE_REASONING}
+        for value in values[2:]:
+            if "output_index" in value:
+                value["output_index"] += 1
+        values[2:2] = [
+            {"type": "response.output_item.added", "output_index": 0,
+             "item": initial_reason},
+            {"type": "response.reasoning_summary_part.added", "output_index": 0,
+             "item_id": REASONING_ID, "summary_index": 0,
+             "part": {"type": "summary_text", "text": ""}},
+            {"type": "response.reasoning_summary_text.delta", "output_index": 0,
+             "item_id": REASONING_ID, "summary_index": 0, "delta": part["text"]},
+            {"type": "response.reasoning_summary_text.done", "output_index": 0,
+             "item_id": REASONING_ID, "summary_index": 0, "text": part["text"]},
+            {"type": "response.reasoning_summary_part.done", "output_index": 0,
+             "item_id": REASONING_ID, "summary_index": 0, "part": part},
+            {"type": "response.output_item.done", "output_index": 0,
+             "item": final_reason},
+        ]
+        values[-1]["response"]["output"] = [final_reason, item]
+        values[-1]["response"]["usage"]["output_tokens_details"]["reasoning_tokens"] = 30
     return b"".join(b"event: " + v["type"].encode() + b"\ndata: " +
                     json.dumps({**v, "sequence_number": i}).encode() + b"\n\n"
                     for i, v in enumerate(values))

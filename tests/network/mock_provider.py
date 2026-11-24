@@ -41,7 +41,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             from mock_repair import native_scripted_reply
             try:
-                response = native_scripted_reply(body)
+                response = native_scripted_reply(body, reasoning=os.environ.get("CTD_REHEARSAL_REASONING") == "low")
             except (ValueError, TypeError):
                 self.send_error(422, 'invalid native tool exchange')
                 return

@@ -26,6 +26,15 @@ class SmokeAttestationTests(unittest.TestCase):
         self.assertEqual(result["gateway_recorded_calls"], 0)
         self.assertFalse(result["verifier_independently_reexecuted"])
 
+    def test_native_attestation_preserves_protocol_and_unknown_calls(self):
+        result = attestation({"api": "responses", "reasoning_effort": "low",
+                              "status": "incomplete_or_uncertain"}, "gpt-6.2-sol")
+        self.assertEqual(result["schema_version"], 2)
+        self.assertEqual(result["api"], "responses")
+        self.assertEqual(result["reasoning_effort"], "low")
+        self.assertFalse(result["ledger_observed"])
+        self.assertIsNone(result["gateway_recorded_calls"])
+
     def test_arbitrary_internal_status_is_not_publicly_trusted(self):
         result = attestation({"status": "secret", "trial": {"outcome": "pass"}}, "gpt-6.1-terra")
         self.assertEqual(result["trial_status"], "unknown")

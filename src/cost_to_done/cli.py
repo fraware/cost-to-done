@@ -64,7 +64,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--repo-root", type=Path, default=Path.cwd())
     p.add_argument("--task", type=Path, default=Path("tasks/allocation-repair"))
     p.add_argument("--jobs-dir", type=Path, default=Path("runs"))
-    p.add_argument("--model", required=True, help="Exact OpenAI Chat Completions model ID")
+    p.add_argument("--model", required=True, help="Exact OpenAI model ID")
+    p.add_argument("--api", choices=("chat", "responses"), default="chat")
+    p.add_argument("--reasoning-effort", choices=("off", "low", "medium", "high", "xhigh"), default="low")
     p.add_argument("--price-schedule", required=True, type=Path)
     p.add_argument("--provider-key-file", required=True, type=Path,
                    help="Private chmod-600 file outside the repository; never pass key contents")
@@ -141,7 +143,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "run-harbor-gateway":
             cfg = LiveConfig(args.repo_root, args.task, args.jobs_dir, args.model,
                              args.price_schedule, args.provider_key_file, args.budget_usd,
-                             args.job_name, args.max_turns, args.max_wall_seconds)
+                             args.job_name, args.max_turns, args.max_wall_seconds, args.api, args.reasoning_effort)
             result = execute_live(cfg, acknowledged=args.acknowledge_provider_limit) if args.execute else plan_live(cfg)
             print(json.dumps(result, indent=2))
             return 0 if result["status"] in ("plan_only", "completed_with_unverified_rate_card_estimate") else 2

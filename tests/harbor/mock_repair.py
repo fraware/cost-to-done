@@ -79,19 +79,27 @@ def scripted_reply(request: dict) -> tuple[dict, str]:
     }, "tool_calls"
 
 
-def native_scripted_reply(request: dict) -> bytes:
+def native_scripted_reply(request: dict, *, reasoning: bool = False) -> bytes:
     """Script the same independent-verifier repair over native Responses SSE."""
-    from native_responses_mock import events
+    from native_responses_mock import events, REASONING_ID, OPAQUE_REASONING
 
     items = request.get("input")
     if not isinstance(items, list) or not items or request.get("stream") is not True:
         raise ValueError("native rehearsal expects streamed item history")
     if request.get("store") is not False or "prompt_cache_key" in request:
         raise ValueError("native metering normalization missing")
+    if reasoning and (request.get("reasoning", {}).get("effort") != "low" or
+                      request.get("include") != ["reasoning.encrypted_content"]):
+        raise ValueError("missing native low-effort encrypted reasoning settings")
     outputs = [i for i in items if isinstance(i, dict) and i.get("type") == "function_call_output"]
     if outputs:
         if len(outputs) != 1 or outputs[0].get("call_id") != CALL_ID:
             raise ValueError("missing matched native tool result")
+        if reasoning:
+            reasoning_items = [i for i in items if isinstance(i, dict) and i.get("type") == "reasoning"]
+            if (len(reasoning_items) != 1 or reasoning_items[0].get("id") != REASONING_ID
+                    or reasoning_items[0].get("encrypted_content") != OPAQUE_REASONING):
+                raise ValueError("opaque reasoning item missing or changed")
         item = {"type": "message", "id": "msg_ctd_repair", "role": "assistant",
                 "status": "completed", "content": [
                     {"type": "output_text", "text": "The requested source change has been applied.",
@@ -104,4 +112,5 @@ def native_scripted_reply(request: dict) -> bytes:
     item = {"type": "function_call", "id": "fc_ctd_repair", "call_id": CALL_ID,
             "name": "write", "arguments": json.dumps({"path": "/app/allocate.py", "content": REPAIR_SOURCE}),
             "status": "completed"}
-    return events("resp_ctd_repair_1", item, tool=True, input_tokens=100, output_tokens=400)
+    return events("resp_ctd_repair_1", item, tool=True, input_tokens=100, output_tokens=400,
+                  reasoning=reasoning)
