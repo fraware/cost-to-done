@@ -16,6 +16,7 @@ import re
 import secrets
 import shutil
 import signal
+import sqlite3
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -401,29 +402,34 @@ def execute_live(config: LiveConfig, *, acknowledged: bool = False) -> dict[str,
         if not ledger_path.exists():
             raise ReceiptError("gateway ledger was not created; unknown expenditure")
         ledger = BudgetLedger(ledger_path)
-        snapshot = ledger.snapshot()
+        snapshot, entries = ledger.observation()
         outcome["gateway_snapshot"] = snapshot.to_dict()
-        outcome["gateway_entries"] = ledger.entries()
+        outcome["gateway_entries"] = entries
         if (snapshot.schedule_sha256 != PriceSchedule.load(c.price_schedule).digest
                 or snapshot.pending or snapshot.uncertain or snapshot.breached):
             outcome["status"] = "requires_financial_reconciliation"
-        elif not ledger.entries():
+        elif not entries:
             outcome["status"] = "no_metered_requests"
         else:
             outcome["status"] = "completed_with_unverified_rate_card_estimate"
-    except (ReceiptError, OSError, ValueError, UnicodeError) as exc:
+    except (ReceiptError, OSError, ValueError, UnicodeError, sqlite3.Error) as exc:
         outcome["status"] = "incomplete_or_uncertain"
-        outcome["error"] = str(exc)
+        outcome["error"] = "gateway ledger read failed" if isinstance(exc, sqlite3.Error) else str(exc)
         # Preserve any readable ledger even if Harbor fails before inspection.
         # Missing/corrupt ledger does not establish zero expenditure.
         try:
             ledger_path = evidence / "ledger.sqlite3"
             if ledger_path.is_file():
                 ledger = BudgetLedger(ledger_path)
-                outcome["gateway_snapshot"] = ledger.snapshot().to_dict()
-                outcome["gateway_entries"] = ledger.entries()
-        except (ReceiptError, OSError, ValueError):
-            pass
+                snapshot, entries = ledger.observation()
+                outcome["gateway_snapshot"] = snapshot.to_dict()
+                outcome["gateway_entries"] = entries
+        except (ReceiptError, OSError, ValueError, sqlite3.Error):
+            # Do not retain an incomplete financial observation or claim zero
+            # requests when the ledger could not be read.
+            outcome.pop("gateway_snapshot", None)
+            outcome.pop("gateway_entries", None)
+            outcome["ledger_read_failed"] = True
     result_path = session_dir / "run-summary.json"
     with result_path.open("x", encoding="utf-8") as output:
         json.dump(outcome, output, indent=2, sort_keys=True)

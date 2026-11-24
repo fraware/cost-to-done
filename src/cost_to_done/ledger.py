@@ -153,16 +153,23 @@ class BudgetLedger:
         assert totals is not None
         return (limit, *map(int, totals))
 
-    def snapshot(self) -> BudgetSnapshot:
-        """Return an exact, auditable accounting snapshot without API access."""
-        with self._transaction() as db:
-            limit, settled, reserved, pending, uncertain, overruns = self._summary(db)
+    def _snapshot(self, db: sqlite3.Connection) -> BudgetSnapshot:
+        limit, settled, reserved, pending, uncertain, overruns = self._summary(db)
         remaining = limit - settled - reserved
-        with self._transaction() as db:
-            schedule = db.execute("SELECT sha256 FROM rate_schedule WHERE id=1").fetchone()
+        schedule = db.execute("SELECT sha256 FROM rate_schedule WHERE id=1").fetchone()
         return BudgetSnapshot(_usd(limit), _usd(settled), _usd(reserved),
                               _usd(max(0, remaining)), remaining < 0 or overruns > 0,
                               pending, uncertain, schedule[0] if schedule else None)
+
+    def snapshot(self) -> BudgetSnapshot:
+        """Return an exact, auditable accounting snapshot without API access."""
+        with self._transaction() as db:
+            return self._snapshot(db)
+
+    def observation(self) -> tuple[BudgetSnapshot, list[dict[str, str | None]]]:
+        """Read the accounting snapshot and request records in one transaction."""
+        with self._transaction() as db:
+            return self._snapshot(db), self._entries(db)
 
     def reserve(self, request_id: str, maximum_usd: str) -> BudgetSnapshot:
         """Atomically admit a bounded request or reject it before forwarding."""
@@ -203,10 +210,14 @@ class BudgetLedger:
             db.execute("UPDATE requests SET actual=?, state='settled' WHERE id=?", (amount, request_id))
         return self.snapshot()
 
-    def entries(self) -> list[dict[str, str | None]]:
-        """Return minimal immutable accounting data without prompts or secrets."""
-        with self._transaction() as db:
-            rows = db.execute("SELECT id, maximum, actual, state FROM requests ORDER BY id").fetchall()
+    @staticmethod
+    def _entries(db: sqlite3.Connection) -> list[dict[str, str | None]]:
+        rows = db.execute("SELECT id, maximum, actual, state FROM requests ORDER BY id").fetchall()
         return [{"request_id": r[0], "reserved_max_usd": _usd(r[1]),
                  "actual_usd": _usd(r[2]) if r[2] is not None else None,
                  "state": r[3]} for r in rows]
+
+    def entries(self) -> list[dict[str, str | None]]:
+        """Return minimal immutable accounting data without prompts or secrets."""
+        with self._transaction() as db:
+            return self._entries(db)

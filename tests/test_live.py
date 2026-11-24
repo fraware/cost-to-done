@@ -260,3 +260,24 @@ class TestLiveFailureHandling(unittest.TestCase):
         t.price.unlink()
         with self.assertRaises((ReceiptError, OSError)):
             plan_live(t.c)
+
+class TestCorruptLedger(unittest.TestCase):
+    def test_corrupt_database_preserves_incomplete_summary(self):
+        t = LiveContractTests()
+        t.setUp()
+        self.addCleanup(t.temp.cleanup)
+        def fake_run(cmd, *, env, log_file, timeout):
+            (Path(env["CTD_EVIDENCE_DIR"]) / "ledger.sqlite3").write_bytes(b"not a sqlite database")
+            return 0
+        result = {"complete": True, "observed_trials": 1, "trials": [
+            {"agent": "pi", "model": "test-model-1", "provider": "openai", "outcome": "pass"}]}
+        with mock.patch("cost_to_done.live._preflight"), \
+                mock.patch("cost_to_done.live._audit_compose_before_live", return_value={"status": "passed"}), \
+                mock.patch("cost_to_done.live._run_process", side_effect=fake_run), \
+                mock.patch("cost_to_done.live.inspect_harbor_job", return_value=result):
+            observed = execute_live(t.c, acknowledged=True)
+        self.assertEqual(observed["status"], "incomplete_or_uncertain")
+        self.assertTrue(observed["ledger_read_failed"])
+        self.assertNotIn("gateway_snapshot", observed)
+        self.assertNotIn("gateway_entries", observed)
+        self.assertTrue(Path(observed["summary_file"]).exists())
