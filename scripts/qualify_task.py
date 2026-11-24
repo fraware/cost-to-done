@@ -1,4 +1,4 @@
-"""Qualify the bundled trusted repair task without container dependencies.
+"""Qualify a bundled single-module trusted repair task without containers.
 
 Runs the unchanged starter and the withheld reference in *separate temporary
 worktrees*. This is a local verifier check, not a Harbor run or a security
@@ -43,7 +43,10 @@ def run_verifier(worktree: Path, tests: Path) -> subprocess.CompletedProcess[str
 def qualify(task: Path) -> dict[str, object]:
     """Ensure the baseline fails and the reference passes independently."""
     task = task.resolve(strict=True)
-    starter = task / "environment" / "allocate.py"
+    starters = sorted((task / "environment").glob("*.py"))
+    if len(starters) != 1:
+        raise ValueError("expected exactly one Python starter module")
+    starter = starters[0]
     tests = task / "tests" / "test_state.py"
     solution = task / "solution" / "solve.sh"
     for file in (starter, tests, solution):
@@ -54,8 +57,8 @@ def qualify(task: Path) -> dict[str, object]:
         second = Path(scratch) / "reference"
         first.mkdir()
         second.mkdir()
-        shutil.copyfile(starter, first / "allocate.py")
-        shutil.copyfile(starter, second / "allocate.py")
+        shutil.copyfile(starter, first / starter.name)
+        shutil.copyfile(starter, second / starter.name)
         baseline = run_verifier(first, task / "tests")
         if baseline.returncode == 0:
             raise RuntimeError("qualification failed: unchanged starter unexpectedly passed")

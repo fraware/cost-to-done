@@ -8,7 +8,8 @@ import os
 import sys
 from pathlib import Path
 
-from .core import ReceiptError, analyze, read_trials
+from .core import ReceiptError, analyze, parse_trial, read_trials
+from .demo import demo_rows
 from .live import LiveConfig, execute_live, plan_live
 from .execute import Launch, execute, plan
 from .evidence import EvidenceRequest, write_evidence_receipt
@@ -31,6 +32,8 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--output", type=Path, default=Path("report.html"))
             p.add_argument("--title", default="Evaluation report")
             p.add_argument("--demo", action="store_true", help="Mark report as synthetic example; for bundled fixture only")
+    p = subs.add_parser("demo", help="Generate a clearly labeled synthetic report; no API key or repository needed")
+    p.add_argument("--output", type=Path, default=Path("cost-to-done-demo.html"))
     p = subs.add_parser("import-harbor", help="Normalize pinned Harbor trial results (estimates, not invoices)")
     p.add_argument("manifest", type=Path)
     p.add_argument("--output", required=True, type=Path)
@@ -93,6 +96,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("ledger", type=Path)
     args = parser.parse_args(argv)
     try:
+        if args.command == "demo":
+            write_report(analyze([parse_trial(row) for row in demo_rows()]), args.output,
+                         title="Synthetic comparison", demo=True)
+            print(f"Synthetic demonstration (no measured model results): {args.output}")
+            return 0
         if args.command == "gateway-status":
             ledger = BudgetLedger(args.ledger)
             print(json.dumps({"snapshot": ledger.snapshot().to_dict(), "entries": ledger.entries()}, indent=2))

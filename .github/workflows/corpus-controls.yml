@@ -1,0 +1,52 @@
+name: Expanded corpus task qualification
+on:
+  push:
+    paths:
+      - 'tasks/interval-union-repair/**'
+      - 'tasks/dependency-order-repair/**'
+      - 'scripts/qualify_task.py'
+      - 'scripts/check_harbor_controls.py'
+      - '.github/workflows/corpus-controls.yml'
+  pull_request:
+    paths:
+      - 'tasks/interval-union-repair/**'
+      - 'tasks/dependency-order-repair/**'
+      - 'scripts/qualify_task.py'
+      - '.github/workflows/corpus-controls.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [interval-union-repair, dependency-order-repair]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Verify local negative and positive controls
+        run: python scripts/qualify_task.py "tasks/${{ matrix.task }}" --output qualification.json
+      - name: Install pinned Harbor
+        run: python -m pip install 'harbor==0.27.0'
+      - name: Run actual Harbor controls
+        run: |
+          harbor run --path "tasks/${{ matrix.task }}" --agent nop --job-name controls-nop --jobs-dir control-jobs --n-concurrent 1
+          harbor run --path "tasks/${{ matrix.task }}" --agent oracle --job-name controls-oracle --jobs-dir control-jobs --n-concurrent 1
+          python scripts/check_harbor_controls.py --nop control-jobs/controls-nop --oracle control-jobs/controls-oracle > harbor-control-summary.json
+          cat harbor-control-summary.json
+      - name: Archive control evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: task-controls-${{ matrix.task }}-${{ github.run_id }}
+          path: |
+            qualification.json
+            harbor-control-summary.json
+            control-jobs/
+          if-no-files-found: warn
+          retention-days: 30

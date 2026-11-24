@@ -43,6 +43,9 @@ python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 python -m pip install -e .
 
+# One-command, offline synthetic demo; works from an installed wheel too.
+cost-to-done demo --output cost-to-done-demo.html
+
 python examples/generate_synthetic.py
 cost-to-done validate examples/synthetic-trials.jsonl
 cost-to-done report examples/synthetic-trials.jsonl \
