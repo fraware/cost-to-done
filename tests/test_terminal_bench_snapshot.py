@@ -34,6 +34,8 @@ class AggregateTests(unittest.TestCase):
         row = extract("x", "blob", record(successes=1, n_trials=2, trials=["a", "a"]))
         self.assertEqual(row["state"], "trial_identifier_mismatch")
         self.assertIsNone(row["reported_inference_cost_per_success_usd"])
+        malformed = extract("x", "blob", record(successes=1, n_trials=2, trials=["a", {}]))
+        self.assertEqual(malformed["state"], "trial_identifier_mismatch")
 
     def test_wrong_target_and_duplicate_json(self):
         self.assertIsNone(extract("x", "blob", b'{"leaderboard":"4-0-0"}'))

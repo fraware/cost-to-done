@@ -4,15 +4,21 @@ on:
     paths:
       - '.github/workflows/terminal-bench-snapshot.yml'
       - 'scripts/analyze_terminal_bench.py'
+      - 'scripts/check_terminal_bench_publication.py'
       - 'tests/test_terminal_bench_snapshot.py'
       - 'docs/terminal-bench-4-1.md'
+      - 'docs/data/terminal-bench-4-1.json'
+      - 'docs/terminal-bench.html'
   push:
     branches: [main]
     paths:
       - '.github/workflows/terminal-bench-snapshot.yml'
       - 'scripts/analyze_terminal_bench.py'
+      - 'scripts/check_terminal_bench_publication.py'
       - 'tests/test_terminal_bench_snapshot.py'
       - 'docs/terminal-bench-4-1.md'
+      - 'docs/data/terminal-bench-4-1.json'
+      - 'docs/terminal-bench.html'
 permissions:
   contents: read
 jobs:
@@ -39,6 +45,7 @@ jobs:
         run: |
           python -m unittest discover -s tests -p test_terminal_bench_snapshot.py -v
           python -m scripts.analyze_terminal_bench --upstream-checkout upstream --output "$RUNNER_TEMP/terminal-bench-4-1.json"
+          python -m scripts.check_terminal_bench_publication "$RUNNER_TEMP/terminal-bench-4-1.json"
       - uses: actions/upload-artifact@v7
         with:
           name: terminal-bench-4-1-aggregate-${{ github.run_id }}

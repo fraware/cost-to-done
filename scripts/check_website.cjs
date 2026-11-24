@@ -26,7 +26,7 @@ async function main() {
         }
         return route.continue();
       });
-      for (const file of ['index.html','calculator.html','report.html']) {
+      for (const file of ['index.html','calculator.html','report.html','terminal-bench.html']) {
         const page = await context.newPage();
         const errors = [];
         page.on('pageerror', error => errors.push(String(error)));
@@ -64,6 +64,11 @@ async function main() {
           assert.equal(await first.inputValue(),'0.05');
           assert.equal(await page.locator('#max').inputValue(),'3');
           assert.equal(await page.locator('.winner').count(),1);
+        } else if(file==='terminal-bench.html'){
+          assert.equal(await page.locator('#external-results tbody tr').count(),32);
+          assert.ok((await page.locator('#external-results').innerText()).includes('$1,011.52'));
+          assert.ok((await page.locator('#external-results').innerText()).includes('Undefined'));
+          assert.ok((await page.locator('.notice').innerText()).includes('Third-party reported aggregate data'));
         } else {
           assert.equal(await page.locator('tbody tr').count(),5);
           assert.ok((await page.locator('.notice').innerText()).includes('Synthetic data only'));

@@ -140,7 +140,7 @@ def extract(name: str, blob: str, raw: bytes) -> dict | None:
         state = "zero_reported_cost_unverified"
     elif not s:
         state = "zero_successes"
-    elif ids_unique is False or (ids_count is not None and ids_count != n):
+    elif ids is not None and (ids_unique is not True or ids_count != n):
         state = "trial_identifier_mismatch"
     reported_ratio = ratio(cost, s, n) if state == "reported_aggregate_only" else None
     return {

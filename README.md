@@ -29,7 +29,11 @@ cost-to-done compare-harbor \
 
 The comparison checks matching task checksums and shows verifier outcomes, elapsed time and available agent-reported cost estimates. Missing costs stay unavailable. See [matched Harbor comparison](docs/compare-harbor.md).
 
-## What real experiments have shown
+## External benchmark analysis
+
+[Terminal-Bench 4.1: reported inference cost per accepted trial](https://fraware.github.io/cost-to-done/terminal-bench.html). Recomputed from all 32 explicitly targeted 4.1 submission records at a pinned upstream commit, covering 10,560 recorded trials. Sol/Codex and Astra/Codex recorded 203 and 205 accepted trials respectively, with reported inference cost per accepted trial of $1.72 and $6.87. The aggregate ratios are third-party estimates with unverified trial-cost completeness; they are not our own executions, invoices, or a model ranking. See [source and method](docs/terminal-bench-4-1.md).
+
+## What our real experiments have shown
 
 ### 18 paid trials, three public repair tasks
 
