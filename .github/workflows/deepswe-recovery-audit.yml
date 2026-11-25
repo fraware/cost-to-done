@@ -5,6 +5,7 @@ on:
       - 'scripts/audit_deepswe_recovery.py'
       - '.github/workflows/deepswe-recovery-audit.yml'
       - 'docs/deepswe-recovery-audit.md'
+      - 'docs/data/deepswe-recovery.json'
   workflow_dispatch:
 permissions:
   contents: read
@@ -27,6 +28,8 @@ jobs:
           sha256sum "$RUNNER_TEMP/deepswe.json"
       - name: Reconstruct outcome and recovery accounting
         run: python -m scripts.audit_deepswe_recovery "$RUNNER_TEMP/deepswe.json" --output "$RUNNER_TEMP/deepswe-audit.json"
+      - name: Compare committed derived report byte for byte
+        run: cmp docs/data/deepswe-recovery.json "$RUNNER_TEMP/deepswe-audit.json"
       - name: Archive derived report only
         uses: actions/upload-artifact@v7
         with:
