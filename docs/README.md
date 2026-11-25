@@ -23,6 +23,7 @@ These cohorts are distinct. All monetary observations are local rate-card estima
 | Matched development panel | [18 paid trials](development-panel-observations.md) |
 | Independent process replay | [Two separate paid trials](real-candidate-replay-observations.md) |
 | External repository mock controls | [Preparation and matched rehearsal](repository-task.md) |
+| Public upstream task controls | [Four CPython repairs and prospective evidence review](external-corpus-controls.md) |
 | External public benchmark | [Terminal-Bench 4.1 aggregate analysis](terminal-bench-4-1.md) |
 
 ## Execution and reproducibility
@@ -33,6 +34,7 @@ Read these guides before using paid or containerized execution.
 - [OpenAI credential preflight](openai-access.md)
 - [Model compatibility](model-compatibility.md)
 - [Comparative protocol](comparative-protocol.md)
+- [Prospective flagship design](flagship-design.md)
 - [Candidate capture and replay](candidate-replay.md)
 - [First task and control design](first-experiment.md)
 - [Real-provider smoke protocol](real-model-smoke.md)
