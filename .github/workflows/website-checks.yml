@@ -4,6 +4,8 @@ on:
     paths:
       - 'docs/*.html'
       - 'docs/*.css'
+      - 'docs/*.js'
+      - 'docs/data/*.json'
       - 'scripts/check_website.cjs'
       - '.github/workflows/website-checks.yml'
   push:
@@ -11,6 +13,8 @@ on:
     paths:
       - 'docs/*.html'
       - 'docs/*.css'
+      - 'docs/*.js'
+      - 'docs/data/*.json'
       - 'scripts/check_website.cjs'
       - '.github/workflows/website-checks.yml'
 permissions:
