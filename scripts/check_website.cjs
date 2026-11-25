@@ -26,7 +26,7 @@ async function main() {
         }
         return route.continue();
       });
-      for (const file of ['index.html','calculator.html','report.html','terminal-bench.html']) {
+      for (const file of ['index.html','calculator.html','report.html','terminal-bench.html','deepswe.html']) {
         const page = await context.newPage();
         const errors = [];
         page.on('pageerror', error => errors.push(String(error)));
@@ -69,6 +69,47 @@ async function main() {
           assert.ok((await page.locator('#external-results').innerText()).includes('$1,011.52'));
           assert.ok((await page.locator('#external-results').innerText()).includes('Undefined'));
           assert.ok((await page.locator('.notice').innerText()).includes('Third-party reported aggregate data'));
+          await page.locator('#benchmark-filters').waitFor({state:'visible'});
+          const visible = page.locator('#external-results tbody tr:visible');
+          assert.equal(await visible.count(),32);
+          await page.locator('#benchmark-query').fill('gpt-6.2');
+          assert.equal(await visible.count(),2);
+          await page.locator('#benchmark-cost').fill('2');
+          assert.equal(await visible.count(),1);
+          assert.ok((await visible.first().innerText()).includes('openai/gpt-6.2-sol'));
+          await page.locator('#benchmark-success').fill('100');
+          assert.equal(await visible.count(),0);
+          await page.getByRole('button',{name:'Reset filters'}).click();
+          assert.equal(await visible.count(),32);
+          await page.locator('#benchmark-agent').selectOption('codex');
+          assert.ok(await visible.count()>0 && await visible.count()<32);
+          await page.getByRole('button',{name:'Copy filtered link'}).click();
+          assert.equal(new URL(page.url()).searchParams.get('agent'),'codex');
+          const count = await visible.count();
+          await page.reload({waitUntil:'networkidle'});
+          await page.locator('#benchmark-filters').waitFor({state:'visible'});
+          assert.equal(await visible.count(),count);
+          await page.getByRole('button',{name:'Reset filters'}).click();
+          assert.equal(await visible.count(),32);
+        } else if(file==='deepswe.html'){
+          const response = await page.request.get(base+'/data/deepswe-recovery.json');
+          assert.ok(response.ok());
+          const evidence = await response.json();
+          assert.equal(evidence.assignment_records,339);
+          assert.equal(evidence.comparative_cost_ratio_available,false);
+          const rendered = page.locator('#deepswe-outcomes tbody tr');
+          assert.equal(await rendered.count(),evidence.rows.length);
+          const money = value => value===null ? 'Unavailable' :
+            new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(value));
+          const outcomes = counts => [counts.pass,counts.fail,counts.ungraded].join(' / ');
+          for(const [i,row] of evidence.rows.entries()){
+            const ratio = row.reported_cost_per_final_pass;
+            const cells = [row.agent,String(row.assigned_slots),outcomes(row.original_outcomes),
+              outcomes(row.final_outcomes),money(row.recorded_model_spend_usd),
+              ratio===null ? 'Unavailable' : money(Number(ratio.numerator_usd)/ratio.denominator)];
+            assert.deepEqual(await rendered.nth(i).locator('th,td').allTextContents(),cells);
+          }
+          assert.ok((await page.locator('.notice').innerText()).includes('No comparative cost ranking'));
         } else {
           assert.equal(await page.locator('tbody tr').count(),5);
           assert.ok((await page.locator('.notice').innerText()).includes('Synthetic data only'));
