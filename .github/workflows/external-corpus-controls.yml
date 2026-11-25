@@ -12,7 +12,17 @@ permissions:
 jobs:
   qualify:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        case:
+          - cpython-statistics-92531
+          - cpython-ipaddress-110196
+          - cpython-fractions-119189
+          - cpython-ipaddress-117566
+    env:
+      CTD_CASE: ${{ matrix.case }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -25,24 +35,22 @@ jobs:
           python -m pip install 'harbor==0.27.0'
           python -m pip install -e .
       - name: Retrieve pinned public blobs and check local regression controls
-        run: python -m scripts.prepare_external_controls "$RUNNER_TEMP/external-controls"
+        run: python -m scripts.prepare_external_controls "$RUNNER_TEMP/external-controls" "$CTD_CASE"
       - name: Run Harbor no-model controls and bind qualification receipts
         run: |
           set -euo pipefail
-          for name in cpython-statistics-92531 cpython-ipaddress-110196 cpython-fractions-119189 cpython-ipaddress-117566; do
-            base="$RUNNER_TEMP/external-controls/$name"
-            for role in starter reference; do
-              cost-to-done validate-repo-task "$base/$role"
-              harbor run --path "$base/$role" --agent nop --job-name "$role" --jobs-dir "$base/jobs" --n-concurrent 1 --n-attempts 1
-            done
-            cost-to-done qualify-repo-task --starter "$base/starter" --reference "$base/reference" --starter-job "$base/jobs/starter" --reference-job "$base/jobs/reference" --output "$base/qualification.json"
-            cat "$base/provenance.json" "$base/qualification.json"
+          base="$RUNNER_TEMP/external-controls/$CTD_CASE"
+          for role in starter reference; do
+            cost-to-done validate-repo-task "$base/$role"
+            harbor run --path "$base/$role" --agent nop --job-name "$role" --jobs-dir "$base/jobs" --n-concurrent 1 --n-attempts 1
           done
+          cost-to-done qualify-repo-task --starter "$base/starter" --reference "$base/reference" --starter-job "$base/jobs/starter" --reference-job "$base/jobs/reference" --output "$base/qualification.json"
+          cat "$base/provenance.json" "$base/qualification.json"
       - name: Archive public control evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: upstream-controls-${{ github.run_id }}
+          name: upstream-controls-${{ matrix.case }}-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/external-controls/*/provenance.json
             ${{ runner.temp }}/external-controls/*/qualification.json
