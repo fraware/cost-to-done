@@ -1,0 +1,73 @@
+name: Fixed upstream development panel
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/upstream-paid-pilot.yml'
+      - 'src/cost_to_done/upstream_pilot.py'
+      - 'src/cost_to_done/live.py'
+      - 'scripts/run_upstream_pilot.py'
+      - 'scripts/prepare_external_controls.py'
+      - 'tests/test_upstream_pilot.py'
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type RUN-UPSTREAM-16 to authorize a new 16-trial panel'
+        required: true
+        type: string
+      provider_limit_reviewed:
+        description: 'I inspected and configured separate provider-side financial controls'
+        required: true
+        default: false
+        type: boolean
+permissions:
+  contents: read
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install pinned Harbor and local package
+        run: |
+          python -m pip install 'harbor==0.27.0'
+          python -m pip install -e .
+      - name: Prepare exact public tasks and qualify fresh starter/reference controls
+        run: |
+          set -euo pipefail
+          python -m scripts.prepare_external_controls "$RUNNER_TEMP/upstream-controls"
+          for name in cpython-statistics-92531 cpython-ipaddress-110196 cpython-fractions-119189 cpython-ipaddress-117566; do
+            base="$RUNNER_TEMP/upstream-controls/$name"
+            for role in starter reference; do
+              harbor run --path "$base/$role" --agent nop --job-name "$role" --jobs-dir "$base/jobs" --n-concurrent 1 --n-attempts 1
+            done
+            cost-to-done qualify-repo-task --starter "$base/starter" --reference "$base/reference" --starter-job "$base/jobs/starter" --reference-job "$base/jobs/reference" --output "$base/qualification.json"
+          done
+      - name: Freeze matched plan and stage every episode without a provider credential
+        run: >-
+          python -m scripts.run_upstream_pilot "$GITHUB_WORKSPACE"
+          "$RUNNER_TEMP/upstream-controls" "$RUNNER_TEMP/upstream-preflight"
+      - name: Execute new paid panel only after explicit canonical main dispatch
+        if: github.event_name == 'workflow_dispatch' && github.repository == 'fraware/cost-to-done' && github.ref == 'refs/heads/main' && github.run_attempt == '1' && inputs.confirm == 'RUN-UPSTREAM-16' && inputs.provider_limit_reviewed == true
+        env:
+          CTD_UPSTREAM_PILOT_AUTHORIZED: '1'
+          CTD_OPENAI_SECRET: ${{ secrets.OPENAI_API_KEY }}
+        run: >-
+          python -m scripts.run_upstream_pilot "$GITHUB_WORKSPACE"
+          "$RUNNER_TEMP/upstream-controls" "$RUNNER_TEMP/upstream-paid" --execute
+      - name: Archive redacted prospective plan and qualification or trial records
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: upstream-development-panel-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/upstream-controls/*/provenance.json
+            ${{ runner.temp }}/upstream-controls/*/qualification.json
+            ${{ runner.temp }}/upstream-preflight/*.json
+            ${{ runner.temp }}/upstream-paid/*.json
+          if-no-files-found: warn
+          retention-days: 30
