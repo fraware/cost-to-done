@@ -28,7 +28,7 @@ jobs:
           cd "$RUNNER_TEMP/new-user"
           python -m venv .venv
           source .venv/bin/activate
-          python -m pip install --no-cache-dir --no-deps 'https://github.com/fraware/cost-to-done/releases/download/v0.1.0/cost_to_done-0.1.0-py3-none-any.whl'
+          python -m pip install 'https://github.com/fraware/cost-to-done/releases/download/v0.1.0/cost_to_done-0.1.0-py3-none-any.whl'
           python -m pip check
           python -c 'from importlib.metadata import version; assert version("cost-to-done") == "0.1.0"'
           cost-to-done demo --output demo.html
