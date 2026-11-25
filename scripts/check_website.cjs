@@ -69,6 +69,28 @@ async function main() {
           assert.ok((await page.locator('#external-results').innerText()).includes('$1,011.52'));
           assert.ok((await page.locator('#external-results').innerText()).includes('Undefined'));
           assert.ok((await page.locator('.notice').innerText()).includes('Third-party reported aggregate data'));
+          await page.locator('#benchmark-filters').waitFor({state:'visible'});
+          const visible = page.locator('#external-results tbody tr:visible');
+          assert.equal(await visible.count(),32);
+          await page.locator('#benchmark-query').fill('gpt-6.2');
+          assert.equal(await visible.count(),2);
+          await page.locator('#benchmark-cost').fill('2');
+          assert.equal(await visible.count(),1);
+          assert.ok((await visible.first().innerText()).includes('openai/gpt-6.2-sol'));
+          await page.locator('#benchmark-success').fill('100');
+          assert.equal(await visible.count(),0);
+          await page.getByRole('button',{name:'Reset filters'}).click();
+          assert.equal(await visible.count(),32);
+          await page.locator('#benchmark-agent').selectOption('codex');
+          assert.ok(await visible.count()>0 && await visible.count()<32);
+          await page.getByRole('button',{name:'Copy filtered link'}).click();
+          assert.equal(new URL(page.url()).searchParams.get('agent'),'codex');
+          const count = await visible.count();
+          await page.reload({waitUntil:'networkidle'});
+          await page.locator('#benchmark-filters').waitFor({state:'visible'});
+          assert.equal(await visible.count(),count);
+          await page.getByRole('button',{name:'Reset filters'}).click();
+          assert.equal(await visible.count(),32);
         } else {
           assert.equal(await page.locator('tbody tr').count(),5);
           assert.ok((await page.locator('.notice').innerText()).includes('Synthetic data only'));
