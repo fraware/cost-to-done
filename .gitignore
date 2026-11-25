@@ -27,3 +27,6 @@ jobs/
 
 /upstream/
 /terminal-bench-4-1.json
+
+# Verified build-time site fonts
+/docs/fonts/*.woff2
