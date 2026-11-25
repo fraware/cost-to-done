@@ -117,8 +117,12 @@ class Regression(unittest.TestCase):
         self.assertIs(base ** Exponent(), base)
 
     def test_not_implemented(self):
-        self.assertIs(subject.Fraction(3, 2).__pow__(object()),
-                      NotImplemented)
+        # A direct dunder call used to raise instead of deferring.
+        try:
+            result = subject.Fraction(3, 2).__pow__(object())
+        except TypeError:
+            self.fail("unsupported operand raised instead of deferring")
+        self.assertIs(result, NotImplemented)
 
     def test_integer_power(self):
         self.assertEqual(subject.Fraction(3, 2) ** 2,
