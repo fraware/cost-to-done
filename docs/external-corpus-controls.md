@@ -118,3 +118,31 @@ records and includes the JSON and offline HTML in its archive.
 The review checks redacted record consistency; it does not authenticate
 the original execution, establish a provider invoice, or re-execute the
 candidate verifier. A valid report is not independent reproduction.
+
+## Capture-enabled development panel (prospective schema v2)
+
+A separate [capture/replay qualification workflow](https://github.com/fraware/cost-to-done/actions/workflows/upstream-replay.yml)
+collects the exact single source module from each of the four defective
+and repaired snapshots using Harbor nop. It then executes the original
+regression tests in a fresh network-disabled, read-only, non-root Docker
+container with no provider credential mounted. It checks the collected
+source bytes against the known control bytes. This is a new qualification
+gate, not an observed paid result.
+
+The revised paid workflow requires all eight capture/replay controls before
+any model access. The prospective plan schema is version 2, distinguished
+from the earlier non-capture plan. Every completed original trial retains
+its financial observation and a separate replay receipt bound to its raw
+Harbor result digest, task digest, pristine test digest and runtime identity.
+An unavailable replay or verdict disagreement stops further inference. Raw
+candidate code and trial transcripts are not published. The replay checks
+the selected module against the pristine narrow tests; arbitrary multi-file
+changes, adversarial Python test manipulation, and container escape are not
+established as safe or correct.
+
+The offline auditor retains original-verifier accounting separately from
+the count of recorded replay agreements. It rejects inconsistent replay
+identity or status. Complete replay agreement requires all sixteen original
+trials to have complete matched accounting and agreeing replay observations.
+It does not re-execute the candidates or authenticate the receipts.
+Historical schema v1 plans remain readable. No provider invoice is verified.
