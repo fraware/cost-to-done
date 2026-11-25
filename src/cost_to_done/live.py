@@ -99,8 +99,8 @@ class LiveConfig:
             from .repository_qualification import check_qualification
             if self.repository_task_sha256 is None or self.repository_qualification is None:
                 raise ReceiptError("external task requires both a pinned digest and qualification receipt")
-            if self.capture_candidate:
-                raise ReceiptError("external candidate collection is not qualified")
+            if self.capture_candidate and not self.repository_upstream_pilot:
+                raise ReceiptError("external candidate collection is not qualified for this route")
             if task.is_relative_to(root):
                 raise ReceiptError("prepared external task must be outside the trusted runner checkout")
             check_qualification(task, self.repository_qualification, self.repository_task_sha256)
@@ -275,6 +275,9 @@ def prepare_task(config: LiveConfig, task_copy: Path) -> None:
         if template.count(marker) != 1:
             raise ReceiptError("unexpected trusted Pi Dockerfile template")
         (task_copy / "environment/Dockerfile").write_text(template.replace(marker, "COPY workspace/ /app/"), encoding="utf-8")
+        if config.repository_upstream_pilot and config.capture_candidate:
+            from .upstream_replay import capture_declaration
+            capture_declaration(task_copy, manifest["task"])
         return
     files, dockerfile = staged_task_inputs(config.repo_root, config.task)
     task_copy.mkdir(mode=0o700)
