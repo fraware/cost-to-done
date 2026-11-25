@@ -7,8 +7,11 @@
 <style>
 .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0 24px}.summary-item{border:1px solid var(--line);padding:15px;border-radius:6px}.summary-item strong{display:block;font-size:27px;line-height:1.2;letter-spacing:-.03em;font-variant-numeric:tabular-nums}.summary-item p{font-size:12px;margin-top:5px}
 .external-table{min-width:850px}.external-table th:first-child{overflow-wrap:anywhere;max-width:310px}.external-table td{font-size:13px}.external-table th a{font-weight:600}.external-table .detail{display:block;font-weight:400;font-size:11px;color:var(--muted);margin-top:3px}.feature-table{min-width:550px}
-@media(max-width:650px){.summary-grid{grid-template-columns:1fr 1fr}.summary-item strong{font-size:23px}}
+.benchmark-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 12px;align-items:end}.benchmark-filters[hidden],#benchmark-filter-status[hidden]{display:none}.benchmark-filters label{display:block;font-size:12px;font-weight:600;margin-bottom:5px}.benchmark-filters input,.benchmark-filters select{width:100%;min-width:0;height:42px;padding:8px 10px;border:1px solid var(--strong-line);border-radius:5px;background:#fff}.filter-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px}#benchmark-filter-status{margin:0 0 12px}.external-table tr[hidden]{display:none}
+@media(max-width:900px){.benchmark-filters{grid-template-columns:1fr 1fr}}
+@media(max-width:650px){.benchmark-filters{grid-template-columns:1fr}.summary-grid{grid-template-columns:1fr 1fr}.summary-item strong{font-size:23px}}
 </style>
+<script defer src="benchmark-explorer.js"></script>
 </head>
 <body><a class="skip" href="#main">Skip to content</a>
 <header class="site-header"><nav class="container site-nav" aria-label="Main navigation"><a class="brand" href="./">Cost to Done</a><div class="nav-links"><a href="index.html#use">Quick start</a><a href="terminal-bench.html" aria-current="page">External evidence</a><a href="calculator.html">Calculator</a><a class="github" href="https://github.com/fraware/cost-to-done">GitHub</a></div></nav></header>
@@ -21,6 +24,14 @@
 <p class="note">Sol and Astra used the same named Codex agent version and reasoning effort. Astra recorded two more accepted trials in aggregate and approximately four times the reported inference cost per accepted trial. Fable used Claude Code, so its result compares configurations, not isolated model effects. No paired uncertainty analysis or statistical superiority claim is made.</p>
 </section>
 <section class="section"><div class="section-header"><h2>All 32 explicit 4.1 submission records</h2><p>Alphabetical by source model route, not a ranking. Each row links to its original pinned source.</p></div>
+<form class="benchmark-filters" id="benchmark-filters" hidden aria-label="Filter reported aggregate evidence">
+<div><label for="benchmark-query">Model or route</label><input id="benchmark-query" type="search" maxlength="100" placeholder="e.g. gpt-6.2"></div>
+<div><label for="benchmark-agent">Agent</label><select id="benchmark-agent"><option value="">All agents</option></select></div>
+<div><label for="benchmark-success">Minimum accepted fraction (%)</label><input id="benchmark-success" type="number" min="0" max="100" step="1" value="0"></div>
+<div><label for="benchmark-cost">Maximum reported cost / accepted trial ($)</label><input id="benchmark-cost" type="number" min="0" max="1000000000" step="0.01" placeholder="No limit"></div>
+<div class="filter-actions"><button class="button" type="reset">Reset filters</button><button class="button" type="button" id="benchmark-share">Copy filtered link</button></div>
+</form>
+<p id="benchmark-filter-status" class="note" role="status" aria-live="polite" hidden></p>
 <div class="table-scroll" tabindex="0" role="region" aria-label="External aggregate results"><table class="external-table" id="external-results"><thead><tr><th scope="col">Model route</th><th scope="col">Agent / effort</th><th scope="col" class="num">Accepted</th><th scope="col" class="num">Reported cost</th><th scope="col" class="num">Cost / accepted trial</th></tr></thead><tbody>
 <tr data-source-path="leaderboard/submissions/2026-11-12-4-1-0-deepseek-v4-1-flash-1017-max-claude-code-regrade.json"><th scope="row"><a href="https://github.com/harbor-framework/terminal-bench/blob/ad4c7aae7b6f1fd80e514dc85768e46d02661bef/leaderboard/submissions/2026-11-12-4-1-0-deepseek-v4-1-flash-1017-max-claude-code-regrade.json">Route not declared</a><span class="detail">2026-10-17</span></th><td>claude-code<span class="detail">max</span></td><td class="num">127/330</td><td class="num">$184.89</td><td class="num">$1.46</td></tr>
 <tr data-source-path="leaderboard/submissions/2026-11-10-anthropic-claude-fable-5-2-max-claude-code.json"><th scope="row"><a href="https://github.com/harbor-framework/terminal-bench/blob/ad4c7aae7b6f1fd80e514dc85768e46d02661bef/leaderboard/submissions/2026-11-10-anthropic-claude-fable-5-2-max-claude-code.json">anthropic/claude-fable-5-2</a><span class="detail">2026-11-09</span></th><td>claude-code<span class="detail">max</span></td><td class="num">217/330</td><td class="num">$16,492.76</td><td class="num">$76.00</td></tr>
