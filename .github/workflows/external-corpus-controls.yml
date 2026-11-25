@@ -29,7 +29,7 @@ jobs:
       - name: Run Harbor no-model controls and bind qualification receipts
         run: |
           set -euo pipefail
-          for name in cpython-textwrap-139065 cpython-ipaddress-117566; do
+          for name in cpython-statistics-92531 cpython-ipaddress-110196 cpython-fractions-119189 cpython-ipaddress-117566; do
             base="$RUNNER_TEMP/external-controls/$name"
             for role in starter reference; do
               cost-to-done validate-repo-task "$base/$role"
