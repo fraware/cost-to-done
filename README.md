@@ -72,7 +72,7 @@ The prepared task pins Git objects, staged file hashes and a Python runtime imag
 
 Run no-model controls on the defective starter and known correct reference using Harbor 0.27.0, Python 3.12 and Docker. Bind the resulting acceptance evidence with `qualify-repo-task`. Follow the [complete repository-task walkthrough](docs/repository-task.md).
 
-**Current boundary:** the external-task gateway and matched comparison have passed actual Harbor/Pi integration tests with a fictional provider. A fixed public synthetic real-provider pilot is available through an explicitly authorized maintainer workflow. Arbitrary paid repository execution is not enabled.
+**Current boundary:** the external-task gateway and matched comparison have passed actual Harbor/Pi integration tests with a fictional provider. A fixed public synthetic pilot and a separately guarded four-task upstream development panel are available from source through explicitly authorized maintainer workflows. The upstream panel has passed credential-free preflight; no paid results are claimed. See [upstream controls and evidence review](docs/external-corpus-controls.md). Arbitrary paid repository execution is not enabled.
 
 ## Choose the workflow you need
 
