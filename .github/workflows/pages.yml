@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
+      - 'scripts/prepare_site_fonts.py'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -37,6 +38,9 @@ jobs:
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             echo "::notice::Activate GitHub Pages once in Settings > Pages > Build and deployment > Source: GitHub Actions."
           fi
+      - name: Prepare verified self-hosted webfonts
+        if: steps.pages.outputs.enabled == 'true'
+        run: python3 scripts/prepare_site_fonts.py
       - name: Configure GitHub Pages
         if: steps.pages.outputs.enabled == 'true'
         uses: actions/configure-pages@v6
