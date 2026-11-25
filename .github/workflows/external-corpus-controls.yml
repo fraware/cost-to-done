@@ -1,0 +1,59 @@
+name: Public upstream repository controls
+on:
+  pull_request:
+    paths:
+      - 'scripts/prepare_external_controls.py'
+      - '.github/workflows/external-corpus-controls.yml'
+      - 'src/cost_to_done/repository_task.py'
+      - 'src/cost_to_done/repository_qualification.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        case:
+          - cpython-statistics-92531
+          - cpython-ipaddress-110196
+          - cpython-fractions-119189
+          - cpython-ipaddress-117566
+    env:
+      CTD_CASE: ${{ matrix.case }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install pinned Harbor and local package
+        run: |
+          python -m pip install 'harbor==0.27.0'
+          python -m pip install -e .
+      - name: Retrieve pinned public blobs and check local regression controls
+        run: python -m scripts.prepare_external_controls "$RUNNER_TEMP/external-controls" "$CTD_CASE"
+      - name: Run Harbor no-model controls and bind qualification receipts
+        run: |
+          set -euo pipefail
+          base="$RUNNER_TEMP/external-controls/$CTD_CASE"
+          for role in starter reference; do
+            cost-to-done validate-repo-task "$base/$role"
+            harbor run --path "$base/$role" --agent nop --job-name "$role" --jobs-dir "$base/jobs" --n-concurrent 1 --n-attempts 1
+          done
+          cost-to-done qualify-repo-task --starter "$base/starter" --reference "$base/reference" --starter-job "$base/jobs/starter" --reference-job "$base/jobs/reference" --output "$base/qualification.json"
+          cat "$base/provenance.json" "$base/qualification.json"
+      - name: Archive public control evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: upstream-controls-${{ matrix.case }}-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/external-controls/*/provenance.json
+            ${{ runner.temp }}/external-controls/*/qualification.json
+            ${{ runner.temp }}/external-controls/*/starter/ctd-task-manifest.json
+            ${{ runner.temp }}/external-controls/*/reference/ctd-task-manifest.json
+          retention-days: 30
