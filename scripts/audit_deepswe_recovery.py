@@ -16,6 +16,7 @@ from pathlib import Path
 SOURCE = "https://reasonmachines.com/research/reason-agent-deepswe/deepswe.json"
 REVISION = "0b9fabbb63b9104d678fe965e1632f2dd9eaa2ea"
 UPDATED = "2026-09-14T07:05:00.816208Z"
+SOURCE_SHA256 = "8128f434c608473a8987bc9d5e02ff578fcac4d6f7c611e8f4436740330f355c"
 RUNS = {"reason-astra-1": ("Reason", 1), "reason-astra-2": ("Reason", 2),
         "codex-astra-1": ("Codex", 1)}
 OUTCOMES = {"pass", "fail", "ungraded"}
@@ -49,6 +50,7 @@ def nonnegative(value):
 
 def audit(raw: bytes) -> dict:
     require(0 < len(raw) <= MAX_BYTES, "invalid source length")
+    require(hashlib.sha256(raw).hexdigest() == SOURCE_SHA256, "source byte digest mismatch")
     doc = json.loads(raw, parse_float=Decimal, parse_constant=invalid_constant,
                      object_pairs_hook=unique)
     require(doc["schema_version"] == "1.1.0" and doc["updated_at"] == UPDATED,
