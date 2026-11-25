@@ -277,12 +277,15 @@ def prepare(root: Path, name: str, case: dict) -> None:
 
 
 def main() -> int:
-    if len(sys.argv) != 2:
-        raise SystemExit("usage: python -m scripts.prepare_external_controls NEW_DIRECTORY")
+    if len(sys.argv) not in (2, 3):
+        raise SystemExit("usage: python -m scripts.prepare_external_controls NEW_DIRECTORY [CASE]")
+    names = list(CASES) if len(sys.argv) == 2 else [sys.argv[2]]
+    if any(name not in CASES for name in names):
+        raise SystemExit("unknown public control case")
     root = Path(sys.argv[1]).absolute()
     root.mkdir(mode=0o700, exist_ok=False)
-    for name, case in CASES.items():
-        prepare(root, name, case)
+    for name in names:
+        prepare(root, name, CASES[name])
     return 0
 
 
