@@ -118,7 +118,7 @@ def replay_source(task: str, module: str, source: bytes, test_name: str, verifie
                   *, timeout: int = 45) -> dict[str, Any]:
     """Replay a bounded source and pristine verifier in the restricted runtime."""
     import re
-    if (not re.fullmatch(r"(?:Lib/)?[A-Za-z_][A-Za-z0-9_]*\\.py", module)
+    if (not re.fullmatch(r"(?:Lib/)?[A-Za-z_][A-Za-z0-9_]*\.py", module)
             or test_name not in ("test_state.py", "test_regression.py")
             or not 0 < len(source) <= MAX_CANDIDATE_BYTES
             or not 0 < len(verifier) <= MAX_TEST_BYTES
