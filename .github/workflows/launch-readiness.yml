@@ -1,0 +1,87 @@
+name: Launch readiness - public site and released wheel
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/launch-readiness.yml'
+      - 'README.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  released-quickstart:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Execute documented public URL quick start outside any checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          unset PYTHONPATH OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY GOOGLE_API_KEY
+          mkdir "$RUNNER_TEMP/new-user"
+          cd "$RUNNER_TEMP/new-user"
+          python -m venv .venv
+          source .venv/bin/activate
+          python -m pip install --no-cache-dir --no-deps 'https://github.com/fraware/cost-to-done/releases/download/v0.1.0/cost_to_done-0.1.0-py3-none-any.whl'
+          python -m pip check
+          python -c 'from importlib.metadata import version; assert version("cost-to-done") == "0.1.0"'
+          cost-to-done demo --output demo.html
+          grep -qi synthetic demo.html
+          for command in compare-harbor report-harbor validate report prepare-repo-task validate-repo-task qualify-repo-task report-panel report-repo-rehearsal run-harbor-gateway; do
+            cost-to-done "$command" --help >/dev/null
+          done
+          sha256sum demo.html > original.sha256
+          if cost-to-done demo --output demo.html; then
+            echo 'Unexpected overwrite success'; exit 1
+          fi
+          sha256sum -c original.sha256
+          echo 'Released quick start passed; all documented CLI commands exist.'
+      - uses: actions/upload-artifact@v7
+        with:
+          name: fresh-release-demo-py${{ matrix.python }}
+          path: ${{ runner.temp }}/new-user/demo.html
+          retention-days: 14
+  production-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ce7f38493e56304b97cceacbd08ffac30e98507b
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Verify production response bytes against deployed commit
+        run: |
+          set -euo pipefail
+          python3 scripts/prepare_site_fonts.py
+          mkdir "$RUNNER_TEMP/live"
+          for file in index.html calculator.html report.html terminal-bench.html deepswe.html site.css benchmark-explorer.js data/terminal-bench-4-1.json data/deepswe-recovery.json fonts/IBMPlexSans-Regular.woff2 fonts/IBMPlexSans-Medium.woff2 fonts/IBMPlexSans-SemiBold.woff2 fonts/IBMPlexSans-Bold.woff2 fonts/IBMPlexMono-Regular.woff2 fonts/OFL.txt; do
+            mkdir -p "$RUNNER_TEMP/live/$(dirname "$file")"
+            curl --fail --silent --show-error --location --max-time 30 --retry 2 "https://fraware.github.io/cost-to-done/$file" --output "$RUNNER_TEMP/live/$file"
+            cmp "docs/$file" "$RUNNER_TEMP/live/$file"
+            echo "Production bytes verified: $file"
+          done
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Exercise actual public website at four viewport sizes
+        env:
+          CTD_SITE_URL: https://fraware.github.io/cost-to-done
+          CTD_SCREENSHOTS: live-screenshots
+        run: node scripts/check_website.cjs
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: production-browser-screenshots-${{ github.run_id }}
+          path: live-screenshots/
+          if-no-files-found: warn
+          retention-days: 14
