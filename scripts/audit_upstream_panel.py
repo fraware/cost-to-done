@@ -21,6 +21,7 @@ from cost_to_done.ledger import _units, _usd
 from cost_to_done.private_files import publish_private_texts
 from cost_to_done.upstream_pilot import STARTERS, MODELS, ALLOWANCE
 from scripts.run_upstream_pilot import validate_plan, SCOPE
+from scripts.prepare_external_controls import CASES
 
 HEX = re.compile(r"[0-9a-f]{64}\Z")
 MAX_FILE = 2_000_000
@@ -77,6 +78,9 @@ def audit_qualifications(root: Path, plan: dict) -> None:
                 or not is_digest(q.get("shared_input_sha256"))
                 or p.get("scope") != "public_upstream_development_controls"
                 or p.get("task") != task or p.get("held_out") is not False
+                or p.get("upstream_repository") != "https://github.com/python/cpython"
+                or p.get("upstream_issue") != CASES[task]["issue"]
+                or p.get("source_path") != f"Lib/{CASES[task]['module']}.py"
                 or type(p.get("provider_calls")) is not int or p["provider_calls"] != 0
                 or p.get("paid_execution_authorized") is not False):
             raise ReceiptError("qualification or provenance scope mismatch")
@@ -94,6 +98,10 @@ def audit_qualifications(root: Path, plan: dict) -> None:
                     or not is_digest(row.get("task_input_sha256"))
                     or row["task_input_sha256"] != source.get("task_input_sha256")
                     or row.get("git_commit") != source.get("packaging_commit")
+                    or not re.fullmatch(r"[0-9a-f]{40}", str(row.get("git_commit")))
+                    or (source.get("upstream_commit"), source.get("upstream_source_blob")) != CASES[task][role]
+                    or source.get("upstream_license_blob") != CASES[task]["license"]
+                    or not is_digest(source.get("source_sha256"))
                     or not isinstance(local, dict) or local.get("outcome") != expected
                     or type(local.get("tests")) is not int or local["tests"] != 4
                     or any(type(local.get(k)) is not int or local[k] != 0 for k in
@@ -118,9 +126,12 @@ def audit(root: Path) -> dict:
     plan = read(root, preflight / "plan.json")
     validate_plan(plan)
     preview = read(root, preflight / "preflight.json")
-    if preview != {"scope": SCOPE, "plan_sha256": plan["plan_sha256"],
-                   "staged_trials": 16, "provider_calls": 0,
-                   "paid_execution_authorized": False}:
+    if (preview != {"scope": SCOPE, "plan_sha256": plan["plan_sha256"],
+                    "staged_trials": 16, "provider_calls": 0,
+                    "paid_execution_authorized": False}
+            or type(preview["staged_trials"]) is not int
+            or type(preview["provider_calls"]) is not int
+            or preview["paid_execution_authorized"] is not False):
         raise ReceiptError("unexpected preflight declaration")
     audit_qualifications(root, plan)
     paid = root / "upstream-paid"
