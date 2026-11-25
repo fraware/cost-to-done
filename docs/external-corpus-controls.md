@@ -89,3 +89,32 @@ all planned observations are complete and matched; zero successful trials
 has an undefined cost per completion. Public historical repairs and narrow
 regression tests do not constitute a private holdout or independent
 verifier replay. No invoice or general ranking claim follows.
+
+## Reconstruct a panel report offline
+
+Download the workflow artifact and extract it into a fresh directory. Use
+a source checkout containing the audit script:
+
+```bash
+python -m pip install -e .
+python -m scripts.audit_upstream_panel ./extracted-artifact \
+  --output audit.json --html audit.html
+```
+
+Open the HTML file locally. The auditor checks upstream provenance pins,
+qualification commitments, matching preflight and paid plans, and the
+ordered intent/result records. It ignores the saved derived summary and
+recomputes the counts and exact estimated cost numerator and success
+denominator. An intent with no observation is distinguished from a trial
+with no recorded intent. No missing cost is treated as zero. Unexpected
+or duplicated records, non-prefix execution, changed identity commitments,
+and costs without an observed ledger are rejected.
+
+A preflight-only artifact yields an explicitly labeled report with no
+paid observations or comparative ratios. An incomplete paid artifact
+withholds all ratios. CI generates the review from the actual workflow
+records and includes the JSON and offline HTML in its archive.
+
+The review checks redacted record consistency; it does not authenticate
+the original execution, establish a provider invoice, or re-execute the
+candidate verifier. A valid report is not independent reproduction.
