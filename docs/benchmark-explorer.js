@@ -92,7 +92,17 @@
     form.addEventListener("submit", event => event.preventDefault());
     form.addEventListener("input", apply);
     form.addEventListener("change", apply);
-    form.addEventListener("reset", () => queueMicrotask(apply));
+    form.addEventListener("reset", event => {
+      event.preventDefault();
+      query.value = "";
+      agent.value = "";
+      success.value = "0";
+      cost.value = "";
+      const url = new URL(window.location.href);
+      for (const key of Object.keys(fields)) url.searchParams.delete(key);
+      window.history.replaceState(null, "", url);
+      apply();
+    });
     share.addEventListener("click", async () => {
       if (!settings()) return;
       const url = new URL(window.location.href);
