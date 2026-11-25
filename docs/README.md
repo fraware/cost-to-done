@@ -25,6 +25,7 @@ These cohorts are distinct. All monetary observations are local rate-card estima
 | External repository mock controls | [Preparation and matched rehearsal](repository-task.md) |
 | Public upstream task controls | [Four CPython repairs and prospective evidence review](external-corpus-controls.md) |
 | External public benchmark | [Terminal-Bench 4.1 aggregate analysis](terminal-bench-4-1.md) |
+| External recovery accounting | [DeepSWE outcome and reported-cost reconstruction](deepswe-recovery-audit.md) |
 
 ## Execution and reproducibility
 
