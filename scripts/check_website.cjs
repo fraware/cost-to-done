@@ -26,7 +26,7 @@ async function main() {
         }
         return route.continue();
       });
-      for (const file of ['index.html','calculator.html','report.html','terminal-bench.html']) {
+      for (const file of ['index.html','calculator.html','report.html','terminal-bench.html','deepswe.html']) {
         const page = await context.newPage();
         const errors = [];
         page.on('pageerror', error => errors.push(String(error)));
@@ -102,6 +102,25 @@ async function main() {
           assert.equal(await visible.count(),count);
           await page.getByRole('button',{name:'Reset filters'}).click();
           assert.equal(await visible.count(),32);
+        } else if(file==='deepswe.html'){
+          const response = await page.request.get(base+'/data/deepswe-recovery.json');
+          assert.ok(response.ok());
+          const evidence = await response.json();
+          assert.equal(evidence.assignment_records,339);
+          assert.equal(evidence.comparative_cost_ratio_available,false);
+          const rendered = page.locator('#deepswe-outcomes tbody tr');
+          assert.equal(await rendered.count(),evidence.rows.length);
+          const money = value => value===null ? 'Unavailable' :
+            new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(value));
+          const outcomes = counts => [counts.pass,counts.fail,counts.ungraded].join(' / ');
+          for(const [i,row] of evidence.rows.entries()){
+            const ratio = row.reported_cost_per_final_pass;
+            const cells = [row.agent,String(row.assigned_slots),outcomes(row.original_outcomes),
+              outcomes(row.final_outcomes),money(row.recorded_model_spend_usd),
+              ratio===null ? 'Unavailable' : money(Number(ratio.numerator_usd)/ratio.denominator)];
+            assert.deepEqual(await rendered.nth(i).locator('th,td').allTextContents(),cells);
+          }
+          assert.ok((await page.locator('.notice').innerText()).includes('No comparative cost ranking'));
         } else {
           assert.equal(await page.locator('tbody tr').count(),5);
           assert.ok((await page.locator('.notice').innerText()).includes('Synthetic data only'));

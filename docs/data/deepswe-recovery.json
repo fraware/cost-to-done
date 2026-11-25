@@ -1,0 +1,63 @@
+{
+  "assignment_records": 339,
+  "comparative_cost_ratio_available": false,
+  "cost_coverage_independently_verified": false,
+  "dataset_revision": "0b9fabbb63b9104d678fe965e1632f2dd9eaa2ea",
+  "eligible_for_ranking": false,
+  "matched_task_names": 113,
+  "provider_invoice_reconciled": false,
+  "reason_reported_physical_attempts": 227,
+  "reason_reported_recovery_spend_included_usd": "5.103275500000002",
+  "rows": [
+    {
+      "agent": "Reason",
+      "assigned_slots": 226,
+      "final_outcomes": {
+        "fail": 61,
+        "pass": 165,
+        "ungraded": 0
+      },
+      "original_outcomes": {
+        "fail": 60,
+        "pass": 164,
+        "ungraded": 2
+      },
+      "recorded_model_spend_usd": "1203.289086",
+      "reported_cost_per_final_pass": {
+        "denominator": 165,
+        "numerator_usd": "1203.289086"
+      },
+      "reported_cost_records": 226,
+      "reported_missing_cost_records": 0,
+      "reported_recovery_kinds": {
+        "fresh_attempt_after_setup_failure": 1,
+        "unchanged_patch_regrade": 1
+      }
+    },
+    {
+      "agent": "Codex",
+      "assigned_slots": 113,
+      "final_outcomes": {
+        "fail": 33,
+        "pass": 80,
+        "ungraded": 0
+      },
+      "original_outcomes": {
+        "fail": 33,
+        "pass": 80,
+        "ungraded": 0
+      },
+      "recorded_model_spend_usd": null,
+      "reported_cost_per_final_pass": null,
+      "reported_cost_records": null,
+      "reported_missing_cost_records": null,
+      "reported_recovery_kinds": {}
+    }
+  ],
+  "schema_version": 1,
+  "scope": "external_publisher_outcomes_and_aggregate_cost",
+  "source_sha256": "8128f434c608473a8987bc9d5e02ff578fcac4d6f7c611e8f4436740330f355c",
+  "source_updated_at": "2026-09-14T07:05:00.816208Z",
+  "source_url": "https://reasonmachines.com/research/reason-agent-deepswe/deepswe.json",
+  "task_digest_support_verified": false
+}

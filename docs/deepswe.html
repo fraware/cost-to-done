@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Reconstructed DeepSWE task outcomes, recovery accounting and reported model spend from a pinned Reason Machines export.">
+<title>DeepSWE recovery accounting · Cost to Done</title>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header"><nav class="container site-nav" aria-label="Main navigation">
+<a class="brand" href="./">Cost to Done</a>
+<div class="nav-links"><a href="index.html#use">Quick start</a><a href="terminal-bench.html">Terminal-Bench</a><a href="deepswe.html" aria-current="page">DeepSWE</a><a class="github" href="https://github.com/fraware/cost-to-done">GitHub</a></div>
+</nav></header>
+<main class="container" id="main">
+<div class="page-title"><p class="eyebrow">External evidence · Historical DeepSWE 1.1</p><h1>What changes when a benchmark recovers failed runs?</h1><p class="lead">Reconstruction of a published Reason Machines export covering 339 assigned slots over 113 shared task names. Original verdicts, recovered verdicts and reported costs are separate observations.</p></div>
+<div class="notice">Publisher-reported data, not our own inference or an invoice audit. Cost completeness and matching task digests are unverified. No comparative cost ranking.</div>
+<section class="section" aria-labelledby="outcomes-title">
+<div class="section-header"><h2 id="outcomes-title">Original and final outcomes</h2><p>GPT-6 Astra, xhigh effort. Two Reason repetitions and one Codex repetition.</p></div>
+<div class="table-scroll" tabindex="0" role="region" aria-label="DeepSWE original and final outcomes"><table class="evidence-table" id="deepswe-outcomes"><thead><tr><th scope="col">Configuration</th><th scope="col" class="num">Assigned slots</th><th scope="col" class="num">Original P / F / U</th><th scope="col" class="num">Final P / F / U</th><th scope="col" class="num">Reported spend</th><th scope="col" class="num">Spend / final pass</th></tr></thead><tbody>
+<tr data-agent="Reason"><th scope="row">Reason</th><td class="num">226</td><td class="num">164 / 60 / 2</td><td class="num">165 / 61 / 0</td><td class="num">$1,203.29</td><td class="num">$7.29</td></tr>
+<tr data-agent="Codex"><th scope="row">Codex</th><td class="num">113</td><td class="num">80 / 33 / 0</td><td class="num">80 / 33 / 0</td><td class="num">Unavailable</td><td class="num">Unavailable</td></tr>
+</tbody></table></div>
+<p class="note">P = pass; F = fail; U = ungraded. Reason reports 226 cost records and zero missing records. Individual charges are not independently reconciled. Different repetition counts preclude a balanced comparison.</p>
+</section>
+<section class="section" aria-labelledby="recovery-title">
+<div class="section-header"><h2 id="recovery-title">Recovery accounting</h2><p>One new attempt after a setup failure; one saved-patch regrade.</p></div>
+<div class="method-grid"><div class="formula"><h3>Reported cost per final pass</h3><div class="fraction" role="img" aria-label="1203.289086 dollars divided by 165 final passes"><span>$1,203.289086</span><span>165 final passes</span></div><p class="note">The numerator already includes $5.10 of reported recovery expenditure. Do not add it again.</p></div><dl class="rule-list"><div><dt>226 assigned slots, 227 reported physical attempts</dt><dd>Count assignment outcomes separately from execution attempts.</dd></div><div><dt>Two ungraded assignments resolved</dt><dd>One additional pass and one additional failure; no causal retry-effect estimate.</dd></div><div><dt>Codex expenditure unavailable</dt><dd>No cross-configuration cost ratio is supported.</dd></div></dl></div>
+</section>
+<section class="section" aria-labelledby="source-title">
+<div class="section-header"><h2 id="source-title">Inspect the evidence</h2><p>The audit rejects changed source bytes and reconstructs the committed report.</p></div>
+<div class="section-links"><a href="data/deepswe-recovery.json">Derived JSON report</a><a href="https://reasonmachines.com/research/reason-agent-deepswe/deepswe.json">Original publisher export</a><a href="https://github.com/fraware/cost-to-done/blob/main/docs/deepswe-recovery-audit.md">Method and limitations</a><a href="https://github.com/fraware/cost-to-done/actions/runs/45616094378">Initial reconstruction</a></div>
+<p class="note">Source timestamp: 14 September 2026, 07:05 UTC. The source may change; the audit uses the exact observed digest.</p>
+</section>
+</main>
+<footer class="container site-footer"><span>Cost to Done · No analytics or tracking</span><span><a href="https://github.com/fraware/cost-to-done">Source</a> · <a href="https://github.com/fraware/cost-to-done/issues/46">Report your experience</a></span></footer>
+</body>
+</html>

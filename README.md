@@ -33,6 +33,8 @@ The comparison checks matching task checksums and shows verifier outcomes, elaps
 
 [Terminal-Bench 4.1: reported inference cost per accepted trial](https://fraware.github.io/cost-to-done/terminal-bench.html). Recomputed from all 32 explicitly targeted 4.1 submission records at a pinned upstream commit, covering 10,560 recorded trials. Sol/Codex and Astra/Codex recorded 203 and 205 accepted trials respectively, with reported inference cost per accepted trial of $1.72 and $6.87. The ratios use third-party reported aggregates with unverified cost coverage and retry history; they are not our own executions, invoices, or a model ranking. See [source and method](docs/terminal-bench-4-1.md).
 
+[DeepSWE recovery accounting](https://fraware.github.io/cost-to-done/deepswe.html). Reconstructed 339 assignment records across 113 shared task names from a pinned publisher export. Reason reports 165 final passes and $1,203.289086 total model spend; recovery spend is included. Codex expenditure is unavailable. No comparative cost ratio or paired task-digest verification. [Source and audit](docs/deepswe-recovery-audit.md).
+
 ## What our real experiments have shown
 
 ### 18 paid trials, three public repair tasks

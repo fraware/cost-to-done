@@ -1,0 +1,38 @@
+name: External DeepSWE recovery accounting review
+on:
+  pull_request:
+    paths:
+      - 'scripts/audit_deepswe_recovery.py'
+      - '.github/workflows/deepswe-recovery-audit.yml'
+      - 'docs/deepswe-recovery-audit.md'
+      - 'docs/data/deepswe-recovery.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Retrieve publisher data (not executable code)
+        run: |
+          curl --fail --silent --show-error --proto '=https' --max-time 60 --max-filesize 2000000 \
+            'https://reasonmachines.com/research/reason-agent-deepswe/deepswe.json' \
+            --output "$RUNNER_TEMP/deepswe.json"
+          sha256sum "$RUNNER_TEMP/deepswe.json"
+      - name: Reconstruct outcome and recovery accounting
+        run: python -m scripts.audit_deepswe_recovery "$RUNNER_TEMP/deepswe.json" --output "$RUNNER_TEMP/deepswe-audit.json"
+      - name: Compare committed derived report byte for byte
+        run: cmp docs/data/deepswe-recovery.json "$RUNNER_TEMP/deepswe-audit.json"
+      - name: Archive derived report only
+        uses: actions/upload-artifact@v7
+        with:
+          name: deepswe-recovery-review-${{ github.run_id }}
+          path: ${{ runner.temp }}/deepswe-audit.json
+          retention-days: 30
