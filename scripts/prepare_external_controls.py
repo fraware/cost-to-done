@@ -1,4 +1,4 @@
-"""Prepare two pinned upstream CPython regression controls without inference.
+"""Prepare pinned upstream CPython regression controls without inference.
 
 Only the declared upstream blobs are downloaded. The local commits are
 constructed packaging snapshots, not the upstream Git commits themselves.
@@ -17,39 +17,117 @@ from urllib.request import urlopen
 from cost_to_done.repository_task import prepare_repository_task
 
 CASES = {
-    "cpython-textwrap-139065": {
-        "issue": 139065,
-        "module": "textwrap",
-        "starter": ("5c942f11cdf5f9d7313200983fa0c58b3bc670a2", "5ae439f5cd3b784594cd87cadc476c65db2453b6"),
-        "reference": ("1c598e04361dbfc9cf465f3a02f83715c11b028c", "41366fbf443a4fc46768a6745d0b9e64c1d3b056"),
-        "license": "20cf39097c68baa17cc566b64e76d34ebf034044",
+    "cpython-statistics-92531": {
+        "issue": 92531,
+        "module": "statistics",
+        "starter": ("5bc2390229bbcb4f13359e867fd8a140a1d5496b", "54f4e132651897eee86f5253c465fc1b391061e3"),
+        "reference": ("e01eeb7b4b8d00b9f5c6acb48957f46ac4e252c0", "2d66b0522f19d52632c0f24d73df7c93d9b326bc"),
+        "license": "02a5145f0e38520d5187b8f775fa7dee091976f8",
         "instruction": (
-            "Repair Lib/textwrap.py: when wrapping a long word after a line "
-            "whose remaining space is consumed by whitespace, remove trailing "
-            "whitespace with the default drop_whitespace setting. Preserve "
-            "normal long-word breaking and ordinary wrapping. Modify the "
-            "source only; use the standard library."
+            "Repair Lib/statistics.py: median_grouped must return a float for "
+            "singleton numeric data, consistently with its interpolation result. "
+            "Preserve grouped interpolation and empty-input error behavior."
         ),
         "tests": '''import unittest
-from Lib import textwrap as subject
+from decimal import Decimal
+from fractions import Fraction
+from Lib import statistics as subject
 
 
 class Regression(unittest.TestCase):
-    def test_boundary(self):
-        self.assertEqual(subject.wrap("abc abcdefghijk", width=4),
-                         ["abc", "abcd", "efgh", "ijk"])
+    def test_single_integer(self):
+        result = subject.median_grouped([23])
+        self.assertIs(type(result), float)
+        self.assertEqual(result, 23.0)
 
-    def test_other_boundary(self):
-        self.assertEqual(subject.wrap("hello abcdefghijk", width=6),
-                         ["hello", "abcdef", "ghijk"])
+    def test_single_fraction(self):
+        result = subject.median_grouped([Fraction(15, 19)])
+        self.assertIs(type(result), float)
+        self.assertAlmostEqual(result, 15 / 19)
 
-    def test_normal_wrapping(self):
-        self.assertEqual(subject.wrap("ab cd ef", width=5), ["ab cd", "ef"])
+    def test_single_decimal(self):
+        result = subject.median_grouped([Decimal("0.28")])
+        self.assertIs(type(result), float)
+        self.assertAlmostEqual(result, 0.28)
 
-    def test_no_long_word_break(self):
-        self.assertEqual(subject.wrap("abc abcdefghijk", width=4,
-                                      break_long_words=False),
-                         ["abc", "abcdefghijk"])
+    def test_interpolation_and_empty(self):
+        self.assertAlmostEqual(subject.median_grouped([1, 2, 2, 3]), 2.0)
+        with self.assertRaises(subject.StatisticsError):
+            subject.median_grouped([])
+''',
+    },
+    "cpython-ipaddress-110196": {
+        "issue": 110196,
+        "module": "ipaddress",
+        "starter": ("b845a9e145b2f133270aa07836c7e6a385066c00", "f5aba434fd4253f778852fcfb2adbd4983019682"),
+        "reference": ("767f416feb551f495bacfff1e9ba1e6672c2f24e", "68ddfbeb4bc212808841c3b7ff2cc941123055a0"),
+        "license": "f26bcf4d2de6eb136e31006ca3ab447d5e488adf",
+        "instruction": (
+            "Repair Lib/ipaddress.py so IPv6 address serialization and copying "
+            "preserve the scope identifier. Preserve ordinary IPv6 addresses."
+        ),
+        "tests": '''import copy
+import pickle
+import unittest
+from Lib import ipaddress as subject
+
+
+class Regression(unittest.TestCase):
+    def test_pickle(self):
+        addr = subject.IPv6Address("2001:db8::%scope")
+        self.assertEqual(pickle.loads(pickle.dumps(addr)), addr)
+
+    def test_copy(self):
+        addr = subject.IPv6Address("fe80::1%eth0")
+        self.assertEqual(copy.copy(addr), addr)
+
+    def test_deepcopy(self):
+        addr = subject.IPv6Address("fe80::1%zone")
+        self.assertEqual(copy.deepcopy(addr), addr)
+
+    def test_unscoped(self):
+        addr = subject.IPv6Address("2001:db8::1")
+        self.assertEqual(pickle.loads(pickle.dumps(addr)), addr)
+''',
+    },
+    "cpython-fractions-119189": {
+        "issue": 119189,
+        "module": "fractions",
+        "starter": ("dae0375bd97f3821c5db1602a0653a3c5dc53c5b", "f91b4f35eff37083c64f8427bceefff9672c2883"),
+        "reference": ("b9965ef282d6662145d2e05b080c811132ce6fde", "95adccd86e33a0e9f611c01553de42e8cbde713d"),
+        "license": "14603b95c2e23b5a4cd6ff93f50348d1817f7638",
+        "instruction": (
+            "Repair Lib/fractions.py so exponentiation with an unsupported "
+            "right operand defers to the operand's reflected operation "
+            "with the original Fraction. Preserve supported rational, float "
+            "and complex exponentiation."
+        ),
+        "tests": '''import unittest
+from Lib import fractions as subject
+
+
+class Exponent:
+    def __rpow__(self, base):
+        return base
+
+
+class Regression(unittest.TestCase):
+    def test_reflected_power(self):
+        base = subject.Fraction(3, 2)
+        self.assertIs(base ** Exponent(), base)
+
+    def test_not_implemented(self):
+        self.assertIs(subject.Fraction(3, 2).__pow__(object()),
+                      NotImplemented)
+
+    def test_integer_power(self):
+        self.assertEqual(subject.Fraction(3, 2) ** 2,
+                         subject.Fraction(9, 4))
+
+    def test_float_and_complex(self):
+        base = subject.Fraction(3, 2)
+        self.assertEqual(base ** 2.0, 2.25)
+        self.assertAlmostEqual(base ** 2j, 1.5 ** 2j)
 ''',
     },
     "cpython-ipaddress-117566": {
