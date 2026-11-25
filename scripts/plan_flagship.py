@@ -136,7 +136,7 @@ def build_plan(spec: dict) -> dict:
         perm = sorted(range(len(orders)), key=lambda i: key("order-cycle", [cycle, i]))
         order = orders[perm[index % len(orders)]]
         for position, config in enumerate(order, 1):
-            schedule.append({"trial_id": f"{task}--{config}--r{repetition}",
+            schedule.append({"trial_id": f"{task}:{config}:r{repetition}",
                              "task": task, "configuration": config,
                              "repetition": repetition, "block": index + 1,
                              "position": position,
@@ -157,7 +157,10 @@ def build_plan(spec: dict) -> dict:
 
 def validate_plan(plan: dict) -> None:
     """Reconstruct support, sequence, cost bounds and digest; reject edits."""
-    if not isinstance(plan, dict) or plan != build_plan(plan.get("spec")):
+    if (not isinstance(plan, dict)
+            or plan.get("plan_sha256") != digest({k: v for k, v in plan.items()
+                                                  if k != "plan_sha256"})
+            or plan != build_plan(plan.get("spec"))):
         raise ReceiptError("plan does not match its prospective design")
 
 
