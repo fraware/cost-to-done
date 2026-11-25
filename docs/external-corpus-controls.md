@@ -1,7 +1,6 @@
 # Public upstream repair controls
 
-Status: qualification pending CI. No model calls, no paid execution, no new
-cost or model-performance observations.
+Status: all four public controls passed in [run 45537928082](https://github.com/fraware/cost-to-done/actions/runs/45537928082). Eight Harbor nop controls and 32 local test executions completed, with assertion failures on each starter and zero failures on each reference. No model calls in that qualification run.
 
 Four historical CPython defects form an initial external-source development
 candidate set. Qualification runs independently per candidate:
@@ -62,3 +61,31 @@ repositories, licensing, private holdout governance, difficulty and task-type
 strata, fixed configuration identities, cost sources, retry policy and
 precision/budget analysis. Record all screening exclusions. The public
 controls above must not count toward a private holdout target.
+
+## Fixed upstream development panel (experimental)
+
+The separate [workflow](https://github.com/fraware/cost-to-done/actions/workflows/upstream-paid-pilot.yml)
+prepares and requalifies the four exact public starters, checks the previously
+observed task-input digests, and stages all 16 prospective Pi episodes before
+reading any paid credential. Two native Responses configurations (GPT-6.1
+Terra and GPT-6.2 Sol, both low effort) each receive two repetitions on each
+task. The plan uses the existing dated rate cards, a fixed interleaved order,
+one attempt per trial, five turns, 900 seconds, and $1 estimated admission
+allowance per trial ($16 aggregate). Recheck prices and separately enforced
+provider financial controls prior to a paid dispatch. These allowances are
+not a verified provider hard cap.
+
+PR and ordinary preflight execution do not use a paid credential. After
+merge and successful preflight, a maintainer who has inspected and configured
+provider financial controls may manually dispatch on canonical main using
+`RUN-UPSTREAM-16` and the provider-limit review checkbox. A rerun of the
+same workflow does not authorize inference. The existing fixed synthetic
+pilot is separate. Arbitrary prepared task execution is still disabled.
+
+The panel stops after the first unresolved result or identity mismatch.
+Redacted artifacts retain planned trial IDs, intent records, available
+estimates and unresolved or missing outcomes. Ratios are withheld unless
+all planned observations are complete and matched; zero successful trials
+has an undefined cost per completion. Public historical repairs and narrow
+regression tests do not constitute a private holdout or independent
+verifier replay. No invoice or general ranking claim follows.
