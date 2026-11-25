@@ -1,25 +1,61 @@
+@font-face {
+  font-family:"IBM Plex Sans";
+  src:url("fonts/IBMPlexSans-Regular.woff2") format("woff2");
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+}
+@font-face {
+  font-family:"IBM Plex Sans";
+  src:url("fonts/IBMPlexSans-Medium.woff2") format("woff2");
+  font-style:normal;
+  font-weight:500;
+  font-display:swap;
+}
+@font-face {
+  font-family:"IBM Plex Sans";
+  src:url("fonts/IBMPlexSans-SemiBold.woff2") format("woff2");
+  font-style:normal;
+  font-weight:600;
+  font-display:swap;
+}
+@font-face {
+  font-family:"IBM Plex Sans";
+  src:url("fonts/IBMPlexSans-Bold.woff2") format("woff2");
+  font-style:normal;
+  font-weight:700;
+  font-display:swap;
+}
+@font-face {
+  font-family:"IBM Plex Mono";
+  src:url("fonts/IBMPlexMono-Regular.woff2") format("woff2");
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+}
 /* Public site: neutral palette, one proportional font family, upright type. */
 :root {
   color-scheme: light;
   --bg:#fff; --surface:#f7f7f7; --ink:#181818; --muted:#545454;
   --line:#dedede; --strong-line:#ababab; --dark:#202020;
-  --sans:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  --mono:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
-  font:15px/1.6 var(--sans); color:var(--ink); background:var(--bg);
+  --sans:"IBM Plex Sans",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+  font:16px/1.6 var(--sans); color:var(--ink); background:var(--bg);
   font-synthesis:none;
 }
 *,*::before,*::after {box-sizing:border-box}
 body {margin:0}
 em,i,cite,dfn,address {font-style:normal}
 h1,h2,h3,p {margin:0}
-h1,h2,h3 {font-weight:650;line-height:1.15;letter-spacing:-.035em}
-h1 {font-size:clamp(34px,4.7vw,58px)}
-h2 {font-size:clamp(25px,3vw,34px)}
+h1,h2,h3 {font-weight:600;line-height:1.15;letter-spacing:-.025em}
+h1 {font-size:clamp(34px,4.7vw,56px)}
+h2 {font-size:clamp(25px,3vw,30px)}
 h3 {font-size:18px;letter-spacing:-.015em}
 p {color:var(--muted)}
 a {color:inherit;text-underline-offset:3px}
 a:hover {text-decoration-thickness:2px}
 button,input,select {font:inherit;color:inherit}
+.num,.chart-label strong,.panel-bottom strong {font-variant-numeric:tabular-nums}
 a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible {
   outline:2px solid var(--ink);outline-offset:3px
 }
@@ -28,9 +64,9 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,[t
 .skip:focus {top:8px}
 .site-header {border-bottom:1px solid var(--line)}
 .site-nav {min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:24px}
-.brand {font-size:19px;font-weight:720;letter-spacing:-.045em;text-decoration:none;white-space:nowrap}
+.brand {font-size:19px;font-weight:700;letter-spacing:-.045em;text-decoration:none;white-space:nowrap}
 .nav-links {display:flex;align-items:center;gap:24px;flex-wrap:wrap}
-.nav-links a {font-size:13px;font-weight:550;text-decoration:none}
+.nav-links a {font-size:14px;font-weight:500;text-decoration:none}
 .nav-links a:hover,.nav-links a[aria-current=page] {text-decoration:underline}
 .nav-links .github {border:1px solid var(--line);padding:7px 13px;border-radius:5px}
 .hero {display:grid;grid-template-columns:1.15fr .85fr;gap:60px;align-items:center;padding:76px 0 64px}
@@ -49,12 +85,12 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,[t
 .panel-top span {font-size:12px;color:var(--muted)}
 .chart-row+.chart-row {margin-top:18px}
 .chart-label {display:flex;justify-content:space-between;gap:12px;font-size:13px;align-items:baseline;margin-bottom:7px}
-.chart-label strong {font-size:19px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.chart-label strong {font-size:22px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .chart-track {height:11px;background:#e3e3e3;border-radius:2px;overflow:hidden}
 .chart-bar {display:block;height:100%;background:#222;border-radius:2px}
 .chart-row:not(.chart-row+.chart-row) .chart-bar {background:#727272}
 .panel-bottom {margin-top:21px;border-top:1px solid var(--line);padding-top:15px}
-.panel-bottom strong {font-size:23px;letter-spacing:-.035em}
+.panel-bottom strong {font-size:24px;font-weight:500;letter-spacing:-.025em}
 .panel-bottom p {font-size:12px;margin-top:4px}
 .panel-bottom a {font-size:12px;font-weight:600;display:inline-block;margin-top:9px}
 .section {border-top:1px solid var(--line);padding:48px 0}
@@ -67,12 +103,12 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,[t
 pre {font:13px/1.7 var(--mono);margin:0;padding:18px 15px;overflow-x:auto;white-space:pre;tab-size:2}
 code {font-family:var(--mono);font-size:.9em}
 .code-foot {padding:0 15px 15px;color:var(--muted);font-size:12px}
-.section-links {display:flex;flex-wrap:wrap;gap:9px 22px;margin-top:15px;font-size:13px;font-weight:550}
+.section-links {display:flex;flex-wrap:wrap;gap:9px 22px;margin-top:15px;font-size:13px;font-weight:500}
 .evidence-block+.evidence-block {border-top:1px solid var(--line);padding-top:30px;margin-top:30px}
 .evidence-title {display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px}
 .evidence-title span {color:var(--muted);font-size:12px}
 .table-scroll {overflow-x:auto;border:1px solid var(--line);border-radius:6px}
-table {border-collapse:collapse;width:100%;font-size:13px;line-height:1.5;font-variant-numeric:tabular-nums}
+table {border-collapse:collapse;width:100%;font-size:14px;line-height:1.5;font-variant-numeric:tabular-nums}
 th,td {padding:13px 15px;text-align:left;vertical-align:middle;border-bottom:1px solid var(--line)}
 thead th {background:var(--surface);font-weight:600;color:var(--muted);font-size:12px}
 tbody th {font-weight:600}
@@ -90,7 +126,7 @@ tbody tr:last-child>* {border-bottom:0}
 .rule-list div {padding:12px 0;border-bottom:1px solid var(--line)}
 .rule-list div:first-child {padding-top:0}
 .rule-list div:last-child {border:0;padding-bottom:0}
-.rule-list dt {font-weight:650;font-size:14px}
+.rule-list dt {font-weight:600;font-size:14px}
 .rule-list dd {margin:3px 0 0;color:var(--muted);font-size:13px}
 .repo-grid {display:grid;grid-template-columns:1.15fr .85fr;gap:30px;align-items:start}
 .repo-status {border-left:2px solid var(--strong-line);padding-left:17px}
@@ -98,7 +134,7 @@ tbody tr:last-child>* {border-bottom:0}
 .repo-status p+p {margin-top:10px}
 .repo-status p {font-size:13px}
 .site-footer {border-top:1px solid var(--line);padding:23px 0 36px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;color:var(--muted);font-size:12px}
-.site-footer a {font-weight:550}
+.site-footer a {font-weight:500}
 .page-title {padding:45px 0 24px}
 .page-title h1 {font-size:clamp(32px,4vw,46px);margin-bottom:12px}
 .page-title .lead {font-size:16px}

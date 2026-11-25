@@ -33,6 +33,16 @@ async function main() {
         page.on('response', response => { if(response.status()>=400) errors.push(response.url()+': '+response.status()); });
         await page.goto(base+'/'+file, {waitUntil:'networkidle'});
         assert.equal(await page.locator('h1').count(),1);
+        const fonts = await page.evaluate(async () => {
+          const loaded = [];
+          for(const [weight, family] of [[400,'IBM Plex Sans'],[500,'IBM Plex Sans'],[600,'IBM Plex Sans'],[700,'IBM Plex Sans'],[400,'IBM Plex Mono']]){
+            const faces = await document.fonts.load(weight+' 16px "'+family+'"','Cost to Done 0123456789');
+            loaded.push(faces.length>0 && faces.every(face=>face.status==='loaded'));
+          }
+          await document.fonts.ready;
+          return loaded;
+        });
+        assert.deepEqual(fonts,[true,true,true,true,true],file+' missing self-hosted Plex fonts');
         const layout = await page.evaluate(() => ({
           width:document.documentElement.scrollWidth,
           viewport:document.documentElement.clientWidth,
@@ -44,6 +54,7 @@ async function main() {
         assert.ok(layout.width<=layout.viewport+1, file+' '+label+' horizontal overflow: '+JSON.stringify(layout));
         assert.deepEqual(layout.italics, [], file+' contains non-upright type');
         assert.equal(layout.font, layout.bodyFont, file+' inconsistent heading font');
+        assert.ok(layout.font.startsWith('"IBM Plex Sans"'),file+' unexpected proportional family: '+layout.font);
         assert.equal(layout.background,'rgb(255, 255, 255)');
         assert.deepEqual(errors, []);
         if(file==='index.html'){
