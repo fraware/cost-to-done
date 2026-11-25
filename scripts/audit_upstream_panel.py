@@ -22,6 +22,8 @@ from cost_to_done.private_files import publish_private_texts
 from cost_to_done.upstream_pilot import STARTERS, MODELS, ALLOWANCE
 from scripts.run_upstream_pilot import validate_plan, SCOPE
 from scripts.prepare_external_controls import CASES
+from cost_to_done.upstream_replay import MODULES
+from cost_to_done.replay import IMAGE, REPLAY_SCRIPT
 
 HEX = re.compile(r"[0-9a-f]{64}\Z")
 MAX_FILE = 2_000_000
@@ -134,6 +136,7 @@ def audit(root: Path) -> dict:
             or preview["paid_execution_authorized"] is not False):
         raise ReceiptError("unexpected preflight declaration")
     audit_qualifications(root, plan)
+    capture = plan.get("schema_version") == 2
     paid = root / "upstream-paid"
     paid_present = paid.exists() or paid.is_symlink()
     filenames = set()
@@ -142,7 +145,7 @@ def audit(root: Path) -> dict:
             raise ReceiptError("unsafe paid evidence directory")
         filenames = {path.name for path in paid.iterdir()}
         allowed = {"plan.json", "summary.json"} | {
-            f"{i:02d}{suffix}.json" for i in range(16) for suffix in ("", ".intent")}
+            f"{i:02d}{suffix}.json" for i in range(16) for suffix in (("", ".intent", ".replay") if capture else ("", ".intent"))}
         if filenames - allowed or read(root, paid / "plan.json") != plan:
             raise ReceiptError("unexpected paid evidence or changed plan")
         # The archived derived summary is intentionally ignored.
@@ -154,9 +157,14 @@ def audit(root: Path) -> dict:
         ident, task, model = trial["id"], trial["task"], trial["model"]
         intent_name, record_name = f"{index:02d}.intent.json", f"{index:02d}.json"
         has_intent, has_record = intent_name in filenames, record_name in filenames
+        replay_name = f"{index:02d}.replay.json"
+        has_replay = replay_name in filenames
+        if has_replay and not has_record:
+            raise ReceiptError("replay without original trial observation")
         if has_record and not has_intent or stopped and (has_intent or has_record):
             raise ReceiptError("non-prefix execution or observation without intent")
         state, cost = "not_observed", None
+        replay_state = "not_requested" if not capture else "not_observed"
         if has_intent:
             intent = read(root, paid / intent_name)
             if intent != {"trial_id": ident, "plan_sha256": plan["plan_sha256"],
@@ -205,11 +213,57 @@ def audit(root: Path) -> dict:
                 checksums[task].add(checksum)
                 if len(checksums[task]) != 1:
                     state = "unresolved"
-        if state not in ("pass", "fail"):
+        if capture and state in ("pass", "fail"):
+            replay_state = "missing"
+            if has_replay:
+                side = read(root, paid / replay_name)
+                if (set(side) != {"trial_id", "plan_sha256", "replay", "agreement"}
+                        or side["trial_id"] != ident
+                        or side["plan_sha256"] != plan["plan_sha256"]):
+                    raise ReceiptError("replay sidecar identity mismatch")
+                replay = side["replay"]
+                if replay is None:
+                    if side["agreement"] is not None:
+                        raise ReceiptError("agreement without replay observation")
+                    replay_state = "unresolved"
+                else:
+                    if not isinstance(replay, dict):
+                        raise ReceiptError("invalid replay observation")
+                    expected_test = hashlib.sha256(CASES[task]["tests"].encode()).hexdigest()
+                    expected_script = hashlib.sha256(REPLAY_SCRIPT.replace(
+                        "test_state.py", "test_regression.py").encode()).hexdigest()
+                    if (replay.get("task") != task or replay.get("source_path") != MODULES[task]
+                            or replay.get("base_task_input_sha256") != STARTERS[task]
+                            or replay.get("harbor_raw_result_sha256") != raw
+                            or replay.get("verifier_sha256") != expected_test
+                            or replay.get("replay_script_sha256") != expected_script
+                            or replay.get("image") != IMAGE
+                            or replay.get("network_mode") != "none"
+                            or replay.get("provider_credentials_mounted") is not False
+                            or replay.get("adversarial_verifier_integrity_established") is not False
+                            or not is_digest(replay.get("candidate_sha256"))):
+                        raise ReceiptError("replay binding or scope mismatch")
+                    replay_outcome = replay.get("outcome")
+                    executed = replay.get("independent_process_reexecution")
+                    if executed is True:
+                        if (replay.get("cleanup_confirmed") is not True
+                                or replay_outcome not in ("pass", "fail")
+                                or side["agreement"] is not (replay_outcome == state)):
+                            raise ReceiptError("inconsistent replay verdict")
+                        replay_state = "agree" if side["agreement"] else "disagree"
+                    elif executed is False and replay_outcome == "unresolved" and side["agreement"] is None:
+                        replay_state = "unresolved"
+                    else:
+                        raise ReceiptError("invalid replay execution status")
+        elif has_replay:
+            raise ReceiptError("replay recorded for an unresolved original trial")
+        if state not in ("pass", "fail") or capture and replay_state != "agree":
             stopped = True
-        details.append({**trial, "state": state, "known_estimate_usd": cost})
+        details.append({**trial, "state": state, "known_estimate_usd": cost,
+                        "replay_state": replay_state})
     complete = (all(row["state"] in ("pass", "fail") for row in details)
                 and all(len(x) == 1 for x in checksums.values()))
+    replay_complete = capture and complete and all(r["replay_state"] == "agree" for r in details)
     summaries = []
     for model in sorted(MODELS):
         rows = [row for row in details if row["model"] == model]
@@ -229,6 +283,8 @@ def audit(root: Path) -> dict:
             "harness_commit": plan["harness_commit"], "qualification_records_checked": 4,
             "staged_trials": 16, "paid_artifact_present": paid_present,
             "complete_matched_accounting": complete, "provider_invoice_reconciled": False,
+            "candidate_replay_required": capture, "complete_replay_agreement": replay_complete,
+            "replay_agreement_count": sum(r["replay_state"] == "agree" for r in details),
             "execution_authenticated": False, "independent_verifier_replay": False,
             "held_out": False, "eligible_for_ranking": False,
             "configurations": summaries, "trials": details}
@@ -251,9 +307,10 @@ def render(report: dict) -> str:
         rows.append("<tr>" + "".join(f"<td>{escape(str(c))}</td>" for c in cells)
                     + f"<td>{money(r['known_estimate_usd'])}</td><td>{ratio(r)}</td></tr>")
     trials = "".join("<tr>" + "".join(f"<td>{escape(str(t[k]))}</td>" for k in
-                                     ("task", "model", "repetition", "state"))
+                                     ("task", "model", "repetition", "state", "replay_state"))
                      + f"<td>{money(t['known_estimate_usd'])}</td></tr>" for t in report["trials"])
-    status = ("Complete matched accounting" if report["complete_matched_accounting"]
+    status = ("Complete matched accounting and replay agreement" if report["complete_replay_agreement"]
+              else "Complete original-verifier accounting" if report["complete_matched_accounting"]
               else "Preflight only — no paid evidence supplied" if not report["paid_artifact_present"]
               else "Incomplete accounting — ratios withheld")
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
@@ -264,9 +321,9 @@ def render(report: dict) -> str:
 <body><main><p>Cost to Done / Public development evidence</p><h1>{status}</h1>
 <p>Four historical CPython tasks. Two configurations. Sixteen planned episodes. Recorded cost estimates are not invoices; missing expenditure is unknown.</p>
 <div class="scroll" tabindex="0" role="region" aria-label="Configuration accounting"><table><thead><tr>{''.join(f'<th scope="col">{h}</th>' for h in headings)}</tr></thead><tbody>{''.join(rows)}</tbody></table></div>
-<h2>Every planned episode</h2><div class="scroll" tabindex="0" role="region" aria-label="Trial accounting"><table><thead><tr><th>Task</th><th>Model</th><th>Repeat</th><th>State</th><th>Known estimate</th></tr></thead><tbody>{trials}</tbody></table></div>
+<h2>Every planned episode</h2><div class="scroll" tabindex="0" role="region" aria-label="Trial accounting"><table><thead><tr><th>Task</th><th>Model</th><th>Repeat</th><th>State</th><th>Replay</th><th>Known estimate</th></tr></thead><tbody>{trials}</tbody></table></div>
 <p>Plan: <code>{escape(report['plan_sha256'])}</code></p>
-<p>Offline content-consistency review of redacted records; no authenticated execution, independent candidate replay, billing reconciliation, private holdout or general model ranking.</p></main></body></html>"""
+<p>Offline content-consistency review of redacted records; no authenticated execution, billing reconciliation, private holdout or general model ranking. Replay agreement, when present, is a recorded fresh-process observation, not independently authenticated execution or adversarial verifier integrity.</p></main></body></html>"""
 
 
 def main() -> int:

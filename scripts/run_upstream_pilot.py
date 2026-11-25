@@ -29,6 +29,7 @@ from cost_to_done.upstream_pilot import (
 )
 from scripts.run_real_model_smoke import attestation
 from scripts.run_repository_pilot import complete_record
+from cost_to_done.upstream_replay import replay_upstream
 
 SCOPE = "fixed_public_upstream_development_panel"
 SEED = 20261125
@@ -39,7 +40,7 @@ def write(path: Path, record: dict) -> None:
                                             allow_nan=False) + "\n")])
 
 
-def build_plan(tasks: dict, schedules: dict, harness_commit: str) -> dict:
+def build_plan(tasks: dict, schedules: dict, harness_commit: str, *, capture: bool = False) -> dict:
     if (not isinstance(tasks, dict) or set(tasks) != set(STARTERS)
             or not all(is_digest(x) for x in tasks.values())
             or len(set(tasks.values())) != len(tasks)
@@ -69,6 +70,8 @@ def build_plan(tasks: dict, schedules: dict, harness_commit: str) -> dict:
         "aggregate_admission_allowance_usd": _usd(len(trials) * _units(ALLOWANCE)),
         "trials": trials,
     }
+    if capture:
+        plan.update(schema_version=2, candidate_replay_required=True)
     plan["plan_sha256"] = digest(plan)
     return plan
 
@@ -76,7 +79,7 @@ def build_plan(tasks: dict, schedules: dict, harness_commit: str) -> dict:
 def validate_plan(plan: dict) -> None:
     if (not isinstance(plan, dict) or plan != build_plan(
             plan.get("qualification_digests"), plan.get("price_schedule_digests"),
-            plan.get("harness_commit"))):
+            plan.get("harness_commit"), capture=plan.get("schema_version") == 2)):
         raise ReceiptError("upstream panel plan changed")
 
 
@@ -172,7 +175,7 @@ def main() -> int:
         if price.model != model:
             raise ReceiptError("price schedule identity mismatch")
         schedules[model] = price.digest
-    plan = build_plan(tasks, schedules, os.environ.get("GITHUB_SHA", ""))
+    plan = build_plan(tasks, schedules, os.environ.get("GITHUB_SHA", ""), capture=True)
     output.mkdir(mode=0o700, exist_ok=False)
     write(output / "plan.json", plan)
     records = []
@@ -188,7 +191,7 @@ def main() -> int:
                               job, 5, 900, "responses", "low",
                               repository_task_sha256=STARTERS[name],
                               repository_qualification=controls / name / "qualification.json",
-                              repository_upstream_pilot=True)
+                              repository_upstream_pilot=True, capture_candidate=True)
         # Stage every task/configuration pair before reading any paid credential.
         # This tests the actual Pi packaging and external route, not model output.
         for index, trial in enumerate(plan["trials"]):
@@ -235,10 +238,29 @@ def main() -> int:
             if len({r["harbor_task_checksum"] for r in records
                     if r["task_input_sha256"] == STARTERS[name]}) != 1:
                 break
+            # Preserve the original financial observation before a separate
+            # replay. Candidate-controlled bytes never enter public artifacts.
+            sidecar = {"trial_id": trial["id"], "plan_sha256": plan["plan_sha256"],
+                       "replay": None, "agreement": None}
+            try:
+                replay = replay_upstream(controls / name / "starter",
+                                         Path(outcome["private_job_dir"]),
+                                         record["harbor_raw_result_sha256"])
+                sidecar["replay"] = replay
+                if replay["independent_process_reexecution"] is True:
+                    sidecar["agreement"] = replay["outcome"] == record["harbor_trial_outcome"]
+            except (ReceiptError, OSError, ValueError, KeyError):
+                pass
+            write(output / f"{index:02d}.replay.json", sidecar)
+            if sidecar["agreement"] is not True:
+                break
     report = summarize(plan, records)
     write(output / "summary.json", report)
     print(json.dumps(report, sort_keys=True, allow_nan=False))
-    return 0 if report["complete_matched_accounting"] else 2
+    return 0 if (report["complete_matched_accounting"] and all(
+        (output / f"{i:02d}.replay.json").is_file() and
+        json.loads((output / f"{i:02d}.replay.json").read_bytes())["agreement"] is True
+        for i in range(len(plan["trials"])))) else 2
 
 
 if __name__ == "__main__":

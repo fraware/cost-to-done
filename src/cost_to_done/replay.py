@@ -58,6 +58,11 @@ def captured_candidate(job: Path, task: str, *, expected_result_sha256: str | No
     module = TRUSTED_TASK_MODULES.get(task)
     if module is None:
         raise ReceiptError("unknown bundled task")
+    return captured_source(job, "/app/" + module, expected_result_sha256=expected_result_sha256)
+
+
+def captured_source(job: Path, expected_source: str, *, expected_result_sha256: str | None = None) -> Path:
+    """Resolve one collected source with the declared path and exact trial identity."""
     if job.is_symlink() or not job.is_dir():
         raise ReceiptError("missing or unsafe Harbor job")
     root = job.resolve(strict=True)
@@ -81,7 +86,7 @@ def captured_candidate(job: Path, task: str, *, expected_result_sha256: str | No
     if len(matching) != 1:
         raise ReceiptError("missing or ambiguous candidate collection")
     entry = matching[0]
-    if (entry.get("source") != "/app/" + module or entry.get("type") != "file"
+    if (entry.get("source") != expected_source or entry.get("type") != "file"
             or entry.get("status") != "ok" or entry.get("service") not in (None, "main")):
         raise ReceiptError("candidate artifact was not collected from the expected module")
     path = manifest.parent / "candidate.py"
@@ -106,6 +111,20 @@ def replay_candidate(root: Path, task: str, candidate: Path, *, timeout: int = 4
     root = root.resolve(strict=True)
     source = _read_regular(candidate.absolute(), MAX_CANDIDATE_BYTES)
     verifier = _read_regular(root / "tasks" / task / "tests/test_state.py", MAX_TEST_BYTES)
+    return replay_source(task, module, source, "test_state.py", verifier, timeout=timeout)
+
+
+def replay_source(task: str, module: str, source: bytes, test_name: str, verifier: bytes,
+                  *, timeout: int = 45) -> dict[str, Any]:
+    """Replay a bounded source and pristine verifier in the restricted runtime."""
+    import re
+    if (not re.fullmatch(r"(?:Lib/)?[A-Za-z_][A-Za-z0-9_]*\.py", module)
+            or test_name not in ("test_state.py", "test_regression.py")
+            or not 0 < len(source) <= MAX_CANDIDATE_BYTES
+            or not 0 < len(verifier) <= MAX_TEST_BYTES
+            or type(timeout) is not int or not 1 <= timeout <= 120):
+        raise ReceiptError("invalid replay source or verifier")
+    script = REPLAY_SCRIPT.replace("test_state.py", test_name)
     environment = {k: os.environ[k] for k in _ALLOWED_ENV if k in os.environ}
     name = "ctd-replay-" + uuid.uuid4().hex
     outcome = "unresolved"
@@ -113,10 +132,11 @@ def replay_candidate(root: Path, task: str, candidate: Path, *, timeout: int = 4
     with tempfile.TemporaryDirectory(prefix="ctd-replay-") as directory:
         stage = Path(directory)
         for folder, filename, payload in (("candidate", module, source),
-                                          ("verifier", "test_state.py", verifier)):
+                                          ("verifier", test_name, verifier)):
             dest = stage / folder
             dest.mkdir(mode=0o755)
             path = dest / filename
+            path.parent.mkdir(parents=True, exist_ok=True, mode=0o755)
             path.write_bytes(payload)
             path.chmod(0o444)
         # Bind mounts reference only the two staged directories, never the repo,
@@ -132,7 +152,7 @@ def replay_candidate(root: Path, task: str, candidate: Path, *, timeout: int = 4
             "--cpus", "1", "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=16m",
             "--mount", f"type=bind,src={stage / 'candidate'},dst=/candidate,readonly",
             "--mount", f"type=bind,src={stage / 'verifier'},dst=/verifier,readonly",
-            "--workdir", "/tmp", IMAGE, "python", "-I", "-B", "-c", REPLAY_SCRIPT,
+            "--workdir", "/tmp", IMAGE, "python", "-I", "-B", "-c", script,
         ]
         try:
             proc = subprocess.run(command, env=environment, stdin=subprocess.DEVNULL,
@@ -160,7 +180,7 @@ def replay_candidate(root: Path, task: str, candidate: Path, *, timeout: int = 4
     return {"schema_version": 1, "task": task, "outcome": outcome,
             "candidate_sha256": hashlib.sha256(source).hexdigest(),
             "verifier_sha256": hashlib.sha256(verifier).hexdigest(),
-            "image": IMAGE, "replay_script_sha256": hashlib.sha256(REPLAY_SCRIPT.encode("utf-8")).hexdigest(),
+            "image": IMAGE, "replay_script_sha256": hashlib.sha256(script.encode("utf-8")).hexdigest(),
             "cleanup_confirmed": cleanup_confirmed,
             "network_mode": "none", "provider_credentials_mounted": False,
             "independent_process_reexecution": outcome in ("pass", "fail"),
