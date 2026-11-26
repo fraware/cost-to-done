@@ -2,13 +2,13 @@
 
 **The cheapest AI model might be the most expensive way to finish your work.**
 
-Measure expenditure per successful task from recorded attempts, including recorded failures. Compare agent configurations against the same acceptance criteria and inspect the evidence behind each result.
+Compare the cost of completing the same coding tasks with different AI agent configurations. Import existing Harbor results or structured trial receipts, retain expenditure on failed attempts, and generate a local HTML report. Missing costs stay unavailable.
 
-[v0.1.0 release](https://github.com/fraware/cost-to-done/releases/tag/v0.1.0) · [38-second product walkthrough](https://github.com/fraware/cost-to-done/releases/download/v0.1.0/cost-to-done-v0.1.0-demo.mp4) · [Project website](https://fraware.github.io/cost-to-done/) · [Interactive calculator](https://fraware.github.io/cost-to-done/calculator.html) · [Documentation](docs/README.md) · [Methodology](docs/methodology.md) · [Repository tasks](docs/repository-task.md)
+[Try the browser calculator](https://fraware.github.io/cost-to-done/calculator.html) · [View a synthetic sample report](https://fraware.github.io/cost-to-done/report.html) · [Explore Terminal-Bench evidence](https://fraware.github.io/cost-to-done/terminal-bench.html) · [Documentation](docs/README.md)
 
 ## Quick start
 
-Python 3.11+ for the local reporting tools. No API key, Docker or paid service needed for this example.
+Install the [v0.1.0 alpha release](https://github.com/fraware/cost-to-done/releases/tag/v0.1.0). Python 3.11–3.13 on Linux is covered by CI. No API key, Docker or paid service is needed for this example. The package is not on PyPI.
 
 ```bash
 python -m venv .venv
@@ -17,7 +17,7 @@ python -m pip install https://github.com/fraware/cost-to-done/releases/download/
 cost-to-done demo --output demo.html
 ```
 
-On Windows, activate the environment with `.venv\Scripts\activate`. [Source installation, distribution checksums and troubleshooting](docs/getting-started.md). Open `demo.html` in your browser. The demo uses synthetic receipts and illustrates failure-inclusive accounting. The report is self-contained and private by default. Choose a fresh output filename for each run.
+Open `demo.html` locally in your browser. The report uses synthetic receipts, not model observations; it needs no network to render. Choose a fresh output filename for each run. Windows PowerShell activation is `.\.venv\Scripts\Activate.ps1`; Windows filesystem behavior is not covered by CI. [Installation, source checkout and checksum verification](docs/getting-started.md).
 
 Already have Harbor results? Compare them immediately, with no new inference:
 
@@ -27,15 +27,15 @@ cost-to-done compare-harbor \
   --output comparison.html
 ```
 
-The comparison checks matching task checksums and shows verifier outcomes, elapsed time and available agent-reported cost estimates. Missing costs stay unavailable. See [matched Harbor comparison](docs/compare-harbor.md).
+Replace the example paths with your own completed jobs. The comparison checks matching task identifiers and checksums and shows verifier outcomes, elapsed time and available agent-reported cost estimates. Missing costs stay unavailable. See [matched Harbor comparison](docs/compare-harbor.md).
 
 ## External benchmark analysis
 
-[Terminal-Bench 4.1: reported inference cost per accepted trial](https://fraware.github.io/cost-to-done/terminal-bench.html). Recomputed from all 32 explicitly targeted 4.1 submission records at a pinned upstream commit, covering 10,560 recorded trials. Sol/Codex and Astra/Codex recorded 203 and 205 accepted trials respectively, with reported inference cost per accepted trial of $1.72 and $6.87. The ratios use third-party reported aggregates with unverified cost coverage and retry history; they are not our own executions, invoices, or a model ranking. See [source and method](docs/terminal-bench-4-1.md).
+[Terminal-Bench 4.1: reported inference cost per accepted trial](https://fraware.github.io/cost-to-done/terminal-bench.html). Recomputed from all 32 explicitly targeted 4.1 submission records at a pinned upstream commit, covering 10,560 recorded trials. GPT-6.2 Sol/Codex and GPT-6.2 Astra/Codex recorded 203/330 and 205/330 accepted trials, respectively, with reported inference expenditure per accepted trial of $1.72 and $6.87. The ratios use third-party reported aggregates with unverified cost coverage and retry history; they are not our own executions, invoices, or a model ranking. See [source and method](docs/terminal-bench-4-1.md).
 
 [DeepSWE recovery accounting](https://fraware.github.io/cost-to-done/deepswe.html). Reconstructed 339 assignment records across 113 shared task names from a pinned publisher export. Reason reports 165 final passes and $1,203.289086 total model spend; recovery spend is included. Codex expenditure is unavailable. No comparative cost ratio or paired task-digest verification. [Source and audit](docs/deepswe-recovery-audit.md).
 
-## What our real experiments have shown
+## Our development experiments
 
 ### 18 paid trials, three public repair tasks
 
@@ -44,7 +44,7 @@ The comparison checks matching task checksums and shows verifier outcomes, elaps
 | GPT-6.1 Terra, low | 9/9 | $0.045686 | $0.005076 |
 | GPT-6.2 Sol, low | 9/9 | $0.177268 | $0.019696 |
 
-Both configurations completed every planned trial. Estimated cost per completion differed by 3.88× in this public development panel. The [original archive audit](https://github.com/fraware/cost-to-done/actions/runs/45320390734) verified the archived results and reconstructed the prospective plan and accounting. [Full experiment and limitations](docs/development-panel-observations.md).
+All 18 planned trials passed the Harbor verifier. Estimated cost per completion differed by 3.88× on these three public repair tasks. The [original archive audit](https://github.com/fraware/cost-to-done/actions/runs/45320390734) verified the archived results and reconstructed the prospective plan and accounting. [Full experiment and limitations](docs/development-panel-observations.md).
 
 ### A separate pair with fresh offline verifier replay
 
@@ -74,7 +74,7 @@ The prepared task pins Git objects, staged file hashes and a Python runtime imag
 
 Run no-model controls on the defective starter and known correct reference using Harbor 0.27.0, Python 3.12 and Docker. Bind the resulting acceptance evidence with `qualify-repo-task`. Follow the [complete repository-task walkthrough](docs/repository-task.md).
 
-**Current boundary:** the external-task gateway and matched comparison have passed actual Harbor/Pi integration tests with a fictional provider. A fixed public synthetic pilot and a separately guarded four-task upstream development panel are available from source through explicitly authorized maintainer workflows. The upstream panel has passed credential-free preflight; no paid results are claimed. See [upstream controls and evidence review](docs/external-corpus-controls.md). Arbitrary paid repository execution is not enabled.
+**Current boundary:** the external-task gateway and matched comparison have passed actual Harbor/Pi integration tests with a fictional provider. A fixed public synthetic pilot and a separately guarded four-task upstream development panel are available from source through explicitly authorized maintainer workflows. The upstream panel passed credential-free preflight and starter/reference capture-and-replay qualification; no paid results are claimed. These newer upstream audit workflows are available in the source checkout, not the v0.1.0 wheel. See [upstream controls and evidence review](docs/external-corpus-controls.md). Arbitrary paid repository execution is not enabled.
 
 ## Choose the workflow you need
 
@@ -99,7 +99,7 @@ For a fixed task distribution and retry policy:
 
 Failed attempts and failed trials count toward expenditure. If no trial succeeds, the ratio is undefined. Missing or uncertain financial observations are never imputed as zero. In the planned-panel and repository-comparison protocols, unresolved support withholds comparative ratios.
 
-A trial receipt binds a task identifier, configuration, task digest, verifier digest, harness digest, retry policy and all charged attempts. A configuration includes the model, agent and settings. Distinct configurations must not be interpreted as isolated model effects.
+A native trial receipt binds a task identifier, configuration, task digest, verifier digest, harness digest, retry policy and recorded attempts. Imported Harbor results do not establish all of these fields or complete expenditure independently. A configuration includes the model, agent and settings. Distinct configurations must not be interpreted as isolated model effects.
 
 See [methodology](docs/methodology.md), [receipt reconciliation](docs/ledger-reconciliation.md), and the [comparative protocol](docs/comparative-protocol.md).
 
@@ -135,6 +135,6 @@ Report vulnerabilities via [SECURITY.md](SECURITY.md). Keep private source, prom
 
 The goal is a one-command evaluation of competing agent configurations on a developer's own work, with complete expenditure accounting and executable acceptance evidence. The current implementation provides local receipt analysis, qualified bundled execution, archived real-provider observations and external repository preparation. General-purpose external execution, independent third-party replication, and a held-out evaluation corpus are outstanding.
 
-Contributions are welcome: reproducible tasks, importer adapters, accounting corrections and evidence audits. Run `python -m unittest discover -s tests -v` before submitting. See [CONTRIBUTING.md](CONTRIBUTING.md) and [Vision](docs/vision.md).
+Try the released reporting tool on your own evaluation results and [report your experience](https://github.com/fraware/cost-to-done/issues/46). Repository maintainers interested in providing previously unpublished repair tasks should [express interest without posting private source or tests](https://github.com/fraware/cost-to-done/issues/54). Contributions are welcome: reproducible tasks, importer adapters, accounting corrections and evidence audits. Run `python -m unittest discover -s tests -v` before submitting. See [CONTRIBUTING.md](CONTRIBUTING.md) and [Vision](docs/vision.md).
 
 MIT license.
